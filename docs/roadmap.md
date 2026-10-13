@@ -2,9 +2,9 @@
 
 This is the build order for the first complete demo. The current [design spec](superpowers/specs/2026-10-13-web3mcp-project-design.md) describes the boundaries. Detailed implementation plans belong under `docs/superpowers/plans/` when interfaces and tooling are selected.
 
-## 1. Freeze protocol v0.1
+## 1. Freeze protocol v0.1 (Completed)
 
-Publish the normative account and manifest format, JSON schema, version rules, Anchor IDL profile, supported input types, account-resolution rules, error behavior, and test vectors in `protocol/`. Pin a known program ID and PDA derivation vector. A separate fixture reader must reject wrong owners, unsupported versions, invalid bindings, and unknown account privileges.
+Normative account layout, JSON schema, version rules, supported input types, account-resolution rules, error behavior, and test vectors published and frozen in `protocol/` (see `protocol/SPEC.md`). The test suite passes 25 automated conformance tests verifying offline schema validation, Anchor binary account layout, digest integrity, and fail-closed error behavior.
 
 ## 2. Publish from a reference program
 
