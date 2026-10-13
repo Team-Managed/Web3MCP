@@ -1,0 +1,22 @@
+{
+  "name": "@web3mcp/protocol",
+  "version": "0.1.0",
+  "description": "Normative schema, account layout, validation logic, and conformance vectors for Web3MCP v0.1",
+  "type": "module",
+  "exports": {
+    "./schema": "./schema/config.schema.json",
+    "./validator": "./src/validator.js",
+    "./pda": "./src/pda.js",
+    "./account": "./src/account.js"
+  },
+  "bin": {
+    "web3mcp-validate": "./bin/validate.js"
+  },
+  "scripts": {
+    "test": "node --test tests/*.test.js"
+  },
+  "dependencies": {
+    "@solana/web3.js": "^1.99.0",
+    "ajv": "^8.20.0"
+  }
+}
