@@ -1,0 +1,55 @@
+{
+  "standard": "web3mcp",
+  "version": "0.1.0",
+  "programId": "11111111111111111111111111111111",
+  "idl": {
+    "version": "0.1.0",
+    "name": "reference_vault",
+    "instructions": [],
+    "accounts": [
+      {
+        "name": "Vault",
+        "type": {
+          "kind": "struct",
+          "fields": [
+            { "name": "owner", "type": "publicKey" },
+            { "name": "balance", "type": "u64" }
+          ]
+        }
+      }
+    ]
+  },
+  "tools": [
+    {
+      "name": "get_vault",
+      "title": "Fetch Vault State",
+      "description": "Reads on-chain account state for a specified program vault",
+      "annotations": {
+        "readOnlyHint": true,
+        "untrustedContentHint": false
+      },
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "vaultOwner": {
+            "type": "string",
+            "pattern": "^[1-9A-HJ-NP-Za-km-z]{32,44}$",
+            "description": "Base58 address of the vault owner"
+          }
+        },
+        "required": ["vaultOwner"],
+        "additionalProperties": false
+      },
+      "solana": {
+        "kind": "accountRead",
+        "account": "Vault",
+        "accounts": {
+          "vault": {
+            "source": "input",
+            "input": "vaultOwner"
+          }
+        }
+      }
+    }
+  ]
+}

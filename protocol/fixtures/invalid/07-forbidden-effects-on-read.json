@@ -1,0 +1,18 @@
+{
+  "standard": "web3mcp",
+  "version": "0.1.0",
+  "programId": "11111111111111111111111111111111",
+  "idl": { "version": "0.1.0", "name": "test", "instructions": [], "accounts": [{ "name": "Vault" }] },
+  "tools": [
+    {
+      "name": "get_vault",
+      "inputSchema": { "type": "object", "properties": {}, "required": [], "additionalProperties": false },
+      "solana": {
+        "kind": "accountRead",
+        "account": "Vault",
+        "accounts": {},
+        "effects": { "stateChanging": false, "financial": false }
+      }
+    }
+  ]
+}

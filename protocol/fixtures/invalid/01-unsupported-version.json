@@ -1,0 +1,7 @@
+{
+  "standard": "web3mcp",
+  "version": "0.2.0",
+  "programId": "11111111111111111111111111111111",
+  "idl": { "version": "0.1.0", "name": "test", "instructions": [] },
+  "tools": []
+}
