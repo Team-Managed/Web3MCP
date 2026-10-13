@@ -1,0 +1,14 @@
+.DS_Store
+.env
+.env.*
+!.env.example
+node_modules/
+target/
+dist/
+build/
+coverage/
+.next/
+test-ledger/
+.anchor/
+*.keypair.json
+CLAUDE.local.md
