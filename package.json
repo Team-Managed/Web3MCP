@@ -11,6 +11,9 @@
     "test": "npm --prefix protocol test && node --test --test-concurrency=1 tests/*.test.js",
     "test:protocol": "npm --prefix protocol test",
     "test:vault": "node --test --test-concurrency=1 tests/*.test.js",
+    "dev:docs": "npm --prefix apps/docs run dev",
+    "build:docs": "npm --prefix apps/docs run build",
+    "deck:generate": "node scripts/generate-deck.js && cp Web3MCP_Pitch_Deck.pptx apps/docs/public/Web3MCP_Pitch_Deck.pptx",
     "generate:config": "node programs/reference-vault/scripts/generate-config.js",
     "publish:vault": "node programs/reference-vault/scripts/publish.js"
   },
@@ -20,6 +23,8 @@
   },
   "license": "Apache-2.0",
   "devDependencies": {
-    "@coral-xyz/anchor": "^0.32.1"
+    "@coral-xyz/anchor": "^0.32.1",
+    "@napi-rs/canvas": "^1.0.11",
+    "pptxgenjs": "^4.0.1"
   }
 }
