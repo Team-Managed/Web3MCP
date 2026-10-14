@@ -8,12 +8,18 @@
     "protocol"
   ],
   "scripts": {
-    "test": "npm --prefix protocol test",
-    "test:protocol": "npm --prefix protocol test"
+    "test": "npm --prefix protocol test && node --test --test-concurrency=1 tests/*.test.js",
+    "test:protocol": "npm --prefix protocol test",
+    "test:vault": "node --test --test-concurrency=1 tests/*.test.js",
+    "generate:config": "node programs/reference-vault/scripts/generate-config.js",
+    "publish:vault": "node programs/reference-vault/scripts/publish.js"
   },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/Team-Managed/Web3MCP.git"
   },
-  "license": "Apache-2.0"
+  "license": "Apache-2.0",
+  "devDependencies": {
+    "@coral-xyz/anchor": "^0.32.1"
+  }
 }
