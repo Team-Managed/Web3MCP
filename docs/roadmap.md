@@ -6,9 +6,11 @@ This is the build order for the first complete demo. The current [design spec](s
 
 Normative account layout, JSON schema, version rules, supported input types, account-resolution rules, error behavior, and test vectors published and frozen in `protocol/` (see `protocol/SPEC.md`). The test suite passes 25 automated conformance tests verifying offline schema validation, Anchor binary account layout, digest integrity, and fail-closed error behavior.
 
-## 2. Publish from a reference program
+## 2. Publish from a reference program (Completed)
 
 Build a small Anchor SOL vault with `get_vault`, `initialize`, `deposit`, and `withdraw` capabilities. Add a program-owned config PDA and authorized publication instructions. Generate the config from the compiled IDL, publish it in bounded chunks, and verify its bytes and account owner on a local validator. No host code may import the generated IDL.
+
+**Status: Complete on Devnet.** Reference vault deployed to `GgVnzvsMhHHKeeGnqQhU9KAjBeCVhYiYmR17174Lyrgv` with Config PDA at `HfA1ExZS1cgYR5k5GEJmsQfyAcDK2J9NPi7p97dU3WLD`. Automated publisher streamed 9 chunks with native on-chain SHA-256 verification (`sol_sha256`). RPC account read verified 100% protocol conformance with zero host imports of the generated IDL or program source (ADR 0007).
 
 ## 3. Build the generic host core
 
