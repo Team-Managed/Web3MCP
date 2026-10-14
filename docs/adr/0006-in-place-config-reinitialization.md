@@ -1,0 +1,3 @@
+# In-Place Config PDA Re-initialization with Fail-Closed Transition
+
+We decided to allow the designated program authority to re-initialize an existing Config PDA in-place rather than deriving version-suffixed PDAs or deploying migration proxy accounts. When `initialize_config` is called by the authority on an already-published Config PDA, the program resets `status` to `1 (Uploading)`, truncates the config buffer, and records new `expected_len` and `digest` values. Re-using the canonical `["web3mcp", "config"]` PDA preserves deterministic discovery for agent hosts, while immediately forcing all hosts into a fail-closed rejection state during in-flight updates until `finalize_config` is successfully executed.
