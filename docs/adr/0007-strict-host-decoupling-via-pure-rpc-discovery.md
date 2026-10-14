@@ -1,0 +1,3 @@
+# Strict Host Decoupling via Pure RPC Discovery
+
+The Web3MCP host still relies on the Anchor IDL to encode instructions and decode accounts, but it must consume that IDL exclusively from the on-chain Config PDA unpacked at runtime via standard Solana RPC `getAccountInfo`. The host is strictly prohibited from having compile-time imports of local program source, static IDL files, or hardcoded tool descriptors. While static imports would simplify host development and provide compile-time types, pure runtime RPC discovery preserves the core property of Web3MCP: enabling a generic agent host to discover and interact with any compatible program on Solana from its Program ID alone without host recompilation or releases.

@@ -1,0 +1,82 @@
+{
+  "standard": "web3mcp",
+  "version": "0.1.0",
+  "programId": "11111111111111111111111111111111",
+  "idl": {
+    "version": "0.1.0",
+    "name": "reference_vault",
+    "instructions": [
+      {
+        "name": "deposit",
+        "accounts": [
+          { "name": "vault", "isMut": true, "isSigner": false },
+          { "name": "user", "isMut": true, "isSigner": true },
+          { "name": "systemProgram", "isMut": false, "isSigner": false },
+          { "name": "recipientAccount", "isMut": true, "isSigner": false }
+        ],
+        "args": [
+          { "name": "amount", "type": "u64" },
+          { "name": "flag", "type": "bool" },
+          { "name": "recipient", "type": "publicKey" }
+        ]
+      }
+    ]
+  },
+  "tools": [
+    {
+      "name": "deposit",
+      "title": "Deposit SOL into Vault",
+      "description": "Transfers SOL from connected wallet into program vault",
+      "annotations": {
+        "readOnlyHint": false,
+        "untrustedContentHint": false
+      },
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "amount": {
+            "type": "string",
+            "pattern": "^[1-9][0-9]*$",
+            "description": "Amount in lamports (u64 decimal string)"
+          },
+          "flag": {
+            "type": "boolean",
+            "description": "Optional behavior toggle"
+          },
+          "recipient": {
+            "type": "string",
+            "pattern": "^[1-9A-HJ-NP-Za-km-z]{32,44}$",
+            "description": "Base58 public key recipient"
+          }
+        },
+        "required": ["amount", "recipient"],
+        "additionalProperties": false
+      },
+      "solana": {
+        "kind": "instruction",
+        "instruction": "deposit",
+        "accounts": {
+          "vault": {
+            "source": "idl"
+          },
+          "user": {
+            "source": "signer"
+          },
+          "systemProgram": {
+            "source": "program",
+            "address": "11111111111111111111111111111111"
+          },
+          "recipientAccount": {
+            "source": "input",
+            "input": "recipient"
+          }
+        },
+        "effects": {
+          "stateChanging": true,
+          "financial": true,
+          "summary": "Deposits lamports from user to vault"
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,20 @@
+{
+  "standard": "web3mcp",
+  "version": "0.1.0",
+  "programId": "11111111111111111111111111111111",
+  "idl": { "version": "0.1.0", "name": "test", "instructions": [{ "name": "deposit", "accounts": [], "args": [] }] },
+  "tools": [
+    {
+      "name": "deposit",
+      "inputSchema": { "type": "object", "properties": {}, "required": [], "additionalProperties": false },
+      "solana": {
+        "kind": "instruction",
+        "instruction": "deposit",
+        "accounts": {
+          "oracle": { "source": "oracle_feed" }
+        },
+        "effects": { "stateChanging": true, "financial": true }
+      }
+    }
+  ]
+}

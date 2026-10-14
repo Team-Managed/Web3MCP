@@ -1,0 +1,236 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://web3mcp.org/schema/v0.1/config.schema.json",
+  "title": "Web3McpConfig",
+  "description": "Web3MCP v0.1 normative configuration payload published on-chain",
+  "type": "object",
+  "required": ["standard", "version", "programId", "idl", "tools"],
+  "additionalProperties": false,
+  "properties": {
+    "standard": {
+      "type": "string",
+      "const": "web3mcp",
+      "description": "Standard identifier; must be exactly 'web3mcp'"
+    },
+    "version": {
+      "type": "string",
+      "pattern": "^0\\.1\\.[0-9]+$",
+      "description": "Protocol version; must adhere to 0.1.x semver format"
+    },
+    "programId": {
+      "type": "string",
+      "pattern": "^[1-9A-HJ-NP-Za-km-z]{32,44}$",
+      "description": "Base58-encoded 32-byte Solana public key of the target program"
+    },
+    "idl": {
+      "type": "object",
+      "description": "Complete Anchor IDL object for the target program"
+    },
+    "tools": {
+      "type": "array",
+      "description": "List of Web3MCP tool descriptors exposed by this program",
+      "items": {
+        "$ref": "#/definitions/toolDescriptor"
+      }
+    }
+  },
+  "definitions": {
+    "toolDescriptor": {
+      "type": "object",
+      "required": ["name", "inputSchema", "solana"],
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_]{0,63}$",
+          "description": "Tool name; must start with lowercase letter, contain only [a-z0-9_], up to 64 chars"
+        },
+        "title": {
+          "type": "string",
+          "description": "Human-readable label for user interface presentation"
+        },
+        "description": {
+          "type": "string",
+          "description": "Tool description provided to LLM; untrusted publisher content"
+        },
+        "annotations": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "readOnlyHint": {
+              "type": "boolean"
+            },
+            "untrustedContentHint": {
+              "type": "boolean"
+            }
+          }
+        },
+        "inputSchema": {
+          "$ref": "#/definitions/inputSchema"
+        },
+        "solana": {
+          "oneOf": [
+            { "$ref": "#/definitions/instructionBinding" },
+            { "$ref": "#/definitions/accountReadBinding" }
+          ]
+        }
+      }
+    },
+    "inputSchema": {
+      "type": "object",
+      "required": ["type", "properties", "required", "additionalProperties"],
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "type": "string",
+          "const": "object"
+        },
+        "properties": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/definitions/supportedPropertyType"
+          }
+        },
+        "required": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": {
+          "type": "boolean",
+          "const": false
+        }
+      }
+    },
+    "supportedPropertyType": {
+      "oneOf": [
+        {
+          "type": "object",
+          "description": "u64 integer encoded as decimal string without leading zeros",
+          "required": ["type", "pattern"],
+          "additionalProperties": false,
+          "properties": {
+            "type": { "type": "string", "const": "string" },
+            "pattern": { "type": "string", "const": "^[1-9][0-9]*$" },
+            "description": { "type": "string" }
+          }
+        },
+        {
+          "type": "object",
+          "description": "boolean flag",
+          "required": ["type"],
+          "additionalProperties": false,
+          "properties": {
+            "type": { "type": "string", "const": "boolean" },
+            "description": { "type": "string" }
+          }
+        },
+        {
+          "type": "object",
+          "description": "32-byte Solana public key in Base58",
+          "required": ["type", "pattern"],
+          "additionalProperties": false,
+          "properties": {
+            "type": { "type": "string", "const": "string" },
+            "pattern": { "type": "string", "const": "^[1-9A-HJ-NP-Za-km-z]{32,44}$" },
+            "description": { "type": "string" }
+          }
+        }
+      ]
+    },
+    "instructionBinding": {
+      "type": "object",
+      "required": ["kind", "instruction", "accounts", "effects"],
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "type": "string",
+          "const": "instruction"
+        },
+        "instruction": {
+          "type": "string",
+          "description": "Name of matching instruction defined in IDL"
+        },
+        "accounts": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/definitions/accountSource"
+          }
+        },
+        "effects": {
+          "type": "object",
+          "required": ["stateChanging", "financial"],
+          "additionalProperties": false,
+          "properties": {
+            "stateChanging": { "type": "boolean" },
+            "financial": { "type": "boolean" },
+            "summary": { "type": "string" }
+          }
+        }
+      }
+    },
+    "accountReadBinding": {
+      "type": "object",
+      "required": ["kind", "account", "accounts"],
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "type": "string",
+          "const": "accountRead"
+        },
+        "account": {
+          "type": "string",
+          "description": "Name of account type defined in IDL"
+        },
+        "accounts": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/definitions/accountSource"
+          }
+        }
+      }
+    },
+    "accountSource": {
+      "oneOf": [
+        {
+          "type": "object",
+          "required": ["source"],
+          "additionalProperties": false,
+          "properties": {
+            "source": { "type": "string", "const": "signer" }
+          }
+        },
+        {
+          "type": "object",
+          "required": ["source", "input"],
+          "additionalProperties": false,
+          "properties": {
+            "source": { "type": "string", "const": "input" },
+            "input": { "type": "string" }
+          }
+        },
+        {
+          "type": "object",
+          "required": ["source", "address"],
+          "additionalProperties": false,
+          "properties": {
+            "source": { "type": "string", "const": "program" },
+            "address": {
+              "type": "string",
+              "pattern": "^[1-9A-HJ-NP-Za-km-z]{32,44}$"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": ["source"],
+          "additionalProperties": false,
+          "properties": {
+            "source": { "type": "string", "const": "idl" }
+          }
+        }
+      ]
+    }
+  }
+}

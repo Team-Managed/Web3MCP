@@ -1,0 +1,25 @@
+{
+  "name": "web3mcp",
+  "version": "0.1.0",
+  "description": "Web3MCP: on-chain Solana tool discovery for AI agents",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "protocol"
+  ],
+  "scripts": {
+    "test": "npm --prefix protocol test && node --test tests/generate-config.test.js",
+    "test:protocol": "npm --prefix protocol test",
+    "test:integration": "node --test --test-concurrency=1 tests/*.test.js",
+    "generate:config": "node programs/reference-vault/scripts/generate-config.js",
+    "publish:vault": "node programs/reference-vault/scripts/publish.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Team-Managed/Web3MCP.git"
+  },
+  "license": "Apache-2.0",
+  "devDependencies": {
+    "@coral-xyz/anchor": "^0.32.1"
+  }
+}
