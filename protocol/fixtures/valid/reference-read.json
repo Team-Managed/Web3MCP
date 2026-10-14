@@ -3,17 +3,42 @@
   "version": "0.1.0",
   "programId": "11111111111111111111111111111111",
   "idl": {
-    "version": "0.1.0",
-    "name": "reference_vault",
+    "address": "11111111111111111111111111111111",
+    "metadata": {
+      "name": "reference_vault",
+      "version": "0.1.0",
+      "spec": "0.1.0"
+    },
     "instructions": [],
     "accounts": [
+      {
+        "name": "Vault",
+        "discriminator": [
+          8,
+          7,
+          6,
+          5,
+          4,
+          3,
+          2,
+          1
+        ]
+      }
+    ],
+    "types": [
       {
         "name": "Vault",
         "type": {
           "kind": "struct",
           "fields": [
-            { "name": "owner", "type": "publicKey" },
-            { "name": "balance", "type": "u64" }
+            {
+              "name": "owner",
+              "type": "pubkey"
+            },
+            {
+              "name": "balance",
+              "type": "u64"
+            }
           ]
         }
       }
@@ -37,7 +62,9 @@
             "description": "Base58 address of the vault PDA"
           }
         },
-        "required": ["vaultAddress"],
+        "required": [
+          "vaultAddress"
+        ],
         "additionalProperties": false
       },
       "solana": {

@@ -2,16 +2,65 @@
   "standard": "web3mcp",
   "version": "0.1.0",
   "programId": "11111111111111111111111111111111",
-  "idl": { "version": "0.1.0", "name": "test", "instructions": [], "accounts": [{ "name": "Vault" }] },
+  "idl": {
+    "address": "11111111111111111111111111111111",
+    "metadata": {
+      "name": "test",
+      "version": "0.1.0",
+      "spec": "0.1.0"
+    },
+    "instructions": [],
+    "accounts": [
+      {
+        "name": "Vault",
+        "discriminator": [
+          8,
+          7,
+          6,
+          5,
+          4,
+          3,
+          2,
+          1
+        ]
+      }
+    ],
+    "types": [
+      {
+        "name": "Vault",
+        "type": {
+          "kind": "struct",
+          "fields": [
+            {
+              "name": "owner",
+              "type": "pubkey"
+            },
+            {
+              "name": "balance",
+              "type": "u64"
+            }
+          ]
+        }
+      }
+    ]
+  },
   "tools": [
     {
       "name": "get_vault",
-      "inputSchema": { "type": "object", "properties": {}, "required": [], "additionalProperties": false },
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "required": [],
+        "additionalProperties": false
+      },
       "solana": {
         "kind": "accountRead",
         "account": "Vault",
         "accounts": {},
-        "effects": { "stateChanging": false, "financial": false }
+        "effects": {
+          "stateChanging": false,
+          "financial": false
+        }
       }
     }
   ]

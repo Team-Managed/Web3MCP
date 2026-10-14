@@ -6,14 +6,24 @@ import { validateConfig } from "../protocol/src/validator.js";
 
 const fixtureIdl = {
   address: "11111111111111111111111111111111",
-  version: "0.1.0",
-  name: "reference_vault",
+  metadata: { name: "reference_vault", version: "0.1.0", spec: "0.1.0" },
   instructions: ["initialize", "deposit", "withdraw"].map((name) => ({
     name,
-    accounts: ["owner", "vault", "system_program"].map((accountName) => ({ name: accountName })),
+    discriminator: [1, 2, 3, 4, 5, 6, 7, 8],
+    accounts: [
+      { name: "owner", signer: true, writable: true },
+      { name: "vault", writable: true, pda: { seeds: [
+        { kind: "const", value: [118, 97, 117, 108, 116] },
+        { kind: "account", path: "owner" },
+      ] } },
+      { name: "system_program", address: "11111111111111111111111111111111" },
+    ],
     args: name === "initialize" ? [] : [{ name: "amount", type: "u64" }],
   })),
-  accounts: [{ name: "Vault" }],
+  accounts: [{ name: "Vault", discriminator: [8, 7, 6, 5, 4, 3, 2, 1] }],
+  types: [{ name: "Vault", type: { kind: "struct", fields: [
+    { name: "owner", type: "pubkey" }, { name: "balance", type: "u64" }, { name: "bump", type: "u8" },
+  ] } }],
 };
 
 describe("Ticket 03: Web3MCP Config Generator & Packaging", () => {

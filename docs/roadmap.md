@@ -4,7 +4,7 @@ This is the build order for the first complete demo. The current [design spec](s
 
 ## 1. Freeze protocol v0.1 (In review)
 
-The account layout, JSON schema, version rules, supported input types, and initial test vectors are implemented in `protocol/`. The Anchor IDL profile, account and argument binding checks, and adversarial conformance vectors still need to be completed before freezing v0.1.
+The account layout, JSON schema, version rules, supported input types, Anchor IDL 0.1.0 profile, and initial account/argument binding checks are implemented in `protocol/`. More adversarial conformance vectors and local-validator publication checks are still needed before freezing v0.1.
 
 ## 2. Publish from a reference program (In review)
 

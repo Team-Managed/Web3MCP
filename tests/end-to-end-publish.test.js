@@ -67,9 +67,9 @@ describe("Ticket 04: End-to-End Publisher & On-Chain Protocol Conformance", () =
   it("preserves strict host boundary: host packages do not import reference program source or static IDLs (ADR 0007)", () => {
     // Assert protocol and future host directories have zero imports of programs/reference-vault or target/idl
     const dirsToCheck = ["../protocol/src"];
-    const hostDir = new URL("../host/src", import.meta.url);
+    const hostDir = new URL("../apps/host/src", import.meta.url);
     if (fs.existsSync(hostDir)) {
-      dirsToCheck.push("../host/src");
+      dirsToCheck.push("../apps/host/src");
     }
 
     for (const dirPath of dirsToCheck) {

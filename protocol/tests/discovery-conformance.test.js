@@ -10,7 +10,7 @@ const config = {
   standard: 'web3mcp',
   version: '0.1.0',
   programId,
-  idl: { version: '0.1.0', name: 'fixture', instructions: [] },
+  idl: { address: programId, metadata: { name: 'fixture', version: '0.1.0', spec: '0.1.0' }, instructions: [] },
   tools: [],
 };
 const data = serializeConfigAccount({
@@ -31,6 +31,14 @@ function discovery(overrides = {}) {
 
 test('accepts an executable program and its owned canonical published config', () => {
   assert.equal(validateDiscoveredConfig(discovery()).valid, true);
+});
+
+test('rejects plain JSON bytes at the canonical PDA even when the manifest is valid', () => {
+  const result = validateDiscoveredConfig(discovery({
+    configAccount: { owner: programId, data: Buffer.from(JSON.stringify(config)) },
+  }));
+  assert.equal(result.valid, false);
+  assert.match(result.errors.join(' '), /published Config PDA account/i);
 });
 
 test('rejects a config account owned by another program', () => {

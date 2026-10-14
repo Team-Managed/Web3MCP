@@ -23,8 +23,7 @@
       "description": "Base58-encoded 32-byte Solana public key of the target program"
     },
     "idl": {
-      "type": "object",
-      "description": "Complete Anchor IDL object for the target program"
+      "$ref": "#/definitions/anchorIdl"
     },
     "tools": {
       "type": "array",
@@ -35,6 +34,26 @@
     }
   },
   "definitions": {
+    "anchorIdl": {
+      "type": "object",
+      "description": "Anchor IDL 0.1.0. Advertised instructions and read accounts receive stricter semantic checks.",
+      "required": ["address", "metadata", "instructions"],
+      "properties": {
+        "address": { "type": "string", "pattern": "^[1-9A-HJ-NP-Za-km-z]{32,44}$" },
+        "metadata": {
+          "type": "object",
+          "required": ["name", "version", "spec"],
+          "properties": {
+            "name": { "type": "string" },
+            "version": { "type": "string" },
+            "spec": { "const": "0.1.0" }
+          }
+        },
+        "instructions": { "type": "array" },
+        "accounts": { "type": "array" },
+        "types": { "type": "array" }
+      }
+    },
     "toolDescriptor": {
       "type": "object",
       "required": ["name", "inputSchema", "solana"],

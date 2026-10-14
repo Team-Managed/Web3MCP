@@ -5,6 +5,7 @@ import { dirname, join } from 'node:path';
 
 import { parseConfigAccount, CONFIG_ACCOUNT_DISCRIMINATOR } from './account.js';
 import { deriveConfigPda } from './pda.js';
+import { validateIdlProfile } from './idl-profile.js';
 import { PublicKey } from '@solana/web3.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -139,46 +140,7 @@ export function validateConfig(configInput) {
     errors.push('/idl/address: embedded IDL address does not match programId');
   }
 
-  // 2. Cross-reference validations against embedded IDL
-  const idl = config.idl || {};
-  const idlInstructions = Array.isArray(idl.instructions) ? idl.instructions : [];
-  const idlAccounts = Array.isArray(idl.accounts) ? idl.accounts : [];
-
-  if (Array.isArray(config.tools)) {
-    for (let i = 0; i < config.tools.length; i++) {
-      const tool = config.tools[i];
-      if (!tool || !tool.solana) continue;
-
-      if (tool.solana.kind === 'instruction') {
-        const ixName = tool.solana.instruction;
-        const exists = idlInstructions.some((ix) => ix && ix.name === ixName);
-        if (!exists) {
-          errors.push(`/tools/${i}/solana/instruction: '${ixName}' is not defined in IDL instructions`);
-        }
-      } else if (tool.solana.kind === 'accountRead') {
-        const accName = tool.solana.account;
-        const exists = idlAccounts.some((acc) => acc && acc.name === accName);
-        if (!exists) {
-          errors.push(`/tools/${i}/solana/account: '${accName}' is not defined in IDL accounts`);
-        }
-      }
-
-      // 3. Cross-reference input-sourced account bindings against inputSchema.properties
-      if (tool.solana.accounts && typeof tool.solana.accounts === 'object') {
-        const properties = tool.inputSchema?.properties || {};
-        for (const [bindingName, binding] of Object.entries(tool.solana.accounts)) {
-          if (binding && binding.source === 'input') {
-            const inputParam = binding.input;
-            if (!properties[inputParam]) {
-              errors.push(
-                `/tools/${i}/solana/accounts/${bindingName}: input '${inputParam}' is not declared in inputSchema.properties`
-              );
-            }
-          }
-        }
-      }
-    }
-  }
+  errors.push(...validateIdlProfile(config));
 
   if (errors.length > 0) {
     return { valid: false, errors };
@@ -220,7 +182,13 @@ export function validateDiscoveredConfig({ programId, programAccount, configAddr
   }
   if (errors.length) return { valid: false, errors };
 
-  const result = validateConfig(configAccount.data);
+  let parsed;
+  try {
+    parsed = parseConfigAccount(configAccount.data);
+  } catch (error) {
+    return { valid: false, errors: [`Invalid published Config PDA account: ${error.message}`] };
+  }
+  const result = validateConfig(parsed.config);
   if (!result.valid) return result;
   if (result.config.programId !== canonicalProgramId) {
     return { valid: false, errors: ['Manifest programId does not match target programId'] };

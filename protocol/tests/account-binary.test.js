@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import crypto from 'node:crypto';
 
-import { parseConfigAccount, serializeConfigAccount, CONFIG_ACCOUNT_DISCRIMINATOR, PublicationStatus } from '../src/account.js';
+import { parseConfigAccount, serializeConfigAccount, CONFIG_ACCOUNT_DISCRIMINATOR, PublicationStatus, OFFSET_DIGEST, OFFSET_PAYLOAD } from '../src/account.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -120,4 +120,15 @@ test('04: rejects bytes beyond the declared config payload', () => {
   });
 
   assert.throws(() => parseConfigAccount(Buffer.concat([binary, Buffer.from([0])])), /length mismatch/i);
+});
+
+test('rejects invalid UTF-8 even when the payload digest matches', () => {
+  const binary = serializeConfigAccount({
+    authority: TEST_AUTHORITY,
+    status: PublicationStatus.Published,
+    configUtf8: '{"x":"a"}',
+  });
+  binary[OFFSET_PAYLOAD + 6] = 0xff;
+  crypto.createHash('sha256').update(binary.subarray(OFFSET_PAYLOAD)).digest().copy(binary, OFFSET_DIGEST);
+  assert.throws(() => parseConfigAccount(binary), /valid UTF-8/i);
 });

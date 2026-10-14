@@ -141,7 +141,12 @@ export function parseConfigAccount(data) {
   }
 
   // 8. UTF-8 JSON decode
-  const configJson = configBytes.toString('utf8');
+  let configJson;
+  try {
+    configJson = new TextDecoder('utf-8', { fatal: true }).decode(configBytes);
+  } catch {
+    throw new ConfigAccountError('Config payload is not valid UTF-8');
+  }
   let config;
   try {
     config = JSON.parse(configJson);

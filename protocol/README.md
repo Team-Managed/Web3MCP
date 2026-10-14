@@ -1,6 +1,6 @@
 # Web3MCP Protocol
 
-Candidate specification, JSON Schema, validation logic, and conformance vectors for Web3MCP v0.1. The Anchor IDL profile and semantic binding checks are still under review.
+Candidate specification, JSON Schema, validation logic, and conformance vectors for Web3MCP v0.1. The supported Anchor IDL 0.1.0 profile and initial semantic binding checks are implemented; adversarial vectors and local-validator publication checks remain under review.
 
 ## Structure
 
@@ -54,7 +54,7 @@ Web3MCP v0.1 supports exactly three scalar property types in `inputSchema.proper
 - `"signer"`: Wallet key of connected user.
 - `"input"`: Resolved from an `inputSchema` argument specified by `"input": "<param>"`.
 - `"program"`: Static program address specified by `"address": "<pubkey>"`.
-- `"idl"`: Deterministically derived PDA from Anchor IDL account definitions.
+- `"idl"`: Deterministically derived PDA from supported Anchor instruction-account seeds. This source is not available to `accountRead` in v0.1.
 
 ### Instruction Tools (`solana.kind = "instruction"`)
 State-changing operations require:
@@ -65,7 +65,7 @@ State-changing operations require:
 ### Account Read Tools (`solana.kind = "accountRead"`)
 Query operations that read and decode program account state:
 - `account`: Name of target account type defined in the IDL.
-- `accounts`: Map of accounts specifying the target query address (via `input`, `program`, `signer`, or `idl`).
+- `accounts`: Exactly one target query address binding (via `input`, `program`, or `signer`).
 - `effects`: **Forbidden** on `accountRead` tools. Schema validation fails closed if present.
 
 ## On-Chain Account Layout

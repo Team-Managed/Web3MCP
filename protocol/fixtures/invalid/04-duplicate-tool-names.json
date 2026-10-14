@@ -2,26 +2,115 @@
   "standard": "web3mcp",
   "version": "0.1.0",
   "programId": "11111111111111111111111111111111",
-  "idl": { "version": "0.1.0", "name": "test", "instructions": [{ "name": "deposit", "accounts": [], "args": [] }] },
+  "idl": {
+    "address": "11111111111111111111111111111111",
+    "metadata": {
+      "name": "test",
+      "version": "0.1.0",
+      "spec": "0.1.0"
+    },
+    "instructions": [
+      {
+        "name": "deposit",
+        "discriminator": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8
+        ],
+        "accounts": [
+          {
+            "name": "vault",
+            "writable": true,
+            "pda": {
+              "seeds": [
+                {
+                  "kind": "const",
+                  "value": [
+                    118,
+                    97,
+                    117,
+                    108,
+                    116
+                  ]
+                },
+                {
+                  "kind": "account",
+                  "path": "user"
+                }
+              ]
+            }
+          },
+          {
+            "name": "user",
+            "writable": true,
+            "signer": true
+          },
+          {
+            "name": "systemProgram",
+            "address": "11111111111111111111111111111111"
+          },
+          {
+            "name": "recipientAccount",
+            "writable": true
+          }
+        ],
+        "args": [
+          {
+            "name": "amount",
+            "type": "u64"
+          },
+          {
+            "name": "flag",
+            "type": "bool"
+          },
+          {
+            "name": "recipient",
+            "type": "pubkey"
+          }
+        ]
+      }
+    ]
+  },
   "tools": [
     {
       "name": "deposit",
-      "inputSchema": { "type": "object", "properties": {}, "required": [], "additionalProperties": false },
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "required": [],
+        "additionalProperties": false
+      },
       "solana": {
         "kind": "instruction",
         "instruction": "deposit",
         "accounts": {},
-        "effects": { "stateChanging": true, "financial": true }
+        "effects": {
+          "stateChanging": true,
+          "financial": true
+        }
       }
     },
     {
       "name": "deposit",
-      "inputSchema": { "type": "object", "properties": {}, "required": [], "additionalProperties": false },
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "required": [],
+        "additionalProperties": false
+      },
       "solana": {
         "kind": "instruction",
         "instruction": "deposit",
         "accounts": {},
-        "effects": { "stateChanging": true, "financial": true }
+        "effects": {
+          "stateChanging": true,
+          "financial": true
+        }
       }
     }
   ]

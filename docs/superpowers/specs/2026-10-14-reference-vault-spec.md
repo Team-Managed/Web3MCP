@@ -4,7 +4,7 @@ Status: implementation under review · Date: 2026-10-14
 
 ## Problem Statement
 
-AI agent runtimes (Web3MCP hosts) require target Solana programs to self-publish verifiable tool declarations and IDLs on-chain in program-owned PDAs. Currently, the Web3MCP protocol v0.1 wire specification is frozen and validated in the abstract, but there is no deployed reference program demonstrating how a real Solana program publishes its tools, manages chunked upload lifecycles, and exposes valid instructions and account queries. Without a reference implementation, host implementers cannot test end-to-end against live on-chain accounts, and program authors lack a reference template for publishing Web3MCP tools.
+AI agent runtimes (Web3MCP hosts) require target Solana programs to self-publish verifiable tool declarations and IDLs on-chain in program-owned PDAs. The Web3MCP protocol v0.1 format is a candidate under review. The updated reference program still needs local-validator publication and conformance checks before host implementers can rely on it as a complete example.
 
 ## Solution
 

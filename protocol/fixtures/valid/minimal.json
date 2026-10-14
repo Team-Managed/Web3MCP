@@ -3,8 +3,12 @@
   "version": "0.1.0",
   "programId": "11111111111111111111111111111111",
   "idl": {
-    "version": "0.1.0",
-    "name": "minimal",
+    "address": "11111111111111111111111111111111",
+    "metadata": {
+      "name": "minimal",
+      "version": "0.1.0",
+      "spec": "0.1.0"
+    },
     "instructions": []
   },
   "tools": []

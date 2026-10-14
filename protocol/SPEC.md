@@ -4,7 +4,7 @@
 **Standard**: `web3mcp`
 **Profile**: Anchor-compatible Solana program discovery
 
-The account layout and JSON envelope below are implemented. The supported Anchor IDL subset and semantic binding rules are still being reviewed; publishers and hosts should not treat this candidate as interoperable until those rules and conformance vectors are complete.
+The account layout, JSON envelope, and initial Anchor IDL 0.1.0 binding checks below are implemented. The profile remains a candidate until adversarial conformance coverage and local-validator publication checks are complete.
 
 ---
 
@@ -88,9 +88,21 @@ The UTF-8 config payload must be valid JSON conforming strictly to `https://web3
 - `standard`: Must be literal string `"web3mcp"`.
 - `version`: Semver string matching `^0\.1\.[0-9]+$`. Hosts must reject any major ≠ 0 or minor ≠ 1.
 - `programId`: Base58 public key matching the account owner.
-- `idl`: Complete Anchor IDL JSON object describing instructions and account structs.
+- `idl`: Complete Anchor IDL JSON object in the Anchor IDL 0.1.0 format described in §3.2. Its `address` must equal `programId`.
 - `tools`: Array of Tool Descriptors.
 - `additionalProperties: false`: Any unknown top-level field causes rejection.
+
+### 3.2 Supported Anchor IDL profile
+
+The embedded IDL must have `address`, `metadata` (`name`, `version`, `spec: "0.1.0"`), and `instructions`. Other ordinary Anchor IDL fields may be present. The host validates every **advertised** instruction or read account before exposing its tool:
+
+- An advertised instruction has an eight-byte discriminator, a flat `accounts` array, and an `args` array. Nested and optional instruction accounts are unsupported.
+- Every IDL instruction account has exactly one tool binding with the same name; extra bindings are rejected. An IDL signer must bind to the connected wallet signer, and only an IDL signer may use that source. A fixed program binding must match an IDL `address` when one is declared.
+- Every IDL argument is a required tool input of the matching type: IDL `u64` maps to the decimal-string `u64` property, `bool` to JSON boolean, and `pubkey` to the public-key property. Additional inputs are accepted only when used to resolve an account. Other instruction argument types are unsupported.
+- An `idl` account source requires an IDL PDA with nonempty seeds. Supported seeds are constant byte arrays of at most 32 bytes or the public key of another instruction account resolved directly from `signer`, `input`, or `program`. PDA seeds from instruction arguments, nested paths, chained PDAs, and alternate PDA programs are unsupported.
+- An advertised read account has an eight-byte discriminator and a matching `types` entry containing a struct. Readable fields are limited to `u8`, `u16`, `u32`, `u64`, `bool`, and `pubkey`. A read tool has exactly one target-address binding. Since account type definitions do not provide instruction PDA seeds, an `idl` source is unsupported for `accountRead` in this profile.
+
+An input-sourced account address must use a **required** public-key property. These rules apply to advertised tools; an IDL may also describe other program instructions and account types that the host does not expose.
 
 ---
 
@@ -128,7 +140,7 @@ Accounts are resolved using one of four sources:
 1. `{"source": "signer"}`: Connected user wallet public key.
 2. `{"source": "input", "input": "<param>"}`: Resolved from an `inputSchema` property. Must match a declared property name.
 3. `{"source": "program", "address": "<pubkey>"}`: Fixed static program address.
-4. `{"source": "idl"}`: Deterministically derived on-chain PDA as specified in Anchor IDL seeds.
+4. `{"source": "idl"}`: Deterministically derived PDA from the supported Anchor instruction-account seeds in §3.2. It is not supported for `accountRead` in v0.1.
 
 ### 5.2 Instruction Binding (`kind: "instruction"`)
 - `instruction`: Name of target instruction in the embedded IDL.
@@ -155,6 +167,7 @@ A compliant host or validator must reject configurations under the following con
 | Binary | Status ≠ `2` (`Published`) | Reject immediately (incomplete upload) |
 | Binary | Payload > 64 KiB (`65,536` bytes) | Reject immediately |
 | Binary | SHA-256(payload) ≠ `digest` | Reject immediately (corruption) |
+| Binary | Payload is not valid UTF-8 JSON | Reject immediately |
 | Envelope | `standard` ≠ `"web3mcp"` | Reject immediately |
 | Envelope | `version` does not match `^0\.1\.[0-9]+$` | Reject immediately |
 | Envelope | Unknown top-level fields | Reject immediately |
@@ -167,6 +180,11 @@ A compliant host or validator must reject configurations under the following con
 | Semantic | Instruction tool not in IDL instructions | Reject immediately |
 | Semantic | Read tool account not in IDL accounts | Reject immediately |
 | Semantic | Account references undeclared input property | Reject immediately |
+| Semantic | Embedded IDL is not in the supported Anchor 0.1.0 profile | Reject immediately |
+| Semantic | Advertised instruction bindings omit or add IDL accounts | Reject immediately |
+| Semantic | IDL argument is missing, optional, or has the wrong scalar type | Reject immediately |
+| Semantic | PDA seed cannot be resolved using the supported sources | Reject immediately |
+| Discovery | Config PDA data lacks a valid Published account header | Reject immediately |
 
 ---
 

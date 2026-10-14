@@ -45,8 +45,8 @@ test('05: rejects instruction tool referencing non-existent IDL instruction', ()
     version: '0.1.0',
     programId: '11111111111111111111111111111111',
     idl: {
-      version: '0.1.0',
-      name: 'vault',
+      address: '11111111111111111111111111111111',
+      metadata: { name: 'vault', version: '0.1.0', spec: '0.1.0' },
       instructions: [{ name: 'deposit', accounts: [], args: [] }],
     },
     tools: [
@@ -74,8 +74,8 @@ test('05: rejects accountRead tool referencing non-existent IDL account', () => 
     version: '0.1.0',
     programId: '11111111111111111111111111111111',
     idl: {
-      version: '0.1.0',
-      name: 'vault',
+      address: '11111111111111111111111111111111',
+      metadata: { name: 'vault', version: '0.1.0', spec: '0.1.0' },
       instructions: [],
       accounts: [{ name: 'Vault' }],
     },
@@ -103,9 +103,9 @@ test('05: rejects input-sourced account referencing non-existent inputSchema pro
     version: '0.1.0',
     programId: '11111111111111111111111111111111',
     idl: {
-      version: '0.1.0',
-      name: 'vault',
-      instructions: [{ name: 'deposit', accounts: [], args: [] }],
+      address: '11111111111111111111111111111111',
+      metadata: { name: 'vault', version: '0.1.0', spec: '0.1.0' },
+      instructions: [{ name: 'deposit', discriminator: [1, 2, 3, 4, 5, 6, 7, 8], accounts: [{ name: 'payer' }], args: [{ name: 'amount', type: 'u64' }] }],
     },
     tools: [
       {
