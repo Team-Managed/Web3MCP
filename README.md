@@ -21,4 +21,7 @@ Program-ID discovery is the first release. SNS name resolution, MCP adapters, sw
 
 ## Status
 
-This repository is initialized with project guidance and design documents. The protocol schema, on-chain reference program, host, and website are planned but not implemented yet. The older October 9 spec and plan under `docs/superpowers/` remain as research history and are marked as superseded.
+- **Phase 1: Freeze Protocol v0.1 (Completed)**: Normative binary account layout, JSON schema, versioning, and 25 automated conformance test vectors published and frozen in `protocol/SPEC.md`.
+- **Phase 2: Publish from Reference Program (Completed)**: Anchor reference vault deployed to Solana Devnet (`GgVnzvsMhHHKeeGnqQhU9KAjBeCVhYiYmR17174Lyrgv`) with live Config PDA (`HfA1ExZS1cgYR5k5GEJmsQfyAcDK2J9NPi7p97dU3WLD`).
+- **Phase 3: Generic Host Core (In Progress)**: Developing the generic headless host runtime (`@web3mcp/host`) for pure RPC discovery, protocol-strict tool export, account reads, and dynamic instruction simulation.
+
