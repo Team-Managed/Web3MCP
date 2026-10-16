@@ -4,13 +4,13 @@
 
 **Blocked by:** None (can start immediately)
 
-**Status:** ready-for-agent
+**Status:** completed
 
-- [ ] Package `@web3mcp/host` is scaffolded as an independent npm workspace package under `apps/host/` with `@web3mcp/protocol` dependency.
-- [ ] `Web3McpHost` class accepts a live `@solana/web3.js` `Connection` and configuration options.
-- [ ] Calling `discover(programId)` fetches program account info on live RPC and throws typed `DiscoveryError` if the account does not exist or `executable !== true`.
-- [ ] Canonical Config PDA address is derived deterministically from `["web3mcp", "config"]` seeds under the target program ID.
-- [ ] Config account is retrieved via live RPC `getAccountInfo` and validated with `@web3mcp/protocol` (`parseConfigAccount` + `validateConfig`).
-- [ ] Dynamic Anchor Borsh instruction coder and accounts coder are instantiated from the deserialized `config.idl` without static file imports.
-- [ ] Discovery of the live Devnet Reference Vault (`GgVnzvsMhHHKeeGnqQhU9KAjBeCVhYiYmR17174Lyrgv`) succeeds and logs zero protocol or digest errors.
-- [ ] Fail-closed behavior is verified on live RPC when querying non-existent program IDs or uninitialized config accounts.
+- [x] Package `@web3mcp/host` is scaffolded as an independent npm workspace package under `apps/host/` with `@web3mcp/protocol` dependency.
+- [x] `Web3McpHost` class accepts a live `@solana/web3.js` `Connection` and configuration options.
+- [x] Calling `discover(programId)` fetches program account info on live RPC and throws typed `DiscoveryError` if the account does not exist or `executable !== true`.
+- [x] Canonical Config PDA address is derived deterministically from `["web3mcp", "config"]` seeds under the target program ID.
+- [x] Config account is retrieved via live RPC `getAccountInfo` and validated with `@web3mcp/protocol` (`parseConfigAccount` + `validateConfig`).
+- [x] Dynamic Anchor Borsh instruction coder and accounts coder are instantiated from the deserialized `config.idl` without static file imports.
+- [x] Discovery of the live Devnet Reference Vault (`GgVnzvsMhHHKeeGnqQhU9KAjBeCVhYiYmR17174Lyrgv`) succeeds and logs zero protocol or digest errors.
+- [x] Fail-closed behavior is verified on live RPC when querying non-existent program IDs or uninitialized config accounts.

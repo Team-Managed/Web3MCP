@@ -1,0 +1,19 @@
+{
+  "name": "@web3mcp/host",
+  "version": "0.1.0",
+  "description": "Generic Web3MCP agent host runtime for discovering and executing Solana program tools directly from on-chain accounts",
+  "type": "module",
+  "main": "./src/index.js",
+  "exports": {
+    ".": "./src/index.js",
+    "./errors": "./src/errors.js"
+  },
+  "scripts": {
+    "test": "node --test tests/*.test.js"
+  },
+  "dependencies": {
+    "@coral-xyz/anchor": "^0.32.1",
+    "@solana/web3.js": "^1.99.0",
+    "@web3mcp/protocol": "^0.1.0"
+  }
+}

@@ -5,11 +5,13 @@
   "private": true,
   "type": "module",
   "workspaces": [
-    "protocol"
+    "protocol",
+    "apps/host"
   ],
   "scripts": {
-    "test": "npm --prefix protocol test && node --test --test-concurrency=1 tests/*.test.js",
+    "test": "npm --prefix protocol test && npm --prefix apps/host test && node --test --test-concurrency=1 tests/*.test.js",
     "test:protocol": "npm --prefix protocol test",
+    "test:host": "npm --prefix apps/host test",
     "test:vault": "node --test --test-concurrency=1 tests/*.test.js",
     "generate:config": "node programs/reference-vault/scripts/generate-config.js",
     "publish:vault": "node programs/reference-vault/scripts/publish.js"
