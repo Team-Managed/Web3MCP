@@ -14,7 +14,8 @@
     "test:host": "npm --prefix apps/host test",
     "test:vault": "node --test --test-concurrency=1 tests/*.test.js",
     "generate:config": "node programs/reference-vault/scripts/generate-config.js",
-    "publish:vault": "node programs/reference-vault/scripts/publish.js"
+    "publish:vault": "node programs/reference-vault/scripts/publish.js",
+    "host:inspect": "node apps/host/bin/inspect.js"
   },
   "repository": {
     "type": "git",

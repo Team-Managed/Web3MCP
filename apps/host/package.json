@@ -8,6 +8,9 @@
     ".": "./src/index.js",
     "./errors": "./src/errors.js"
   },
+  "bin": {
+    "web3mcp-host": "./bin/inspect.js"
+  },
   "scripts": {
     "test": "node --test tests/*.test.js"
   },
