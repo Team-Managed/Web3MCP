@@ -68,3 +68,24 @@ export class SimulationError extends Web3McpHostError {
     this.name = 'SimulationError';
   }
 }
+
+/**
+ * Thrown when a requested tool is not found in the registry.
+ */
+export class ToolNotFoundError extends Web3McpHostError {
+  constructor(message, cause) {
+    super(message, cause);
+    this.name = 'ToolNotFoundError';
+  }
+}
+
+/**
+ * Thrown when arguments fail validation against the tool's inputSchema.
+ */
+export class ValidationError extends Web3McpHostError {
+  constructor(message, cause) {
+    super(message, cause);
+    this.name = 'ValidationError';
+  }
+}
+

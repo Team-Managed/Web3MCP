@@ -6,6 +6,7 @@ import { parseConfigAccount } from '@web3mcp/protocol/account';
 import {
   DiscoveryError,
   ConfigValidationError,
+  ToolNotFoundError,
   Web3McpHostError,
 } from './errors.js';
 
@@ -128,6 +129,66 @@ export class Web3McpHost {
 
     this.programs.set(programId, context);
     return context;
+  }
+
+  /**
+   * Retrieves registered tool descriptors across all discovered programs or for a specific programId.
+   *
+   * @param {string} [programId] Optional programId to filter tools
+   * @returns {any[]} Array of protocol-compliant tool descriptors
+   */
+  getTools(programId) {
+    if (programId) {
+      const context = this.programs.get(programId);
+      if (!context) {
+        throw new DiscoveryError(`Program '${programId}' has not been discovered.`);
+      }
+      return context.tools;
+    }
+
+    const allTools = [];
+    for (const context of this.programs.values()) {
+      allTools.push(...context.tools);
+    }
+    return allTools;
+  }
+
+  /**
+   * Retrieves a specific tool descriptor by name.
+   *
+   * @param {string} name Tool name
+   * @param {string} [programId] Optional programId to scope the search
+   * @returns {any} Tool descriptor
+   */
+  getTool(name, programId) {
+    const tools = this.getTools(programId);
+    const tool = tools.find((t) => t.name === name);
+    if (!tool) {
+      throw new ToolNotFoundError(
+        programId
+          ? `Tool '${name}' not found for program '${programId}'.`
+          : `Tool '${name}' not found in registered tools.`
+      );
+    }
+    return tool;
+  }
+
+  /**
+   * Converts registered tool descriptors into the standard OpenAI tool/function calling format.
+   *
+   * @param {string} [programId] Optional programId filter
+   * @returns {Array<{ type: 'function', function: { name: string, description: string, parameters: any } }>}
+   */
+  toOpenAiTools(programId) {
+    const tools = this.getTools(programId);
+    return tools.map((tool) => ({
+      type: 'function',
+      function: {
+        name: tool.name,
+        description: tool.description,
+        parameters: tool.inputSchema,
+      },
+    }));
   }
 }
 

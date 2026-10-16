@@ -4,12 +4,12 @@
 
 **Blocked by:** 01: Host Package Scaffolding & Live RPC Program Discovery
 
-**Status:** ready-for-agent
+**Status:** completed
 
-- [ ] `host.getTools(programId?)` returns an array of tool descriptors registered from on-chain discovery.
-- [ ] Each returned tool descriptor includes `name`, `title`, `description`, `inputSchema`, `annotations`, and `solana` execution binding.
-- [ ] Every returned tool descriptor validates 100% against `@web3mcp/protocol` JSON Schema (`config.schema.json`).
-- [ ] Tool parameters in `inputSchema` strictly enforce scalar types (`u64`, `boolean`, `publicKey`) with `additionalProperties: false`.
-- [ ] Multi-program registration is supported: tools from distinct program IDs can be retrieved together or filtered by `programId`.
-- [ ] An export helper (e.g. `host.toOpenAiTools()`) converts protocol tool descriptors into the standard OpenAI function/tool calling format with JSON schema parameters.
-- [ ] Verified against the live Devnet Reference Vault (`GgVnzvsMhHHKeeGnqQhU9KAjBeCVhYiYmR17174Lyrgv`), confirming `get_vault`, `initialize`, `deposit`, and `withdraw` are registered with complete schemas.
+- [x] `host.getTools(programId?)` returns an array of tool descriptors registered from on-chain discovery.
+- [x] Each returned tool descriptor includes `name`, `title`, `description`, `inputSchema`, `annotations`, and `solana` execution binding.
+- [x] Every returned tool descriptor validates 100% against `@web3mcp/protocol` JSON Schema (`config.schema.json`).
+- [x] Tool parameters in `inputSchema` strictly enforce scalar types (`u64`, `boolean`, `publicKey`) with `additionalProperties: false`.
+- [x] Multi-program registration is supported: tools from distinct program IDs can be retrieved together or filtered by `programId`.
+- [x] An export helper (e.g. `host.toOpenAiTools()`) converts protocol tool descriptors into the standard OpenAI function/tool calling format with JSON schema parameters.
+- [x] Verified against the live Devnet Reference Vault (`GgVnzvsMhHHKeeGnqQhU9KAjBeCVhYiYmR17174Lyrgv`), confirming `get_vault`, `initialize`, `deposit`, and `withdraw` are registered with complete schemas.
