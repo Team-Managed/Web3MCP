@@ -4,16 +4,16 @@
 
 **Blocked by:** 01: Host Package Scaffolding & Live RPC Program Discovery
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] `host.prepareInstruction(toolName, args, { signer })` strictly validates arguments against the tool's scalar `inputSchema` (`u64`, `boolean`, `publicKey`).
-- [ ] Accounts declared with `source: "signer"` resolve to the caller-supplied `signer` public key with `isSigner: true`.
-- [ ] Accounts declared with `source: "input"` resolve to the public key specified in the corresponding validated argument.
-- [ ] Accounts declared with `source: "program"` resolve to the fixed declared program public key.
-- [ ] Accounts declared with `source: "idl"` dynamically derive PDAs according to IDL seeds: `const` byte vectors, `account` references to other resolved accounts (e.g. `owner`), and `arg` references (ADR 0008).
-- [ ] Account writable flags (`isMut` / `isWritable`) match the IDL instruction account declarations.
-- [ ] Instruction data is encoded into Anchor binary layout (8-byte instruction discriminator + Borsh serialized args) using the dynamic runtime coder (ADR 0009).
-- [ ] The constructed `TransactionInstruction` is packaged into a transaction and simulated via live RPC (`connection.simulateTransaction`) per ADR 0009.
-- [ ] The method returns an object containing: `instruction` (the raw `@solana/web3.js` instruction), `simulation` (status, compute units consumed, logs, error details), and `effects` (declared publisher effects, accounts touched).
-- [ ] Verified end-to-end against the live Devnet Reference Vault (`GgVnzvsMhHHKeeGnqQhU9KAjBeCVhYiYmR17174Lyrgv`), successfully preparing and simulating a `deposit` instruction with live validator logs.
-- [ ] Fail-closed behavior is verified on invalid argument types or unresolvable PDA seeds.
+- [x] `host.prepareInstruction(toolName, args, { signer })` strictly validates arguments against the tool's scalar `inputSchema` (`u64`, `boolean`, `publicKey`).
+- [x] Accounts declared with `source: "signer"` resolve to the caller-supplied `signer` public key with `isSigner: true`.
+- [x] Accounts declared with `source: "input"` resolve to the public key specified in the corresponding validated argument.
+- [x] Accounts declared with `source: "program"` resolve to the fixed declared program public key.
+- [x] Accounts declared with `source: "idl"` dynamically derive PDAs according to IDL seeds: `const` byte vectors, `account` references to other resolved accounts (e.g. `owner`), and `arg` references (ADR 0008).
+- [x] Account writable flags (`isMut` / `isWritable`) match the IDL instruction account declarations.
+- [x] Instruction data is encoded into Anchor binary layout (8-byte instruction discriminator + Borsh serialized args) using the dynamic runtime coder (ADR 0009).
+- [x] The constructed `TransactionInstruction` is packaged into a transaction and simulated via live RPC (`connection.simulateTransaction`) per ADR 0009.
+- [x] The method returns an object containing: `instruction` (the raw `@solana/web3.js` instruction), `simulation` (status, compute units consumed, logs, error details), and `effects` (declared publisher effects, accounts touched).
+- [x] Verified end-to-end against the live Devnet Reference Vault (`GgVnzvsMhHHKeeGnqQhU9KAjBeCVhYiYmR17174Lyrgv`), successfully preparing and simulating a `deposit` instruction with live validator logs.
+- [x] Fail-closed behavior is verified on invalid argument types or unresolvable PDA seeds.

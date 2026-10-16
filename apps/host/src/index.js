@@ -1,6 +1,6 @@
 import crypto from 'node:crypto';
 import Ajv from 'ajv';
-import { PublicKey } from '@solana/web3.js';
+import { PublicKey, Transaction, TransactionInstruction } from '@solana/web3.js';
 import * as anchor from '@coral-xyz/anchor';
 import { deriveConfigPda } from '@web3mcp/protocol/pda';
 import { validateConfig } from '@web3mcp/protocol/validator';
@@ -14,6 +14,34 @@ import {
   AccountDiscriminatorMismatchError,
   Web3McpHostError,
 } from './errors.js';
+
+const BN = anchor.BN || anchor.default?.BN;
+
+function normalizeAccountName(name) {
+  return String(name).replace(/_/g, '').toLowerCase();
+}
+
+function formatArgForCoder(val, typeDef) {
+  if (val === undefined || val === null) return val;
+  if (typeof typeDef === 'string') {
+    if (['u64', 'u128', 'i64', 'i128'].includes(typeDef)) {
+      return new BN(String(val));
+    }
+    if (['u8', 'u16', 'u32', 'i8', 'i16', 'i32'].includes(typeDef)) {
+      return Number(val);
+    }
+    if (typeDef === 'pubkey') {
+      return new PublicKey(val);
+    }
+    if (typeDef === 'bool') {
+      return Boolean(val);
+    }
+    if (typeDef === 'bytes') {
+      return Buffer.from(val);
+    }
+  }
+  return val;
+}
 
 function formatDecodedValue(val) {
   if (val === null || val === undefined) return val;
@@ -136,9 +164,12 @@ export class Web3McpHost {
     let coders = null;
     if (config.idl) {
       try {
+        const ixCoder = new BorshInstructionCoder(config.idl);
+        const accCoder = new BorshAccountsCoder(config.idl);
         coders = {
-          instruction: new BorshInstructionCoder(config.idl),
-          accounts: new BorshAccountsCoder(config.idl),
+          instruction: ixCoder,
+          instructions: ixCoder,
+          accounts: accCoder,
         };
       } catch (err) {
         throw new ConfigValidationError(`Failed to initialize runtime Borsh coders from IDL: ${err.message}`, err);
@@ -149,6 +180,7 @@ export class Web3McpHost {
       programId,
       configPda: configPdaAddress,
       config,
+      idl: config.idl,
       coders,
       tools: Array.isArray(config.tools) ? config.tools : [],
     };
@@ -367,6 +399,303 @@ export class Web3McpHost {
       address: finalPubkey.toBase58(),
       account: accountTypeName,
       data: decoded,
+    };
+  }
+
+  /**
+   * Prepares a state-changing instruction tool for wallet handoff.
+   * Validates arguments, deterministically resolves accounts (signer, input, program, IDL PDA seeds),
+   * encodes instruction data using dynamic Borsh coders, and simulates transaction execution on Solana RPC.
+   *
+   * @param {string} toolName Name of the instruction tool
+   * @param {Record<string, any>} [args={}] Tool arguments
+   * @param {object} [options]
+   * @param {string|PublicKey|object} [options.signer] Caller's signer public key or wallet
+   * @param {string|PublicKey|object} [options.wallet] Alias for options.signer
+   * @param {string} [options.programId] Optional programId scoping the tool
+   * @param {boolean} [options.simulate=true] Whether to run transaction simulation via RPC
+   * @param {import('@solana/web3.js').Commitment} [options.commitment] Optional override commitment level
+   * @returns {Promise<{ tool: string, programId: string, instruction: TransactionInstruction, simulation: any, effects: any, accounts: Array<{ name: string, pubkey: string, isSigner: boolean, isWritable: boolean }> }>}
+   */
+  async prepareInstruction(toolName, args = {}, options = {}) {
+    let targetContext = null;
+    let targetTool = null;
+
+    if (options.programId) {
+      targetContext = this.programs.get(options.programId);
+      if (!targetContext) {
+        throw new DiscoveryError(`Program '${options.programId}' has not been discovered.`);
+      }
+      targetTool = targetContext.tools.find((t) => t.name === toolName);
+    } else {
+      for (const ctx of this.programs.values()) {
+        const found = ctx.tools.find((t) => t.name === toolName);
+        if (found) {
+          targetContext = ctx;
+          targetTool = found;
+          break;
+        }
+      }
+    }
+
+    if (!targetTool) {
+      throw new ToolNotFoundError(
+        options.programId
+          ? `Tool '${toolName}' not found for program '${options.programId}'.`
+          : `Tool '${toolName}' not found in registered tools.`
+      );
+    }
+
+    if (targetTool.solana?.kind !== 'instruction') {
+      throw new ValidationError(`Tool '${toolName}' is not an instruction tool.`);
+    }
+
+    // 1. Validate arguments against tool's inputSchema
+    const ajv = new Ajv({ allErrors: true });
+    const validate = ajv.compile(targetTool.inputSchema || { type: 'object' });
+    const valid = validate(args);
+    if (!valid) {
+      const errorMsgs = (validate.errors || []).map((e) => `${e.instancePath || '<root>'}: ${e.message}`);
+      throw new ValidationError(`Invalid arguments for tool '${toolName}': ${errorMsgs.join('; ')}`);
+    }
+
+    // 2. Resolve target instruction from embedded IDL
+    const instructionName = targetTool.solana.instruction;
+    const idlInstructions = targetContext.idl?.instructions || [];
+    const idlInstruction = idlInstructions.find((ix) => ix.name === instructionName);
+    if (!idlInstruction) {
+      throw new ValidationError(`Instruction '${instructionName}' is not defined in program IDL.`);
+    }
+
+    // 3. Resolve signer public key
+    let signerPubkey = null;
+    const rawSigner = options.signer || options.wallet;
+    if (rawSigner) {
+      if (rawSigner.publicKey && rawSigner.publicKey instanceof PublicKey) {
+        signerPubkey = rawSigner.publicKey;
+      } else if (rawSigner instanceof PublicKey) {
+        signerPubkey = rawSigner;
+      } else if (typeof rawSigner === 'string') {
+        try {
+          signerPubkey = new PublicKey(rawSigner);
+        } catch (err) {
+          throw new ValidationError(`Invalid signer public key '${rawSigner}': ${err.message}`);
+        }
+      }
+    }
+
+    // 4. Resolve Accounts according to ADR 0008 & ADR 0009
+    const toolAccounts = targetTool.solana.accounts || {};
+    const resolvedAccounts = new Map();
+
+    const findBinding = (accountName) => {
+      if (toolAccounts[accountName]) return toolAccounts[accountName];
+      const norm = normalizeAccountName(accountName);
+      for (const [k, v] of Object.entries(toolAccounts)) {
+        if (normalizeAccountName(k) === norm) return v;
+      }
+      return null;
+    };
+
+    const idlAccountsList = idlInstruction.accounts || [];
+
+    // Pass 1: Resolve non-PDA accounts (signer, input, program, explicit address)
+    for (const acc of idlAccountsList) {
+      const binding = findBinding(acc.name);
+      if (binding) {
+        if (binding.source === 'signer') {
+          if (!signerPubkey) {
+            throw new ValidationError(`Signer is required for instruction account '${acc.name}'.`);
+          }
+          resolvedAccounts.set(acc.name, signerPubkey);
+        } else if (binding.source === 'input') {
+          const rawVal = args[binding.input];
+          if (!rawVal) {
+            throw new ValidationError(`Missing required input argument '${binding.input}' for account '${acc.name}'.`);
+          }
+          try {
+            resolvedAccounts.set(acc.name, new PublicKey(rawVal));
+          } catch (err) {
+            throw new ValidationError(`Invalid public key for input argument '${binding.input}': ${err.message}`);
+          }
+        } else if (binding.source === 'program') {
+          const addr = binding.address || acc.address || targetContext.programId;
+          resolvedAccounts.set(acc.name, new PublicKey(addr));
+        }
+      } else {
+        if (acc.address) {
+          resolvedAccounts.set(acc.name, new PublicKey(acc.address));
+        } else if (Boolean(acc.signer ?? acc.isSigner) && signerPubkey) {
+          resolvedAccounts.set(acc.name, signerPubkey);
+        }
+      }
+    }
+
+    // Pass 2: Resolve PDA accounts (source: "idl" or acc.pda defined)
+    for (const acc of idlAccountsList) {
+      const binding = findBinding(acc.name);
+      const isIdlSource = binding && binding.source === 'idl';
+      if (isIdlSource || (acc.pda && !resolvedAccounts.has(acc.name))) {
+        if (!acc.pda || !Array.isArray(acc.pda.seeds)) {
+          throw new ValidationError(`Account '${acc.name}' declared with source 'idl' has no PDA seeds defined in IDL.`);
+        }
+
+        const seedBuffers = [];
+        for (let i = 0; i < acc.pda.seeds.length; i++) {
+          const seed = acc.pda.seeds[i];
+          if (seed.kind === 'const') {
+            if (Array.isArray(seed.value)) {
+              seedBuffers.push(Buffer.from(seed.value));
+            } else if (typeof seed.value === 'string') {
+              seedBuffers.push(Buffer.from(seed.value, 'utf8'));
+            } else {
+              throw new ValidationError(`Unsupported const seed value type at seed index ${i} for account '${acc.name}'.`);
+            }
+          } else if (seed.kind === 'account') {
+            const pathName = seed.path;
+            let refPubkey = resolvedAccounts.get(pathName);
+            if (!refPubkey) {
+              const norm = normalizeAccountName(pathName);
+              for (const [k, v] of resolvedAccounts.entries()) {
+                if (normalizeAccountName(k) === norm) {
+                  refPubkey = v;
+                  break;
+                }
+              }
+            }
+            if (!refPubkey) {
+              throw new ValidationError(
+                `Cannot derive PDA for '${acc.name}': referenced account seed '${pathName}' has not been resolved.`
+              );
+            }
+            seedBuffers.push(refPubkey.toBuffer());
+          } else if (seed.kind === 'arg') {
+            const pathName = seed.path;
+            const argVal = args[pathName];
+            if (argVal === undefined || argVal === null) {
+              throw new ValidationError(
+                `Cannot derive PDA for '${acc.name}': referenced argument seed '${pathName}' is missing.`
+              );
+            }
+            const argDef = (idlInstruction.args || []).find((a) => a.name === pathName);
+            const argType = argDef?.type || 'string';
+            if (argType === 'u64' || argType === 'u128') {
+              const b = Buffer.alloc(8);
+              b.writeBigUInt64LE(BigInt(argVal));
+              seedBuffers.push(b);
+            } else if (argType === 'u32') {
+              const b = Buffer.alloc(4);
+              b.writeUInt32LE(Number(argVal));
+              seedBuffers.push(b);
+            } else if (argType === 'pubkey') {
+              seedBuffers.push(new PublicKey(argVal).toBuffer());
+            } else {
+              seedBuffers.push(Buffer.from(String(argVal), 'utf8'));
+            }
+          } else {
+            throw new ValidationError(`Unsupported seed kind '${seed.kind}' for account '${acc.name}'.`);
+          }
+        }
+
+        const derivingProgram = acc.pda.program
+          ? new PublicKey(acc.pda.program.address || targetContext.programId)
+          : new PublicKey(targetContext.programId);
+
+        const [derivedPda] = PublicKey.findProgramAddressSync(seedBuffers, derivingProgram);
+        resolvedAccounts.set(acc.name, derivedPda);
+      }
+    }
+
+    // Build the ordered TransactionInstruction keys
+    const keys = [];
+    const accountsSummary = [];
+
+    for (const acc of idlAccountsList) {
+      let pubkey = resolvedAccounts.get(acc.name);
+      if (!pubkey) {
+        const norm = normalizeAccountName(acc.name);
+        for (const [k, v] of resolvedAccounts.entries()) {
+          if (normalizeAccountName(k) === norm) {
+            pubkey = v;
+            break;
+          }
+        }
+      }
+
+      if (!pubkey) {
+        throw new ValidationError(`Account '${acc.name}' could not be resolved for instruction '${instructionName}'.`);
+      }
+
+      const binding = findBinding(acc.name);
+      const isSigner = Boolean(
+        acc.signer ??
+        acc.isSigner ??
+        (binding && binding.source === 'signer')
+      );
+      const isWritable = Boolean(acc.writable ?? acc.isMut);
+
+      keys.push({
+        pubkey,
+        isSigner,
+        isWritable,
+      });
+
+      accountsSummary.push({
+        name: acc.name,
+        pubkey: pubkey.toBase58(),
+        isSigner,
+        isWritable,
+      });
+    }
+
+    // 5. Format arguments for Borsh instruction coder
+    const formattedArgs = {};
+    for (const argDef of idlInstruction.args || []) {
+      const val = args[argDef.name];
+      if (val !== undefined && val !== null) {
+        formattedArgs[argDef.name] = formatArgForCoder(val, argDef.type);
+      }
+    }
+
+    // 6. Encode instruction data via dynamic runtime coder
+    let data;
+    try {
+      data = targetContext.coders.instructions.encode(instructionName, formattedArgs);
+    } catch (err) {
+      throw new ValidationError(`Failed to encode instruction data for '${instructionName}': ${err.message}`, err);
+    }
+
+    // 7. Construct TransactionInstruction
+    const instruction = new TransactionInstruction({
+      programId: new PublicKey(targetContext.programId),
+      keys,
+      data,
+    });
+
+    // 8. Live RPC Simulation
+    let simulation = null;
+    if (options.simulate !== false) {
+      const tx = new Transaction().add(instruction);
+      tx.feePayer = signerPubkey || keys.find((k) => k.isSigner)?.pubkey || keys[0]?.pubkey;
+      const latestBlockhash = await this.connection.getLatestBlockhash(options.commitment || this.commitment);
+      tx.recentBlockhash = latestBlockhash.blockhash;
+
+      const simResult = await this.connection.simulateTransaction(tx);
+      simulation = {
+        err: simResult.value.err,
+        logs: simResult.value.logs,
+        unitsConsumed: simResult.value.unitsConsumed,
+        returnData: simResult.value.returnData,
+      };
+    }
+
+    return {
+      tool: targetTool.name,
+      programId: targetContext.programId,
+      instruction,
+      simulation,
+      effects: targetTool.solana.effects || null,
+      accounts: accountsSummary,
     };
   }
 }
