@@ -12,9 +12,11 @@ Build a small Anchor SOL vault with `get_vault`, `initialize`, `deposit`, and `w
 
 **Status: Complete on Devnet.** Reference vault deployed to `GgVnzvsMhHHKeeGnqQhU9KAjBeCVhYiYmR17174Lyrgv` with Config PDA at `HfA1ExZS1cgYR5k5GEJmsQfyAcDK2J9NPi7p97dU3WLD`. Automated publisher streamed 9 chunks with native on-chain SHA-256 verification (`sol_sha256`). RPC account read verified 100% protocol conformance with zero host imports of the generated IDL or program source (ADR 0007).
 
-## 3. Build the generic host core
+## 3. Build the generic host core (Completed)
 
 Given a program ID, verify the executable program and config PDA, parse the config, and dynamically register its tools for the LLM. Implement account reads, instruction encoding, supported account resolution, and strict input validation. Prove the host works from the published config alone.
+
+**Status: Complete on Devnet.** `@web3mcp/host` package implemented under `apps/host/`. Discovers program and Config PDA via pure RPC without local program source or IDLs (ADR 0007). Implements `executeRead` with Anchor discriminator verification and dynamic Borsh decoding (ADR 0010), and `prepareInstruction` with 4-tier declarative account resolution (signer, input, program, IDL PDA seeds per ADR 0008) and transaction simulation via `simulateTransaction` (ADR 0009). Exposes `web3mcp-host` CLI (`npm run host:inspect`) and exports OpenAI function calling schemas. Verified across 29 automated tests against the live Reference Vault on Devnet (`GgVnzvsMhHHKeeGnqQhU9KAjBeCVhYiYmR17174Lyrgv`).
 
 ## 4. Add the LLM and wallet flow
 
