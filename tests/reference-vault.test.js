@@ -24,6 +24,7 @@ describe("reference-vault: SOL vault operations on devnet", () => {
   const idl = JSON.parse(fs.readFileSync(idlPath, "utf8"));
   const program = new anchor.Program(idl, provider);
   const user = wallet;
+  const BN = anchor.BN || anchor.default?.BN;
 
   let vaultPda;
   let vaultBump;
@@ -54,7 +55,7 @@ describe("reference-vault: SOL vault operations on devnet", () => {
   });
 
   it("deposits SOL into the vault", async () => {
-    const depositAmount = new anchor.BN(10_000_000); // 0.01 SOL
+    const depositAmount = new BN(10_000_000); // 0.01 SOL
     const initialVaultLamports = await provider.connection.getBalance(vaultPda, "confirmed");
     const initialAccount = await program.account.vault.fetch(vaultPda);
 
@@ -78,7 +79,7 @@ describe("reference-vault: SOL vault operations on devnet", () => {
   });
 
   it("withdraws SOL from the vault", async () => {
-    const withdrawAmount = new anchor.BN(5_000_000); // 0.005 SOL
+    const withdrawAmount = new BN(5_000_000); // 0.005 SOL
     const initialVaultLamports = await provider.connection.getBalance(vaultPda, "confirmed");
     const initialAccount = await program.account.vault.fetch(vaultPda);
 
@@ -102,7 +103,7 @@ describe("reference-vault: SOL vault operations on devnet", () => {
   });
 
   it("fails to withdraw beyond available balance or violating rent exemption", async () => {
-    const excessiveAmount = new anchor.BN(100 * LAMPORTS_PER_SOL);
+    const excessiveAmount = new BN(100 * LAMPORTS_PER_SOL);
 
     await assert.rejects(
       async () => {
