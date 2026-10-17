@@ -21,4 +21,4 @@ Program-ID discovery is the first release. SNS name resolution, MCP adapters, sw
 
 ## Status
 
-The protocol validator and reference vault are implemented and under merge review. The generic host and documentation site are still planned. The v0.1 Anchor IDL profile and local-validator integration evidence remain open before the protocol can be called frozen. The older October 9 spec and plan under `docs/superpowers/` remain as research history and are marked as superseded.
+The protocol validator, reference vault, and generic host core are implemented. The current reference vault has passed local-validator tests; the earlier Devnet deployment predates its latest fixes. The documentation site and second-program interoperability demo remain planned. The older October 9 spec and plan under `docs/superpowers/` are superseded research history.

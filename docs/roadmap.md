@@ -12,13 +12,17 @@ Build a small Anchor SOL vault with `get_vault`, `initialize`, `deposit`, and `w
 
 **Status:** An earlier reference vault is deployed on devnet at `GgVnzvsMhHHKeeGnqQhU9KAjBeCVhYiYmR17174Lyrgv` with Config PDA `HfA1ExZS1cgYR5k5GEJmsQfyAcDK2J9NPi7p97dU3WLD`. A read-only RPC check on 2026-10-14 found an executable program and a published, program-owned config with four tools. That deployed version predates the authorization and read-binding corrections in this review. The updated program built and passed 18 local-validator integration tests on 2026-10-17, including config publication, RPC conformance, and vault operations. It has not been deployed to devnet.
 
-## 3. Build the generic host core
+## 3. Build the generic host core (Completed)
 
 Given a program ID, verify the executable program and config PDA, parse the config, and dynamically register its tools for the LLM. Implement account reads, instruction encoding, supported account resolution, and strict input validation. Prove the host works from the published config alone.
 
-## 4. Add the LLM and wallet flow
+**Status:** `@web3mcp/host` is implemented under `apps/host/`, with RPC discovery, validated tool export, account reads, instruction preparation, and simulation. The earlier Devnet reference config does not satisfy the current v0.1 validator, so its older host tests are an optional rehearsal until the corrected program and config are deployed. Current protocol interoperability is checked against a local validator.
+
+## 4. Add the LLM and wallet flow (In review)
 
 Choose one tool-calling model for the demo. Add a generic chat interface that exposes only validated on-chain tools to the model. For writes, construct and simulate the transaction, show the exact program, accounts, amount, fee, and uncertainty, then request explicit wallet approval of that exact message. Confirm the signature and report the chain result. Keep model credentials out of the browser bundle and repository.
+
+**Status:** Model adapters, a terminal agent, and wallet approval are implemented. A provider-backed rehearsal against the current protocol remains pending.
 
 ## 5. Publish the explanation and demonstrate interoperability
 

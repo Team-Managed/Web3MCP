@@ -36,6 +36,10 @@ _Avoid_: Write call, Transaction tool, Action
 The mandatory boundary where the host presents simulated transaction effects, signers, writable accounts, and fees to the user wallet for approval. The LLM never signs.
 _Avoid_: Auto-sign, Agent signing, Delegation
 
+**Account Resolution**:
+The deterministic mechanism by which the Web3MCP Host resolves account public keys required for instruction execution or queries using declared sources (`signer`, `input`, `program`, `idl`).
+_Avoid_: Address mapping, Parameter binding
+
 **Reference Vault**:
 The sample Anchor program in `programs/reference-vault` used to demonstrate publishing tools; never imported by the host.
 _Avoid_: Sample backend, Target program

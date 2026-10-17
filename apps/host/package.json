@@ -1,0 +1,56 @@
+{
+  "name": "@web3mcp/host",
+  "version": "0.1.0",
+  "description": "Generic Web3MCP agent host runtime for discovering and executing Solana program tools directly from on-chain accounts",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./errors": {
+      "types": "./dist/errors.d.ts",
+      "import": "./dist/errors.js"
+    },
+    "./llm": {
+      "types": "./dist/llm/index.d.ts",
+      "import": "./dist/llm/index.js"
+    },
+    "./wallet": {
+      "types": "./dist/wallet/index.d.ts",
+      "import": "./dist/wallet/index.js"
+    },
+    "./agent": {
+      "types": "./dist/agent/index.d.ts",
+      "import": "./dist/agent/index.js"
+    },
+    "./ui": {
+      "types": "./dist/ui/index.d.ts",
+      "import": "./dist/ui/index.js"
+    }
+  },
+  "bin": {
+    "web3mcp-host": "./bin/inspect.js",
+    "web3mcp-agent": "./bin/agent.js"
+  },
+  "scripts": {
+    "build": "tsup",
+    "test": "node --import tsx --test tests/agent-knowledge.test.js tests/llm.test.js tests/wallet.test.js tests/local-boundaries.test.js",
+    "test:devnet": "node --import tsx --test tests/*.test.js"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.135.0",
+    "@coral-xyz/anchor": "^0.32.1",
+    "@solana/web3.js": "^1.99.0",
+    "@web3mcp/protocol": "^0.1.0",
+    "openai": "^7.35.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.19.43",
+    "tsup": "^8.5.1",
+    "tsx": "^4.23.15",
+    "typescript": "^5.9.3"
+  }
+}
