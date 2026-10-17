@@ -75,6 +75,9 @@ const badCases = [
   ['nested IDL instruction accounts', (c) => { c.idl.instructions[0].accounts[0].accounts = []; }],
   ['object-valued nested IDL instruction accounts', (c) => { c.idl.instructions[0].accounts[0].accounts = {}; }],
   ['empty IDL fixed address', (c) => { c.idl.instructions[0].accounts[0].address = ''; }],
+  ['numeric optional account flag', (c) => { c.idl.instructions[0].accounts[0].optional = 0; }],
+  ['null optional account flag', (c) => { c.idl.instructions[0].accounts[0].optional = null; }],
+  ['optional account', (c) => { c.idl.instructions[0].accounts[0].optional = true; }],
 ];
 
 for (const [label, mutate] of badCases) {
@@ -104,4 +107,17 @@ test('rejects malformed UTF-8 in a raw JSON buffer', () => {
   const result = validateConfig(raw);
   assert.equal(result.valid, false);
   assert.match(result.errors.join(' '), /UTF-8/i);
+});
+
+test('rejects duplicate decoded JSON member names at every depth', () => {
+  const raw = JSON.stringify(config());
+  const duplicateTopLevel = raw.replace('"programId":', '"programId":"11111111111111111111111111111111","programId":');
+  const duplicateNested = raw.replace('"source":"signer"', '"source":"input","\\u0073ource":"signer"');
+  for (const duplicate of [duplicateTopLevel, duplicateNested]) {
+    for (const input of [duplicate, Buffer.from(duplicate)]) {
+      const result = validateConfig(input);
+      assert.equal(result.valid, false);
+      assert.match(result.errors.join(' '), /duplicate/i);
+    }
+  }
 });

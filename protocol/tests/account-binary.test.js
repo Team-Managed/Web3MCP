@@ -132,3 +132,12 @@ test('rejects invalid UTF-8 even when the payload digest matches', () => {
   crypto.createHash('sha256').update(binary.subarray(OFFSET_PAYLOAD)).digest().copy(binary, OFFSET_DIGEST);
   assert.throws(() => parseConfigAccount(binary), /valid UTF-8/i);
 });
+
+test('rejects duplicate JSON member names in a published account', () => {
+  const binary = serializeConfigAccount({
+    authority: TEST_AUTHORITY,
+    status: PublicationStatus.Published,
+    configUtf8: '{"standard":"web3mcp","standard":"web3mcp"}',
+  });
+  assert.throws(() => parseConfigAccount(binary), /duplicate/i);
+});

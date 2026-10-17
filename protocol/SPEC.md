@@ -73,6 +73,7 @@ The Config PDA account data begins with an 81-byte header followed by the UTF-8 
 ## 3. Configuration Envelope & Schema
 
 The UTF-8 config payload must be valid JSON conforming strictly to `https://web3mcp.org/schema/v0.1/config.schema.json`.
+Object member names must be unique after JSON escape decoding at every depth; hosts reject duplicates before exposing tools.
 
 ```json
 {
@@ -168,6 +169,7 @@ A compliant host or validator must reject configurations under the following con
 | Binary | Payload > 64 KiB (`65,536` bytes) | Reject immediately |
 | Binary | SHA-256(payload) ≠ `digest` | Reject immediately (corruption) |
 | Binary | Payload is not valid UTF-8 JSON | Reject immediately |
+| Envelope | Duplicate decoded JSON member name | Reject immediately |
 | Envelope | `standard` ≠ `"web3mcp"` | Reject immediately |
 | Envelope | `version` does not match `^0\.1\.[0-9]+$` | Reject immediately |
 | Envelope | Unknown top-level fields | Reject immediately |

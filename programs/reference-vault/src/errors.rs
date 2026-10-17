@@ -20,4 +20,6 @@ pub enum VaultError {
     DigestMismatch,
     #[msg("Signer is not authorized to modify config")]
     Unauthorized,
+    #[msg("Config account has an invalid binary layout")]
+    InvalidConfigAccount,
 }

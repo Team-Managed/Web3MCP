@@ -1,5 +1,6 @@
 import crypto from 'node:crypto';
 import { PublicKey } from '@solana/web3.js';
+import { parseUniqueJson } from './unique-json.js';
 
 /**
  * Anchor account discriminator for `Web3McpConfig`:
@@ -149,7 +150,7 @@ export function parseConfigAccount(data) {
   }
   let config;
   try {
-    config = JSON.parse(configJson);
+    config = parseUniqueJson(configJson);
   } catch (err) {
     throw new ConfigAccountError(`Failed to parse config as valid JSON: ${err.message}`);
   }

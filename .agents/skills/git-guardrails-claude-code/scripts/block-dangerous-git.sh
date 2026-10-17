@@ -8,8 +8,7 @@ GIT_PREFIX="(^|[[:space:];|&])git([[:space:]]+((-C|-c|--git-dir|--work-tree)[[:s
 DANGEROUS_PATTERNS=(
   "${GIT_PREFIX}push([[:space:]]|$)"
   "${GIT_PREFIX}reset --hard"
-  "${GIT_PREFIX}clean -fd"
-  "${GIT_PREFIX}clean -f"
+  "${GIT_PREFIX}clean([[:space:]]+-[-a-zA-Z]+)*[[:space:]]+(-[a-zA-Z]*f[a-zA-Z]*|--force)([[:space:]]|$)"
   "${GIT_PREFIX}branch -D"
   "${GIT_PREFIX}checkout \."
   "${GIT_PREFIX}restore \."

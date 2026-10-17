@@ -7,6 +7,7 @@ import { parseConfigAccount, CONFIG_ACCOUNT_DISCRIMINATOR, MAX_CONFIG_PAYLOAD_BY
 import { deriveConfigPda } from './pda.js';
 import { validateIdlProfile } from './idl-profile.js';
 import { PublicKey } from '@solana/web3.js';
+import { parseUniqueJson } from './unique-json.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -35,7 +36,7 @@ export function validateToolInput(tool, input) {
 
   for (const [name, property] of Object.entries(tool.inputSchema.properties)) {
     if (!Object.hasOwn(input, name)) continue;
-    if (property.pattern === U64_PATTERN && BigInt(input[name]) > MAX_U64) {
+    if (property.pattern === U64_PATTERN && (input[name].length > 20 || BigInt(input[name]) > MAX_U64)) {
       errors.push(`${name}: value exceeds u64 maximum`);
     }
     if (property.pattern === PUBLIC_KEY_PATTERN) {
@@ -122,13 +123,13 @@ export function validateConfig(configInput) {
         if (buf.length > MAX_CONFIG_PAYLOAD_BYTES) {
           return { valid: false, errors: ['Raw JSON config exceeds 64 KiB payload limit'] };
         }
-        config = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(buf));
+        config = parseUniqueJson(new TextDecoder('utf-8', { fatal: true }).decode(buf));
       }
     } else if (typeof configInput === 'string') {
       if (Buffer.byteLength(configInput, 'utf8') > MAX_CONFIG_PAYLOAD_BYTES) {
         return { valid: false, errors: ['Raw JSON config exceeds 64 KiB payload limit'] };
       }
-      config = JSON.parse(configInput);
+      config = parseUniqueJson(configInput);
     } else if (configInput && typeof configInput === 'object') {
       if (Buffer.byteLength(JSON.stringify(configInput), 'utf8') > MAX_CONFIG_PAYLOAD_BYTES) {
         return { valid: false, errors: ['JSON config exceeds 64 KiB payload limit'] };

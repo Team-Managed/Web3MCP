@@ -24,6 +24,12 @@ test('rejects an integer larger than u64 despite matching the decimal pattern', 
   assert.match(result.errors.join(' '), /u64/i);
 });
 
+test('rejects an oversized u64 before converting it to BigInt', () => {
+  const result = validateToolInput(tool, { amount: '1'.repeat(100_000), recipient: '11111111111111111111111111111111' });
+  assert.equal(result.valid, false);
+  assert.match(result.errors.join(' '), /u64/i);
+});
+
 test('rejects a Base58 string that does not decode to a public key', () => {
   const result = validateToolInput(tool, { amount: '1', recipient: 'z'.repeat(44) });
   assert.equal(result.valid, false);

@@ -53,7 +53,7 @@ function validateInstruction(tool, instruction, path, errors) {
     const binding = bindings[account.name];
     if (!binding) continue;
     const accountPath = `${path}/accounts/${account.name}`;
-    if (account.optional || Object.hasOwn(account, 'accounts') || !isRecord(account) || typeof account.writable !== 'boolean' && account.writable !== undefined ||
+    if ((Object.hasOwn(account, 'optional') && account.optional !== false) || Object.hasOwn(account, 'accounts') || !isRecord(account) || typeof account.writable !== 'boolean' && account.writable !== undefined ||
         typeof account.signer !== 'boolean' && account.signer !== undefined) {
       errors.push(`${accountPath}: unsupported or malformed IDL account`);
       continue;

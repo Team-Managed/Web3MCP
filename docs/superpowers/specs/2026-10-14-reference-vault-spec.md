@@ -4,7 +4,7 @@ Status: implementation under review · Date: 2026-10-14
 
 ## Problem Statement
 
-AI agent runtimes (Web3MCP hosts) require target Solana programs to self-publish verifiable tool declarations and IDLs on-chain in program-owned PDAs. The Web3MCP protocol v0.1 format is a candidate under review. The updated reference program still needs local-validator publication and conformance checks before host implementers can rely on it as a complete example.
+AI agent runtimes (Web3MCP hosts) require target Solana programs to self-publish verifiable tool declarations and IDLs on-chain in program-owned PDAs. The Web3MCP protocol v0.1 format is a candidate under review. The reference program demonstrates local-validator publication and conformance checks.
 
 ## Solution
 
@@ -25,13 +25,13 @@ Build `reference-vault`, an Anchor-based SOL vault program that owns a canonical
 11. As a vault user, I want to withdraw SOL from my vault PDA back to my wallet, ensuring the vault retains at least the rent-exempt minimum balance to prevent accidental account closing.
 12. As a host implementer, I want to read the vault account state via an `accountRead` tool descriptor (`get_vault`), so that an agent can inspect user balances before suggesting actions.
 13. As a host implementer, I want to execute vault actions via `instruction` tool descriptors (`deposit`, `withdraw`, `initialize`), so that an agent can construct and simulate wallet-approved transactions.
-14. As a conformance tester, I want an integration test on a local validator / devnet to verify the deployed Config PDA against `@web3mcp/protocol`'s `validateConfigAccount`, ensuring strict protocol compliance.
+14. As a conformance tester, I want an integration test on a local validator / devnet to verify the deployed Config PDA against `@web3mcp/protocol`'s `validateDiscoveredConfig`, ensuring strict protocol compliance.
 15. As a protocol maintainer, I want the reference vault's source code and IDL to be strictly isolated within its program directory, so that the future Web3MCP host cannot accidentally import reference source files or violate decoupling boundaries (ADR 0007).
 
 ## Implementation Decisions
 
 - **Program Architecture**: Anchor program (`reference_vault`) with two functional modules: vault operations (`initialize`, `deposit`, `withdraw`) and Web3MCP publication operations (`initialize_config`, `write_config_chunk`, `finalize_config`).
-- **Config PDA Account Layout**: Exact 81-byte header followed by 4-byte LE length prefix and raw UTF-8 JSON payload:
+- **Config PDA Account Layout**: Exact 81-byte header (including the 4-byte vector length prefix) followed by raw UTF-8 JSON payload:
   - Discriminator: 8 bytes (`sha256("account:Web3McpConfig")[0..8]` = `0x991dc793e1358b35`)
   - Authority: 32-byte `Pubkey`
   - Status: 1 byte (`0 = Uninitialized`, `1 = Uploading`, `2 = Published`)
@@ -39,7 +39,7 @@ Build `reference-vault`, an Anchor-based SOL vault program that owns a canonical
   - Digest: 32 bytes `[u8; 32]` (SHA-256 of complete JSON payload)
   - Config payload: `Vec<u8>` (4-byte length prefix + UTF-8 payload)
 - **Publication Lifecycle & Safety**:
-  - `initialize_config` requires the upgradeable program's current upgrade authority to sign and sets the config authority to that same key. It resets status to `1 (Uploading)`, stores `expected_len` and `digest`, and truncates the config buffer. A pre-funded system-owned PDA is allocated and assigned before writing the header. After a program upgrade-authority rotation, the new authority may reinitialize and replace the stored config authority.
+  - `initialize_config` requires the upgradeable program's current upgrade authority to sign and sets the config authority to that same key. It resets status to `1 (Uploading)`, stores `expected_len` and `digest`, and truncates the config buffer. Excess rent is refunded to the authority. A pre-funded system-owned PDA is allocated and assigned before writing the header. After a program upgrade-authority rotation, the new authority may reinitialize and replace the stored config authority.
   - `write_config_chunk` verifies caller is both the stored config authority and the current program upgrade authority, verifies `status == 1` and `offset == current_len`, writes the slice, and reallocates account space with rent transfer from authority.
   - `finalize_config` verifies caller is both authorities, verifies `status == 1` and payload length equals `expected_len`, computes SHA-256 of payload via native `sol_sha256` syscall, asserts equality with `digest`, and sets status to `2 (Published)`.
 - **Vault State & Safety**:

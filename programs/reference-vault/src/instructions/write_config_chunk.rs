@@ -1,5 +1,5 @@
 use crate::errors::VaultError;
-use crate::state::{ConfigStatus, Web3McpConfig, CONFIG_HEADER_LEN};
+use crate::state::{parse_config_header, ConfigStatus, CONFIG_HEADER_LEN, VEC_LEN_OFFSET};
 use anchor_lang::prelude::*;
 
 #[derive(Accounts)]
@@ -10,13 +10,9 @@ pub struct WriteConfigChunk<'info> {
     pub program: Program<'info, crate::program::ReferenceVault>,
     #[account(constraint = program_data.upgrade_authority_address == Some(authority.key()) @ VaultError::Unauthorized)]
     pub program_data: Account<'info, ProgramData>,
-    #[account(
-        mut,
-        seeds = [b"web3mcp".as_ref(), b"config".as_ref()],
-        bump,
-        has_one = authority @ VaultError::Unauthorized
-    )]
-    pub config: Account<'info, Web3McpConfig>,
+    /// CHECK: Seeds, owner, authority, and layout are checked before modification.
+    #[account(mut, seeds = [b"web3mcp".as_ref(), b"config".as_ref()], bump)]
+    pub config: AccountInfo<'info>,
     pub system_program: Program<'info, System>,
 }
 
@@ -25,13 +21,20 @@ pub fn write_config_chunk(
     offset: u32,
     chunk: Vec<u8>,
 ) -> Result<()> {
-    let config = &mut ctx.accounts.config;
+    let config_info = &ctx.accounts.config;
+    require_keys_eq!(*config_info.owner, crate::id(), VaultError::Unauthorized);
+    let config = parse_config_header(&config_info.try_borrow_data()?)?;
+    require_keys_eq!(
+        config.authority,
+        ctx.accounts.authority.key(),
+        VaultError::Unauthorized
+    );
     require!(
         config.status == ConfigStatus::Uploading as u8,
         VaultError::InvalidStatus
     );
 
-    let current_len = config.config.len() as u32;
+    let current_len = config.payload_len as u32;
     require!(offset == current_len, VaultError::InvalidOffset);
 
     let new_len = current_len
@@ -40,7 +43,6 @@ pub fn write_config_chunk(
     require!(new_len <= config.expected_len, VaultError::InvalidLength);
 
     // Reallocate account size
-    let config_info = config.to_account_info();
     let new_account_len = CONFIG_HEADER_LEN + new_len as usize;
 
     let rent = Rent::get()?;
@@ -61,7 +63,9 @@ pub fn write_config_chunk(
     }
 
     config_info.resize(new_account_len)?;
-    config.config.extend_from_slice(&chunk);
+    let mut data = config_info.try_borrow_mut_data()?;
+    data[VEC_LEN_OFFSET..CONFIG_HEADER_LEN].copy_from_slice(&new_len.to_le_bytes());
+    data[CONFIG_HEADER_LEN + current_len as usize..new_account_len].copy_from_slice(&chunk);
 
     Ok(())
 }

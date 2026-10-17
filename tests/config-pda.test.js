@@ -5,7 +5,7 @@ import path from "node:path";
 import os from "node:os";
 import crypto from "node:crypto";
 import * as anchor from "@coral-xyz/anchor";
-import { Connection, PublicKey, SystemProgram, Keypair, Transaction } from "@solana/web3.js";
+import { Connection, PublicKey, SystemProgram, Keypair, Transaction, ComputeBudgetProgram } from "@solana/web3.js";
 
 const BPF_LOADER_UPGRADEABLE_PROGRAM_ID = new PublicKey("BPFLoaderUpgradeab1e11111111111111111111111");
 
@@ -34,6 +34,18 @@ describe("reference-vault: Web3MCP Config PDA chunked upload lifecycle", () => {
   let configPda;
   let configBump;
   let programData;
+
+  async function fetchConfig() {
+    const account = await connection.getAccountInfo(configPda, "confirmed");
+    assert.ok(account);
+    return {
+      authority: new PublicKey(account.data.subarray(8, 40)),
+      status: account.data.readUInt8(40),
+      expectedLen: account.data.readUInt32LE(41),
+      digest: account.data.subarray(45, 77),
+      config: account.data.subarray(81),
+    };
+  }
 
   const samplePayload = Buffer.from(
     JSON.stringify({
@@ -124,7 +136,7 @@ describe("reference-vault: Web3MCP Config PDA chunked upload lifecycle", () => {
       })
       .rpc();
 
-    const configAccount = await program.account.web3McpConfig.fetch(configPda);
+    const configAccount = await fetchConfig();
     assert.equal(configAccount.authority.toBase58(), authority.publicKey.toBase58());
     assert.equal(configAccount.status, 1); // 1 = Uploading
     assert.equal(configAccount.expectedLen, expectedLen);
@@ -149,7 +161,7 @@ describe("reference-vault: Web3MCP Config PDA chunked upload lifecycle", () => {
       })
       .rpc();
 
-    let account = await program.account.web3McpConfig.fetch(configPda);
+    let account = await fetchConfig();
     assert.equal(account.config.length, chunk1.length);
 
     await program.methods
@@ -163,7 +175,7 @@ describe("reference-vault: Web3MCP Config PDA chunked upload lifecycle", () => {
       })
       .rpc();
 
-    account = await program.account.web3McpConfig.fetch(configPda);
+    account = await fetchConfig();
     assert.equal(account.config.length, expectedLen);
     assert.deepEqual(Buffer.from(account.config), samplePayload);
   });
@@ -179,7 +191,7 @@ describe("reference-vault: Web3MCP Config PDA chunked upload lifecycle", () => {
       })
       .rpc();
 
-    const account = await program.account.web3McpConfig.fetch(configPda);
+    const account = await fetchConfig();
     assert.equal(account.status, 2); // 2 = Published
   });
 
@@ -252,7 +264,39 @@ describe("reference-vault: Web3MCP Config PDA chunked upload lifecycle", () => {
     );
 
     // Status remains 1 (Uploading), ensuring hosts fail closed
-    const account = await program.account.web3McpConfig.fetch(configPda);
+    const account = await fetchConfig();
     assert.equal(account.status, 1);
+  });
+
+  it("publishes the 64-KiB maximum and refunds excess rent on reinitialization", async () => {
+    const payload = Buffer.from(JSON.stringify({ data: "x" }).padEnd(65_536, " "));
+    const digest = crypto.createHash("sha256").update(payload).digest();
+    await program.methods.initializeConfig(authority.publicKey, payload.length, Array.from(digest))
+      .accounts({ authority: authority.publicKey, program: program.programId, programData, config: configPda, systemProgram: SystemProgram.programId })
+      .rpc();
+
+    for (let offset = 0; offset < payload.length; offset += 800) {
+      try {
+        await program.methods.writeConfigChunk(offset, payload.subarray(offset, offset + 800))
+          .accounts({ authority: authority.publicKey, program: program.programId, programData, config: configPda, systemProgram: SystemProgram.programId })
+          .rpc();
+      } catch (error) {
+        throw new Error(`Chunk at offset ${offset} failed: ${error.message}`, { cause: error });
+      }
+    }
+    await program.methods.finalizeConfig()
+      .accounts({ authority: authority.publicKey, program: program.programId, programData, config: configPda })
+      .preInstructions([ComputeBudgetProgram.setComputeUnitLimit({ units: 400_000 })]).rpc();
+
+    const published = await connection.getAccountInfo(configPda, "confirmed");
+    assert.equal(published.data.length, 81 + payload.length);
+    assert.equal(published.data.readUInt8(40), 2);
+
+    await program.methods.initializeConfig(authority.publicKey, expectedLen, Array.from(correctDigest))
+      .accounts({ authority: authority.publicKey, program: program.programId, programData, config: configPda, systemProgram: SystemProgram.programId })
+      .rpc();
+    const reset = await connection.getAccountInfo(configPda, "confirmed");
+    assert.equal(reset.data.length, 81);
+    assert.equal(reset.lamports, await connection.getMinimumBalanceForRentExemption(81));
   });
 });

@@ -1,5 +1,7 @@
 use crate::errors::VaultError;
-use crate::state::{ConfigStatus, Web3McpConfig, CONFIG_HEADER_LEN, MAX_CONFIG_LEN};
+use crate::state::{
+    parse_config_header, ConfigStatus, Web3McpConfig, CONFIG_HEADER_LEN, MAX_CONFIG_LEN,
+};
 use anchor_lang::prelude::*;
 use anchor_lang::system_program::{
     allocate, assign, create_account, transfer, Allocate, Assign, CreateAccount, Transfer,
@@ -105,15 +107,20 @@ pub fn initialize_config(
     } else {
         require_keys_eq!(*config_info.owner, crate::id(), VaultError::Unauthorized);
 
-        // Verify the existing account is a Web3McpConfig. The current program
-        // upgrade authority may take over after an upgrade-authority rotation.
+        // The current program upgrade authority may take over after a rotation.
         {
-            let mut data: &[u8] = &config_info.try_borrow_data()?;
-            Web3McpConfig::try_deserialize(&mut data)?;
+            let data = config_info.try_borrow_data()?;
+            parse_config_header(&data)?;
         }
 
         if config_info.data_len() > CONFIG_HEADER_LEN {
             config_info.resize(CONFIG_HEADER_LEN)?;
+        }
+        let minimum_balance = Rent::get()?.minimum_balance(CONFIG_HEADER_LEN);
+        let excess = config_info.lamports().saturating_sub(minimum_balance);
+        if excess > 0 {
+            **config_info.try_borrow_mut_lamports()? -= excess;
+            **ctx.accounts.authority.try_borrow_mut_lamports()? += excess;
         }
     }
 
