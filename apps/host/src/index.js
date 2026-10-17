@@ -701,3 +701,5 @@ export class Web3McpHost {
 }
 
 export * from './errors.js';
+export * from './llm.js';
+export * from './wallet.js';
