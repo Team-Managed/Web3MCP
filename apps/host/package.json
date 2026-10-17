@@ -21,10 +21,15 @@
     "./wallet": {
       "types": "./dist/wallet/index.d.ts",
       "import": "./dist/wallet/index.js"
+    },
+    "./agent": {
+      "types": "./dist/agent/index.d.ts",
+      "import": "./dist/agent/index.js"
     }
   },
   "bin": {
-    "web3mcp-host": "./bin/inspect.js"
+    "web3mcp-host": "./bin/inspect.js",
+    "web3mcp-agent": "./bin/agent.js"
   },
   "scripts": {
     "build": "tsup",

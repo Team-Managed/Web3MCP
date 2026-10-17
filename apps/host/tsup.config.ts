@@ -6,6 +6,7 @@ export default defineConfig({
     errors: 'src/errors.ts',
     'llm/index': 'src/llm/index.ts',
     'wallet/index': 'src/wallet/index.ts',
+    'agent/index': 'src/agent/index.ts',
   },
   format: ['esm'],
   dts: true,
