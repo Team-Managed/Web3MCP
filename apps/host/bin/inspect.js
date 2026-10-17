@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 import { Connection, PublicKey } from '@solana/web3.js';
-import { Web3McpHost } from '../src/index.js';
+import { Web3McpHost } from '../dist/index.js';
 
 function printHelp() {
   console.log(`
