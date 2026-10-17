@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { validateConfig } from '../src/validator.js';
+import { MAX_CONFIG_PAYLOAD_BYTES } from '../src/account.js';
 
 const programId = '11111111111111111111111111111111';
 const publicKey = { type: 'string', pattern: '^[1-9A-HJ-NP-Za-km-z]{32,44}$' };
@@ -62,9 +63,14 @@ const badCases = [
   ['fixed program address mismatch', (c) => { c.tools[0].solana.accounts.system_program.address = 'BPFLoaderUpgradeab1e11111111111111111111111'; }],
   ['missing PDA seeds', (c) => { delete c.idl.instructions[0].accounts[1].pda; }],
   ['unsupported PDA seed', (c) => { c.idl.instructions[0].accounts[1].pda.seeds[1] = { kind: 'arg', path: 'amount' }; }],
+  ['sixteen PDA seeds before the bump', (c) => { c.idl.instructions[0].accounts[1].pda.seeds = Array.from({ length: 16 }, () => ({ kind: 'const', value: [1] })); }],
   ['missing read type', (c) => { c.idl.types = []; }],
+  ['duplicate readable struct fields', (c) => { c.idl.types[0].type.fields.push({ name: 'balance', type: 'u64' }); }],
   ['multiple read addresses', (c) => { c.tools[1].solana.accounts.second = { source: 'input', input: 'vaultAddress' }; }],
   ['read address bound to number', (c) => { c.tools[1].inputSchema.properties.vaultAddress = u64; }],
+  ['unused account-read input', (c) => { c.tools[1].inputSchema.properties.confirm = { type: 'boolean' }; c.tools[1].inputSchema.required.push('confirm'); }],
+  ['required property absent from properties', (c) => { c.tools[0].inputSchema.required.push('ghost'); }],
+  ['duplicate required property', (c) => { c.tools[0].inputSchema.required.push('amount'); }],
   ['duplicate IDL instructions', (c) => { c.idl.instructions.push(structuredClone(c.idl.instructions[0])); }],
   ['nested IDL instruction accounts', (c) => { c.idl.instructions[0].accounts[0].accounts = []; }],
 ];
@@ -76,3 +82,12 @@ for (const [label, mutate] of badCases) {
     assert.equal(validateConfig(candidate).valid, false, label);
   });
 }
+
+test('rejects raw JSON larger than the on-chain payload limit', () => {
+  const raw = JSON.stringify(config()).padEnd(MAX_CONFIG_PAYLOAD_BYTES + 1, ' ');
+  for (const input of [raw, Buffer.from(raw)]) {
+    const result = validateConfig(input);
+    assert.equal(result.valid, false);
+    assert.match(result.errors.join(' '), /64 KiB|65,536|65536/);
+  }
+});

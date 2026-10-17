@@ -70,7 +70,7 @@ function validateInstruction(tool, instruction, path, errors) {
     }
     if (binding.source === 'idl') {
       const seeds = account.pda?.seeds;
-      if (!Array.isArray(seeds) || seeds.length === 0 || account.pda.program !== undefined) {
+      if (!Array.isArray(seeds) || seeds.length === 0 || seeds.length > 15 || account.pda.program !== undefined) {
         errors.push(`${accountPath}: IDL PDA must have supported seeds under the target program`);
         continue;
       }
@@ -114,7 +114,8 @@ function validateRead(tool, idl, account, path, errors) {
   }
   const definition = Array.isArray(idl.types) && idl.types.find((type) => type?.name === account.name);
   if (!definition || definition.type?.kind !== 'struct' || !Array.isArray(definition.type.fields) ||
-      definition.type.fields.some((field) => typeof field?.name !== 'string' || !READ_FIELD_TYPES.has(field.type))) {
+      definition.type.fields.some((field) => typeof field?.name !== 'string' || !READ_FIELD_TYPES.has(field.type)) ||
+      new Set(definition.type.fields.map((field) => field.name)).size !== definition.type.fields.length) {
     errors.push(`${path}: read account requires a supported struct type in IDL types`);
   }
   const bindings = Object.entries(tool.solana.accounts);
@@ -124,6 +125,10 @@ function validateRead(tool, idl, account, path, errors) {
   for (const [name, binding] of bindings) {
     validateAddressBinding(binding, tool.inputSchema, `${path}/accounts/${name}`, errors);
     if (binding.source === 'idl') errors.push(`${path}/accounts/${name}: accountRead has no instruction PDA seeds to resolve`);
+  }
+  const accountInputs = new Set(bindings.filter(([, binding]) => binding.source === 'input').map(([, binding]) => binding.input));
+  for (const name of Object.keys(tool.inputSchema.properties)) {
+    if (!accountInputs.has(name)) errors.push(`${path}/inputSchema/${name}: input is unused by the account read`);
   }
 }
 

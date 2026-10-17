@@ -40,6 +40,28 @@ async function retryOn429(fn, maxRetries = 5) {
   }
 }
 
+export async function sendPublishedTransaction(method, { connection, wallet }) {
+  const transaction = await method.transaction();
+  const { blockhash, lastValidBlockHeight } = await retryOn429(() => connection.getLatestBlockhash("confirmed"));
+  transaction.feePayer = wallet.publicKey;
+  transaction.recentBlockhash = blockhash;
+  const signed = await wallet.signTransaction(transaction);
+  const signature = anchor.utils.bytes.bs58.encode(signed.signature);
+  const raw = signed.serialize();
+
+  try {
+    // Retrying identical signed bytes cannot execute the instruction twice.
+    await retryOn429(() => connection.sendRawTransaction(raw, { preflightCommitment: "confirmed" }));
+    const result = await retryOn429(() => connection.confirmTransaction(
+      { signature, blockhash, lastValidBlockHeight }, "confirmed"
+    ));
+    if (result.value.err) throw new Error(JSON.stringify(result.value.err));
+  } catch (error) {
+    throw new Error(`Transaction ${signature} was not confirmed: ${error.message}`, { cause: error });
+  }
+  return signature;
+}
+
 export async function publishConfig(options = {}) {
   const url = options.url || process.env.ANCHOR_PROVIDER_URL || "https://api.devnet.solana.com";
   const connection = new Connection(url, "confirmed");
@@ -77,7 +99,7 @@ export async function publishConfig(options = {}) {
 
   // 4. Initialize Config PDA
   console.log("Step 1/3: Initializing Config PDA in Uploading state (status = 1)...");
-  const initSig = await retryOn429(() =>
+  const initSig = await sendPublishedTransaction(
     program.methods
       .initializeConfig(wallet.publicKey, payload.length, Array.from(digest))
       .accounts({
@@ -86,8 +108,8 @@ export async function publishConfig(options = {}) {
         programData,
         config: configPda,
         systemProgram: SystemProgram.programId,
-      })
-      .rpc()
+      }),
+    { connection, wallet }
   );
   console.log(`Initialized Config PDA. Tx: ${initSig}`);
 
@@ -100,7 +122,7 @@ export async function publishConfig(options = {}) {
     const chunk = payload.subarray(offset, Math.min(offset + CHUNK_SIZE, payload.length));
 
     console.log(`Uploading chunk ${i + 1}/${totalChunks} (offset: ${offset}, length: ${chunk.length})...`);
-    await retryOn429(() =>
+    await sendPublishedTransaction(
       program.methods
         .writeConfigChunk(offset, chunk)
         .accounts({
@@ -109,8 +131,8 @@ export async function publishConfig(options = {}) {
           programData,
           config: configPda,
           systemProgram: SystemProgram.programId,
-        })
-        .rpc()
+        }),
+      { connection, wallet }
     );
 
     if (i < totalChunks - 1 && CHUNK_DELAY_MS > 0) {
@@ -120,7 +142,7 @@ export async function publishConfig(options = {}) {
 
   // 6. Finalize Config PDA
   console.log("Step 3/3: Finalizing config and verifying SHA-256 digest on-chain...");
-  const finalizeSig = await retryOn429(() =>
+  const finalizeSig = await sendPublishedTransaction(
     program.methods
       .finalizeConfig()
       .accounts({
@@ -131,8 +153,8 @@ export async function publishConfig(options = {}) {
       })
       .preInstructions([
         ComputeBudgetProgram.setComputeUnitLimit({ units: 400_000 }),
-      ])
-      .rpc()
+      ]),
+    { connection, wallet }
   );
   console.log(`Finalized Config PDA (status = 2 Published). Tx: ${finalizeSig}`);
 

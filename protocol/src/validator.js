@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
-import { parseConfigAccount, CONFIG_ACCOUNT_DISCRIMINATOR } from './account.js';
+import { parseConfigAccount, CONFIG_ACCOUNT_DISCRIMINATOR, MAX_CONFIG_PAYLOAD_BYTES } from './account.js';
 import { deriveConfigPda } from './pda.js';
 import { validateIdlProfile } from './idl-profile.js';
 import { PublicKey } from '@solana/web3.js';
@@ -79,6 +79,13 @@ export function validateConfigSchema(config) {
           seenNames.add(tool.name);
         }
       }
+      if (tool?.inputSchema?.properties && Array.isArray(tool.inputSchema.required)) {
+        for (const name of tool.inputSchema.required) {
+          if (!Object.hasOwn(tool.inputSchema.properties, name)) {
+            errors.push(`/tools/${i}/inputSchema/required: '${name}' is not defined in properties`);
+          }
+        }
+      }
     }
   }
 
@@ -112,11 +119,20 @@ export function validateConfig(configInput) {
         const parsedAccount = parseConfigAccount(buf);
         config = parsedAccount.config;
       } else {
+        if (buf.length > MAX_CONFIG_PAYLOAD_BYTES) {
+          return { valid: false, errors: ['Raw JSON config exceeds 64 KiB payload limit'] };
+        }
         config = JSON.parse(buf.toString('utf8'));
       }
     } else if (typeof configInput === 'string') {
+      if (Buffer.byteLength(configInput, 'utf8') > MAX_CONFIG_PAYLOAD_BYTES) {
+        return { valid: false, errors: ['Raw JSON config exceeds 64 KiB payload limit'] };
+      }
       config = JSON.parse(configInput);
     } else if (configInput && typeof configInput === 'object') {
+      if (Buffer.byteLength(JSON.stringify(configInput), 'utf8') > MAX_CONFIG_PAYLOAD_BYTES) {
+        return { valid: false, errors: ['JSON config exceeds 64 KiB payload limit'] };
+      }
       config = configInput;
     } else {
       return { valid: false, errors: ['Input must be a JSON object, JSON string, or account Buffer'] };
