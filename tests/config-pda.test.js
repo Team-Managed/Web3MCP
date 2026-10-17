@@ -5,7 +5,9 @@ import path from "node:path";
 import os from "node:os";
 import crypto from "node:crypto";
 import * as anchor from "@coral-xyz/anchor";
-import { Connection, PublicKey, SystemProgram, Keypair, Transaction, BPF_LOADER_UPGRADEABLE_PROGRAM_ID } from "@solana/web3.js";
+import { Connection, PublicKey, SystemProgram, Keypair, Transaction } from "@solana/web3.js";
+
+const BPF_LOADER_UPGRADEABLE_PROGRAM_ID = new PublicKey("BPFLoaderUpgradeab1e11111111111111111111111");
 
 if (!process.env.ANCHOR_WALLET) {
   process.env.ANCHOR_WALLET = path.resolve(os.homedir(), ".config/solana/id.json");
@@ -98,10 +100,11 @@ describe("reference-vault: Web3MCP Config PDA chunked upload lifecycle", () => {
 
   it("pre-funds the canonical PDA before initialization", async () => {
     assert.equal(await provider.connection.getAccountInfo(configPda, "confirmed"), null);
+    const rentExemptLamports = await provider.connection.getMinimumBalanceForRentExemption(0);
     const transfer = new Transaction().add(SystemProgram.transfer({
       fromPubkey: authority.publicKey,
       toPubkey: configPda,
-      lamports: 1,
+      lamports: rentExemptLamports,
     }));
     await provider.sendAndConfirm(transfer);
     const prefunded = await provider.connection.getAccountInfo(configPda, "confirmed");

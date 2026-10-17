@@ -10,7 +10,7 @@ if (!process.env.ANCHOR_WALLET) {
   process.env.ANCHOR_WALLET = path.resolve(os.homedir(), ".config/solana/id.json");
 }
 
-describe("reference-vault: SOL vault operations on devnet", () => {
+describe("reference-vault: SOL vault operations on a local validator", () => {
   const url = process.env.ANCHOR_PROVIDER_URL || "http://127.0.0.1:8899";
   if (!/^https?:\/\/(127\.0\.0\.1|localhost)(:\d+)?\/?$/.test(url)) {
     throw new Error("Integration tests require a local validator RPC URL");

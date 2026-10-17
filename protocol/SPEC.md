@@ -4,7 +4,7 @@
 **Standard**: `web3mcp`
 **Profile**: Anchor-compatible Solana program discovery
 
-The account layout, JSON envelope, and initial Anchor IDL 0.1.0 binding checks below are implemented. The profile remains a candidate until adversarial conformance coverage and local-validator publication checks are complete.
+The account layout, JSON envelope, and initial Anchor IDL 0.1.0 binding checks below are implemented. Local-validator publication and RPC discovery passed on 2026-10-17. The profile remains a candidate until adversarial conformance coverage is complete.
 
 ---
 

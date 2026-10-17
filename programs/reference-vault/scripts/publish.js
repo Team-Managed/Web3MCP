@@ -4,9 +4,11 @@ import os from "node:os";
 import crypto from "node:crypto";
 import { fileURLToPath } from "node:url";
 import * as anchor from "@coral-xyz/anchor";
-import { Connection, PublicKey, SystemProgram, ComputeBudgetProgram, BPF_LOADER_UPGRADEABLE_PROGRAM_ID } from "@solana/web3.js";
+import { Connection, PublicKey, SystemProgram, ComputeBudgetProgram } from "@solana/web3.js";
 import { generateConfig } from "./generate-config.js";
 import { validateDiscoveredConfig } from "../../../protocol/src/validator.js";
+
+const BPF_LOADER_UPGRADEABLE_PROGRAM_ID = new PublicKey("BPFLoaderUpgradeab1e11111111111111111111111");
 
 if (!process.env.ANCHOR_WALLET) {
   process.env.ANCHOR_WALLET = path.resolve(os.homedir(), ".config/solana/id.json");

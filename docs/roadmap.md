@@ -4,13 +4,13 @@ This is the build order for the first complete demo. The current [design spec](s
 
 ## 1. Freeze protocol v0.1 (In review)
 
-The account layout, JSON schema, version rules, supported input types, Anchor IDL 0.1.0 profile, and initial account/argument binding checks are implemented in `protocol/`. More adversarial conformance vectors and local-validator publication checks are still needed before freezing v0.1.
+The account layout, JSON schema, version rules, supported input types, Anchor IDL 0.1.0 profile, and initial account/argument binding checks are implemented in `protocol/`. Local-validator publication and RPC discovery passed on 2026-10-17. More adversarial conformance vectors are still needed before freezing v0.1.
 
 ## 2. Publish from a reference program (In review)
 
 Build a small Anchor SOL vault with `get_vault`, `initialize`, `deposit`, and `withdraw` capabilities. Add a program-owned config PDA and authorized publication instructions. Generate the config from the compiled IDL, publish it in bounded chunks, and verify its bytes and account owner on a local validator. No host code may import the generated IDL.
 
-**Status:** An earlier reference vault is deployed on devnet at `GgVnzvsMhHHKeeGnqQhU9KAjBeCVhYiYmR17174Lyrgv` with Config PDA `HfA1ExZS1cgYR5k5GEJmsQfyAcDK2J9NPi7p97dU3WLD`. A read-only RPC check on 2026-10-14 found an executable program and a published, program-owned config with four tools. That deployed version predates the authorization and read-binding corrections in this review. The updated program has not been deployed or run through a local-validator integration test.
+**Status:** An earlier reference vault is deployed on devnet at `GgVnzvsMhHHKeeGnqQhU9KAjBeCVhYiYmR17174Lyrgv` with Config PDA `HfA1ExZS1cgYR5k5GEJmsQfyAcDK2J9NPi7p97dU3WLD`. A read-only RPC check on 2026-10-14 found an executable program and a published, program-owned config with four tools. That deployed version predates the authorization and read-binding corrections in this review. The updated program built and passed 18 local-validator integration tests on 2026-10-17, including config publication, RPC conformance, and vault operations. It has not been deployed to devnet.
 
 ## 3. Build the generic host core
 
