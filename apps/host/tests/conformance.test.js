@@ -5,7 +5,7 @@ import { readFileSync, readdirSync } from 'node:fs';
 import { resolve, dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { Connection, PublicKey } from '@solana/web3.js';
-import { Web3McpHost } from '../src/index.js';
+import { Web3McpHost } from '../dist/index.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -17,7 +17,7 @@ describe('Web3McpHost: Conformance, CLI & E2E Devnet Verification (Ticket 05)', 
 
   it('preserves strict protocol boundary: zero imports of reference-vault or target/idl in apps/host/ (ADR 0007)', () => {
     const srcDir = resolve(__dirname, '../src');
-    const files = readdirSync(srcDir).filter((f) => f.endsWith('.js'));
+    const files = readdirSync(srcDir).filter((f) => f.endsWith('.ts') || f.endsWith('.js'));
 
     for (const file of files) {
       const content = readFileSync(join(srcDir, file), 'utf8');

@@ -1,8 +1,8 @@
 import test, { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { Connection, Keypair, SystemProgram } from '@solana/web3.js';
-import { Web3McpHost } from '../src/index.js';
-import { DiscoveryError, Web3McpHostError } from '../src/errors.js';
+import { Web3McpHost } from '../dist/index.js';
+import { DiscoveryError, Web3McpHostError } from '../dist/errors.js';
 
 describe('Web3McpHost: Program Discovery (Ticket 01)', () => {
   const rpcUrl = process.env.SOLANA_RPC_URL || 'https://api.devnet.solana.com';

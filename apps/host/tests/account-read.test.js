@@ -1,13 +1,13 @@
 import test, { describe, it, before } from 'node:test';
 import assert from 'node:assert/strict';
 import { Connection, Keypair } from '@solana/web3.js';
-import { Web3McpHost } from '../src/index.js';
+import { Web3McpHost } from '../dist/index.js';
 import {
   AccountSecurityError,
   AccountDiscriminatorMismatchError,
   ValidationError,
   Web3McpHostError,
-} from '../src/errors.js';
+} from '../dist/errors.js';
 
 describe('Web3McpHost: Live Account Query & Dynamic Borsh Decoding (Ticket 03)', () => {
   const rpcUrl = process.env.SOLANA_RPC_URL || 'https://api.devnet.solana.com';

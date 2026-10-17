@@ -1,7 +1,7 @@
 import test, { describe, it, before } from 'node:test';
 import assert from 'node:assert/strict';
 import { Connection } from '@solana/web3.js';
-import { Web3McpHost } from '../src/index.js';
+import { Web3McpHost } from '../dist/index.js';
 import { validateConfigSchema } from '@web3mcp/protocol/validator';
 
 describe('Web3McpHost: Protocol-Strict Tool Descriptors & LLM Export (Ticket 02)', () => {
