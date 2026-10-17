@@ -21,4 +21,4 @@ Program-ID discovery is the first release. SNS name resolution, MCP adapters, sw
 
 ## Status
 
-This repository is initialized with project guidance and design documents. The protocol schema, on-chain reference program, host, and website are planned but not implemented yet. The older October 9 spec and plan under `docs/superpowers/` remain as research history and are marked as superseded.
+The protocol validator and reference vault are implemented and under merge review. The generic host and documentation site are still planned. The v0.1 Anchor IDL profile and local-validator integration evidence remain open before the protocol can be called frozen. The older October 9 spec and plan under `docs/superpowers/` remain as research history and are marked as superseded.

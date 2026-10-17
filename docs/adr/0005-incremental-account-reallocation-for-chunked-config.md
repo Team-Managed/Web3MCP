@@ -1,0 +1,3 @@
+# Incremental Account Reallocation for Chunked Config Uploads
+
+We decided that `write_config_chunk` will dynamically reallocate the Config PDA account size and transfer required rent lamports from the authority wallet as chunks arrive, rather than pre-allocating the maximum 64 KiB buffer during `initialize_config`. Because Solana runtime restricts reallocation growth to 10,240 bytes per instruction, pre-allocating up to 64 KiB would require complex multi-transaction pre-allocation loops before data transfer begins; by sizing chunks to ~800 bytes, incremental reallocation stays well within Solana's 10 KiB ceiling, keeps each chunk write transaction self-contained, and only locks rent lamports for the exact bytes published.

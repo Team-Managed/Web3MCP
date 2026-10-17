@@ -23,3 +23,23 @@ Web3MCP lets an agent host discover Solana program tools from a program-owned co
 - This first commit is a project baseline, not a runnable protocol or host. Add build commands only when their implementation exists.
 - Keep protocol fixtures and conformance tests independent of the reference program. A generic host should work with a second compatible program without code changes.
 - Update the design and roadmap when a protocol or product boundary changes.
+
+## Agent skills
+
+Skills are installed under `.agents/skills/`.
+
+### Configuration & Docs
+
+- **Issue tracker**: Local markdown under `.scratch/<feature>/` (and GitHub `Team-Managed/Web3MCP`). See [issue-tracker.md](docs/agents/issue-tracker.md).
+- **Domain docs**: Single-context domain glossary at [GLOSSARY.md](GLOSSARY.md) and architecture decision records in `docs/adr/`. See [domain.md](docs/agents/domain.md).
+
+### Core Workflows
+
+- **`tdd`**: Test-driven development with a red-green-refactor loop. Essential for freezing protocol wire formats and conformance fixtures before implementing parsers.
+- **`code-review`**: Dual-axis review across **Standards** and **Spec**. Validates that host implementations never violate protocol boundaries (e.g. importing the reference vault source or attempting agent signing).
+- **`codebase-design`**: Deep module design principles. Enforces small, robust interfaces for complex on-chain config parsing, RPC interactions, and simulation.
+- **`diagnosing-bugs`**: Disciplined debugging loop with reproducible feedback scripts for Solana RPC and Anchor transaction simulation failures.
+- **`domain-modeling`**: Actively keeps [GLOSSARY.md](GLOSSARY.md) and `docs/adr/` aligned with protocol specifications.
+- **`grill-me`** / **`grilling`**: Relentless Socratic interview to stress-test designs and edge cases before coding.
+- **`to-spec`** & **`to-tickets`**: Converts discussions into specifications and vertical-slice tracer tickets.
+- **`git-guardrails-claude-code`**: Blocks selected destructive Git commands in Claude Code. Review staged files for wallet keys and secrets before committing.
