@@ -7,7 +7,11 @@ import readline from 'node:readline';
 import { Connection } from '@solana/web3.js';
 import { Web3McpHost } from '../dist/index.js';
 import { Web3McpAgent } from '../dist/agent/index.js';
-import { loadKeypairFromFile } from '../dist/wallet/index.js';
+import {
+  loadKeypairFromFile,
+  generateKeypairToFile,
+  requestDevnetAirdrop,
+} from '../dist/wallet/index.js';
 
 // Attempt to load .env if available
 try {
@@ -40,6 +44,7 @@ Options:
 Slash Commands:
   /tools                List all discovered tools and signatures
   /balance              Check local wallet SOL balance on Devnet
+  /keygen               Generate a fresh Devnet keypair and request 1 SOL airdrop
   /clear                Reset agent conversation history
   /help                 Show command guide
   /exit, /quit          Exit the interactive session
@@ -109,7 +114,9 @@ async function main() {
     process.exit(1);
   }
 
-  // Load keypair if present
+  const connection = new Connection(rpcUrl, 'confirmed');
+
+  // Load keypair if present, or prompt to generate one if missing
   let signer = null;
   if (keypairPath && fs.existsSync(keypairPath)) {
     try {
@@ -117,9 +124,37 @@ async function main() {
     } catch (err) {
       console.warn(`⚠️  Warning: Failed to load keypair at ${keypairPath}: ${err.message}`);
     }
+  } else if (keypairPath && process.stdin.isTTY) {
+    const rlInit = readline.createInterface({ input: process.stdin, output: process.stdout });
+    const answer = await new Promise((resolve) => {
+      rlInit.question(
+        `\n⚠️  No Solana wallet found at '${keypairPath}'.\n? Would you like to generate a new Devnet keypair and request 1 SOL airdrop? [Y/n] › `,
+        (ans) => {
+          rlInit.close();
+          resolve(ans.trim().toLowerCase());
+        }
+      );
+    });
+
+    if (answer === '' || answer === 'y' || answer === 'yes') {
+      try {
+        const { keypair, path: savedPath } = generateKeypairToFile({ customPath: keypairPath });
+        signer = keypair;
+        console.log(`✨ Generated keypair: ${keypair.publicKey.toBase58()}`);
+        console.log(`📁 Saved to: ${savedPath}`);
+        try {
+          process.stdout.write('💧 Requesting 1 SOL Devnet airdrop...');
+          await requestDevnetAirdrop(connection, keypair.publicKey, 1);
+          console.log(' Confirmed!');
+        } catch (airdropErr) {
+          console.log(`\n⚠️  Airdrop notice: ${airdropErr.message} (faucet: https://faucet.solana.com)`);
+        }
+      } catch (genErr) {
+        console.warn(`⚠️  Failed to generate keypair: ${genErr.message}`);
+      }
+    }
   }
 
-  const connection = new Connection(rpcUrl, 'confirmed');
   const host = new Web3McpHost({ connection });
 
   console.log(`\nDiscovering on-chain Web3MCP tools for program ${programId}...`);
@@ -157,7 +192,7 @@ async function main() {
     console.log(`    • ${t.name.padEnd(20)} [${kind}]`);
   }
   console.log('═'.repeat(width));
-  console.log('Type your question or request. Commands: /tools, /balance, /clear, /help, /exit\n');
+  console.log('Type your question or request. Commands: /tools, /balance, /keygen, /clear, /help, /exit\n');
 
   const rl = readline.createInterface({
     input: process.stdin,
