@@ -124,9 +124,14 @@ export class Web3McpAgent {
    *
    * @param userInput User text input
    * @param onToken Optional streaming token callback
+   * @param onProgress Optional tool and lifecycle progress callback
    * @returns Final assistant response
    */
-  async prompt(userInput: string, onToken?: (token: string) => void): Promise<string> {
+  async prompt(
+    userInput: string,
+    onToken?: (token: string) => void,
+    onProgress?: (event: import('./loop.js').AgentProgressEvent) => void
+  ): Promise<string> {
     const cmdResult = await this.handleCommand(userInput);
     if (cmdResult.handled) {
       return cmdResult.output || '';
@@ -142,6 +147,7 @@ export class Web3McpAgent {
       programId: this.programId,
       onToken,
       onApprovalRequest: this.onApprovalRequest,
+      onProgress,
     });
   }
 }

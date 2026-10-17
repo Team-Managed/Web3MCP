@@ -15,6 +15,17 @@ export interface ApprovalRequest {
 
 export type ApprovalHandler = (req: ApprovalRequest) => Promise<boolean>;
 
+export type AgentProgressEvent =
+  | { type: 'thinking'; turn: number }
+  | { type: 'tool_call'; tool: string; kind: 'accountRead' | 'instruction'; args: Record<string, unknown> }
+  | { type: 'tool_result'; tool: string; success: boolean; summary?: string }
+  | { type: 'simulating'; tool: string }
+  | { type: 'simulation_result'; tool: string; success: boolean; unitsConsumed?: number }
+  | { type: 'broadcasting'; tool: string }
+  | { type: 'broadcast_confirmed'; tool: string; signature: string; explorerUrl: string };
+
+export type AgentProgressHandler = (event: AgentProgressEvent) => void;
+
 export interface AgentToolCall {
   id: string;
   name: string;
@@ -36,6 +47,7 @@ export interface ExecuteTurnParams {
   programId?: string;
   onToken?: (token: string) => void;
   onApprovalRequest?: ApprovalHandler;
+  onProgress?: AgentProgressHandler;
   maxTurns?: number;
 }
 
@@ -55,6 +67,7 @@ export async function executeAgentTurn({
   programId,
   onToken,
   onApprovalRequest,
+  onProgress,
   maxTurns = 5,
 }: ExecuteTurnParams): Promise<string> {
   const tools = host.toOpenAiTools(programId);
@@ -62,6 +75,8 @@ export async function executeAgentTurn({
 
   while (turnsCount < maxTurns) {
     turnsCount++;
+
+    onProgress?.({ type: 'thinking', turn: turnsCount });
 
     const response = await llmClient.chat({
       messages,
@@ -109,7 +124,10 @@ export async function executeAgentTurn({
         continue;
       }
 
-      if (descriptor.solana?.kind === 'accountRead') {
+      const toolKind: 'accountRead' | 'instruction' = descriptor.solana?.kind || 'accountRead';
+      onProgress?.({ type: 'tool_call', tool: toolName, kind: toolKind, args: toolArgs });
+
+      if (toolKind === 'accountRead') {
         try {
           const rawResult = await host.executeRead(toolName, toolArgs, { programId });
           const compacted = compactToolResult(toolName, rawResult);
@@ -118,18 +136,28 @@ export async function executeAgentTurn({
             tool_call_id: toolCall.id,
             content: JSON.stringify(compacted),
           });
+          onProgress?.({ type: 'tool_result', tool: toolName, success: true });
         } catch (err: any) {
           messages.push({
             role: 'tool',
             tool_call_id: toolCall.id,
             content: JSON.stringify({ error: err.message }),
           });
+          onProgress?.({ type: 'tool_result', tool: toolName, success: false, summary: err.message });
         }
-      } else if (descriptor.solana?.kind === 'instruction') {
+      } else if (toolKind === 'instruction') {
         try {
+          onProgress?.({ type: 'simulating', tool: toolName });
           const prep = await host.prepareInstruction(toolName, toolArgs, {
             signer: signer?.publicKey,
             programId,
+          });
+
+          onProgress?.({
+            type: 'simulation_result',
+            tool: toolName,
+            success: !prep.simulation?.err,
+            unitsConsumed: prep.simulation?.unitsConsumed,
           });
 
           let approved = false;
@@ -158,10 +186,18 @@ export async function executeAgentTurn({
             if (!signer) {
               throw new Error('Cannot sign transaction: no signer keypair configured on host.');
             }
+            onProgress?.({ type: 'broadcasting', tool: toolName });
             const broadcastResult = await signAndBroadcastTransaction({
               connection: host.connection,
               instruction: prep.instruction,
               signer,
+            });
+
+            onProgress?.({
+              type: 'broadcast_confirmed',
+              tool: toolName,
+              signature: broadcastResult.signature,
+              explorerUrl: broadcastResult.explorerUrl,
             });
 
             const compacted = compactToolResult(toolName, {

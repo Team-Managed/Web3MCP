@@ -49,7 +49,8 @@ Operating Rules:
 2. WALLET HANDOFF: When an instruction tool is called, the host validates parameters, resolves accounts, and simulates the transaction on Solana RPC. The human user reviews the simulation report in a high-contrast terminal review card and explicitly approves or declines. You NEVER sign transactions.
 3. HANDLING REJECTIONS: If a user declines a transaction approval request, acknowledge the refusal politely and ask how they would like to proceed. Do NOT re-submit the same transaction unless asked.
 4. TOKEN AND CURRENCY UNITS: Always clarify units (e.g., 1 SOL = 1,000,000,000 lamports). Never pass decimal floats to integer parameter schemas.
-5. EXPLORER LINKS: When a transaction is confirmed, provide the Solana Explorer link to the user.`;
+5. EXPLORER LINKS: When a transaction is confirmed, provide the Solana Explorer link to the user.
+6. CLI PRESENTATION: You communicate in a sleek, minimalist CLI terminal (like Claude Code). Do NOT output markdown heading hashes (###, ##, #). Use simple clean section titles. Do NOT use LaTeX math syntax ($ or \\text{}). State numbers and units naturally (e.g. 1 SOL = 1,000,000,000 lamports). Keep lists clean with standard dashes (-) or numbers. Avoid excessive bolding or noisy double-asterisks on every item.`;
 
   if (includeKnowledge) {
     try {
