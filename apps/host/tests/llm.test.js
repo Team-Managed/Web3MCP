@@ -1,6 +1,6 @@
 import test, { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { createLlmClient, compactToolResult, LlmError, OpenAiCompatibleDriver, AnthropicDriver } from '../src/llm.js';
+import { createLlmClient, compactToolResult, LlmError, OpenAiCompatibleDriver, AnthropicDriver } from '../dist/llm/index.js';
 
 describe('Web3McpHost: Universal LLM Client & Log Compaction (Ticket 01)', () => {
   it('fails closed when no model is specified', () => {

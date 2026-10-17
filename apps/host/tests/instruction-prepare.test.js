@@ -1,8 +1,8 @@
 import test, { describe, it, before } from 'node:test';
 import assert from 'node:assert/strict';
 import { Connection, PublicKey, Keypair } from '@solana/web3.js';
-import { Web3McpHost } from '../src/index.js';
-import { ValidationError, ToolNotFoundError } from '../src/errors.js';
+import { Web3McpHost } from '../dist/index.js';
+import { ValidationError, ToolNotFoundError } from '../dist/errors.js';
 
 describe('Web3McpHost: Dynamic Account Resolution & Instruction Simulation (Ticket 04)', () => {
   const rpcUrl = process.env.SOLANA_RPC_URL || 'https://api.devnet.solana.com';

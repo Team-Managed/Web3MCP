@@ -11,7 +11,7 @@ import {
   promptApproval,
   signAndBroadcastTransaction,
   WalletError,
-} from '../src/wallet.js';
+} from '../dist/wallet/index.js';
 
 describe('Web3McpHost: Terminal Wallet Signer & Review Card', () => {
   it('loads a Solana Keypair from a valid json file', () => {
