@@ -1,3 +1,4 @@
+import { Connection, Commitment } from '@solana/web3.js';
 import { Web3McpHostError } from './errors.js';
 import { discoverProgram } from './discovery/index.js';
 import { queryTools, findTool } from './tools/registry.js';
@@ -5,17 +6,24 @@ import { formatOpenAiTools } from './tools/schema.js';
 import { readAccount } from './accounts/reader.js';
 import { prepareAndSimulateInstruction } from './instructions/simulator.js';
 
+export interface Web3McpHostOptions {
+  connection?: Connection;
+  commitment?: Commitment;
+}
+
 /**
  * Web3MCP Host: Generic runtime for discovering, querying, and preparing
  * Solana program tools directly from on-chain accounts.
  */
 export class Web3McpHost {
+  connection: Connection;
+  commitment: Commitment;
+  programs: Map<string, any>;
+
   /**
-   * @param {object} options
-   * @param {import('@solana/web3.js').Connection} options.connection Active Solana RPC connection
-   * @param {import('@solana/web3.js').Commitment} [options.commitment='confirmed'] Default commitment level
+   * @param options
    */
-  constructor({ connection, commitment = 'confirmed' } = {}) {
+  constructor({ connection, commitment = 'confirmed' }: Web3McpHostOptions = {}) {
     if (!connection) {
       throw new Web3McpHostError('Web3McpHost requires an active @solana/web3.js Connection instance.');
     }
