@@ -5,7 +5,10 @@ import { LlmError } from '../errors.js';
  * Native Anthropic Claude driver with tool calling & Server-Sent Events (SSE) streaming.
  */
 export class AnthropicDriver {
-  constructor({ apiKey, model }) {
+  client: Anthropic;
+  model: string;
+
+  constructor({ apiKey, model }: { apiKey?: string; model?: string }) {
     if (!model) {
       throw new LlmError('A model name must be explicitly specified (e.g. via options.model, --model, or LLM_MODEL).');
     }

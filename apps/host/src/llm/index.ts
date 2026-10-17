@@ -15,17 +15,17 @@ function ensureEnvLoaded() {
   }
 }
 
+export interface CreateLlmClientOptions {
+  provider?: 'gemini' | 'openai' | 'anthropic' | 'groq' | 'ollama';
+  model?: string;
+  apiKey?: string;
+  baseURL?: string;
+}
+
 /**
  * Factory function creating an appropriate LlmClient instance based on parameters and environment variables.
- *
- * @param {object} [options]
- * @param {'gemini'|'openai'|'anthropic'|'groq'|'ollama'} [options.provider] Provider name
- * @param {string} [options.model] Target model name (explicitly required)
- * @param {string} [options.apiKey] API key override
- * @param {string} [options.baseURL] Custom base URL override
- * @returns {OpenAiCompatibleDriver|AnthropicDriver}
  */
-export function createLlmClient(options = {}) {
+export function createLlmClient(options: CreateLlmClientOptions = {}): OpenAiCompatibleDriver | AnthropicDriver {
   ensureEnvLoaded();
 
   const provider =

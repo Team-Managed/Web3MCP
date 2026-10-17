@@ -6,7 +6,20 @@ import { LlmError } from '../errors.js';
  * Uses HTTP Server-Sent Events (SSE) streaming for real-time token delivery to the terminal.
  */
 export class OpenAiCompatibleDriver {
-  constructor({ apiKey, baseURL, model, defaultHeaders = {} }) {
+  client: OpenAI;
+  model: string;
+
+  constructor({
+    apiKey,
+    baseURL,
+    model,
+    defaultHeaders = {},
+  }: {
+    apiKey?: string;
+    baseURL?: string;
+    model?: string;
+    defaultHeaders?: Record<string, string>;
+  }) {
     if (!model) {
       throw new LlmError('A model name must be explicitly specified (e.g. via options.model, --model, or LLM_MODEL).');
     }
