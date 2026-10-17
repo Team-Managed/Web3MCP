@@ -13,7 +13,21 @@ import readline from 'node:readline';
  * @param {number} [params.fee=5000] Estimated transaction fee in lamports
  * @returns {string} Formatted review card
  */
-export function formatReviewCard({ tool, programId, accounts = [], simulation, effects, fee = 5000 }) {
+export interface ReviewCardParams {
+  tool: string;
+  programId: string;
+  accounts?: Array<any>;
+  simulation?: any;
+  effects?: any;
+  fee?: number;
+}
+
+export interface PromptApprovalOptions {
+  input?: NodeJS.ReadableStream;
+  output?: NodeJS.WritableStream;
+}
+
+export function formatReviewCard({ tool, programId, accounts = [], simulation, effects, fee = 5000 }: ReviewCardParams): string {
   const width = 74;
   const line = '─'.repeat(width);
 
@@ -51,7 +65,7 @@ export function formatReviewCard({ tool, programId, accounts = [], simulation, e
   if (simulation?.logs && simulation.logs.length > 0) {
     lines.push(`│ Key Logs:`.padEnd(width + 1) + '│');
     const relevantLogs = simulation.logs
-      .filter((l) => l.includes('Instruction:') || l.includes('success') || l.includes('failed') || l.includes('consumed'))
+      .filter((l: string) => l.includes('Instruction:') || l.includes('success') || l.includes('failed') || l.includes('consumed'))
       .slice(0, 3);
     for (const log of relevantLogs) {
       const truncated = log.length > 68 ? log.slice(0, 65) + '...' : log;
@@ -65,17 +79,16 @@ export function formatReviewCard({ tool, programId, accounts = [], simulation, e
 
 /**
  * Prompts the user interactively in the terminal for transaction approval.
- *
- * @param {string} reviewCard Formatted review card to display
- * @param {object} [io] Custom IO streams for testing
- * @returns {Promise<boolean>} Resolves to true if approved, false if rejected
  */
-export async function promptApproval(reviewCard, { input = process.stdin, output = process.stdout } = {}) {
+export async function promptApproval(
+  reviewCard: string,
+  { input = process.stdin, output = process.stdout }: PromptApprovalOptions = {}
+): Promise<boolean> {
   output.write('\n' + reviewCard + '\n');
 
-  const rl = readline.createInterface({ input, output });
+  const rl = readline.createInterface({ input: input as any, output: output as any });
 
-  return new Promise((resolve) => {
+  return new Promise<boolean>((resolve) => {
     rl.question('? Approve and broadcast transaction to Devnet? [y/N] › ', (answer) => {
       rl.close();
       const trimmed = (answer || '').trim().toLowerCase();

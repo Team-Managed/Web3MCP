@@ -1,17 +1,17 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
-import { Keypair, Transaction } from '@solana/web3.js';
+import { Keypair, Transaction, Connection, TransactionInstruction, Commitment } from '@solana/web3.js';
 import { WalletError } from './errors.js';
 
 /**
  * Loads a Solana Keypair from a local file.
  * Defaults to ~/.config/solana/id.json if no path is provided.
  *
- * @param {string} [customPath] Optional custom path to keypair file
- * @returns {Keypair} Loaded Solana Keypair
+ * @param customPath Optional custom path to keypair file
+ * @returns Loaded Solana Keypair
  */
-export function loadKeypair(customPath) {
+export function loadKeypair(customPath?: string): Keypair {
   const defaultPath = path.join(os.homedir(), '.config/solana/id.json');
   const targetPath = customPath
     ? path.resolve(customPath)
@@ -30,22 +30,34 @@ export function loadKeypair(customPath) {
     const secretKeyArray = JSON.parse(rawData);
     const secretKey = Uint8Array.from(secretKeyArray);
     return Keypair.fromSecretKey(secretKey);
-  } catch (err) {
+  } catch (err: any) {
     throw new WalletError(`Failed to load keypair from '${targetPath}': ${err.message}`, err);
   }
 }
 
+export const loadKeypairFromFile = loadKeypair;
+
+export interface SignAndBroadcastParams {
+  connection: Connection;
+  instruction: TransactionInstruction;
+  signer: Keypair;
+  commitment?: Commitment;
+}
+
+export interface BroadcastResult {
+  signature: string;
+  explorerUrl: string;
+}
+
 /**
  * Signs and broadcasts a TransactionInstruction to Solana RPC, waiting for confirmation.
- *
- * @param {object} params
- * @param {import('@solana/web3.js').Connection} params.connection Solana RPC connection
- * @param {import('@solana/web3.js').TransactionInstruction} params.instruction Prepared instruction
- * @param {Keypair} params.signer Local signer keypair
- * @param {import('@solana/web3.js').Commitment} [params.commitment='confirmed'] Confirmation commitment
- * @returns {Promise<{ signature: string, explorerUrl: string }>} Transaction signature and Explorer link
  */
-export async function signAndBroadcastTransaction({ connection, instruction, signer, commitment = 'confirmed' }) {
+export async function signAndBroadcastTransaction({
+  connection,
+  instruction,
+  signer,
+  commitment = 'confirmed',
+}: SignAndBroadcastParams): Promise<BroadcastResult> {
   if (!connection) throw new WalletError('Missing active Solana connection.');
   if (!instruction) throw new WalletError('Missing TransactionInstruction to sign.');
   if (!signer || !(signer instanceof Keypair)) {
