@@ -102,6 +102,10 @@ export class Web3McpAgent {
       signerPubkey: this.signer ? this.signer.publicKey : null,
       tools: this.host.getTools(this.programId),
       clearHistory: () => this.clearHistory(),
+      setSigner: (signer: Keypair) => {
+        this.signer = signer;
+        this.initSystemPrompt();
+      },
     });
   }
 

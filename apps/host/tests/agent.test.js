@@ -1,5 +1,8 @@
 import test, { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import path from 'node:path';
+import os from 'node:os';
 import { Connection, Keypair, PublicKey } from '@solana/web3.js';
 import { Web3McpHost } from '../dist/index.js';
 import {
@@ -104,6 +107,30 @@ describe('Web3McpAgent: Multi-Turn Loop, Grounding & Slash Commands (Ticket 03)'
     });
     assert.equal(res2.handled, true);
     assert.equal(res2.shouldExit, true);
+  });
+
+  it('dispatches /keygen to generate a new keypair and invoke setSigner', async () => {
+    let newSigner = null;
+    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'web3mcp-agent-keygen-'));
+    const tempPath = path.join(tempDir, 'agent-key.json');
+
+    try {
+      const result = await handleSlashCommand(`/keygen ${tempPath}`, {
+        connection,
+        clearHistory: () => {},
+        setSigner: (signer) => {
+          newSigner = signer;
+        },
+      });
+
+      assert.equal(result.handled, true);
+      assert.ok(result.output.includes('Generated fresh Solana keypair'));
+      assert.ok(result.output.includes(tempPath));
+      assert.ok(newSigner instanceof Keypair);
+      assert.ok(fs.existsSync(tempPath));
+    } finally {
+      fs.rmSync(tempDir, { recursive: true, force: true });
+    }
   });
 
   it('handles unknown slash commands with guidance', async () => {
