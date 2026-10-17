@@ -1,10 +1,14 @@
 #!/bin/bash
 
 INPUT=$(cat)
-COMMAND=$(echo "$INPUT" | jq -r '.tool_input.command')
+if ! COMMAND=$(printf '%s' "$INPUT" | jq -er '.tool_input.command | select(type == "string" and length > 0)'); then
+  echo "BLOCKED: Could not parse the hook command (jq is required)." >&2
+  exit 2
+fi
 
 GIT_ARG="([^[:space:]\"']+|\"[^\"]+\"|'[^']+')"
-GIT_PREFIX="(^|[[:space:];|&])git([[:space:]]+((-C|-c|--git-dir|--work-tree)[[:space:]]+${GIT_ARG}|(--git-dir|--work-tree|--config-env)=${GIT_ARG}|--[a-z][a-z-]*|-[pP]))*[[:space:]]+"
+GIT_EXEC="(git|[^[:space:]\"']*/git|\"[^\"]*/git\"|'[^']*/git')"
+GIT_PREFIX="(^|[[:space:];|&])${GIT_EXEC}([[:space:]]+((-C|-c|--git-dir|--work-tree)[[:space:]]+${GIT_ARG}|(--git-dir|--work-tree|--config-env)=${GIT_ARG}|--[a-z][a-z-]*|-[pP]))*[[:space:]]+"
 DANGEROUS_PATTERNS=(
   "${GIT_PREFIX}push([[:space:]]|$)"
   "${GIT_PREFIX}reset --hard"

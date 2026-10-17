@@ -42,4 +42,4 @@ Skills are installed under `.agents/skills/`.
 - **`domain-modeling`**: Actively keeps [GLOSSARY.md](GLOSSARY.md) and `docs/adr/` aligned with protocol specifications.
 - **`grill-me`** / **`grilling`**: Relentless Socratic interview to stress-test designs and edge cases before coding.
 - **`to-spec`** & **`to-tickets`**: Converts discussions into specifications and vertical-slice tracer tickets.
-- **`git-guardrails-claude-code`**: Prevents accidental git commits of wallet keypairs, private keys, secrets, or destructive operations.
+- **`git-guardrails-claude-code`**: Blocks selected destructive Git commands in Claude Code. Review staged files for wallet keys and secrets before committing.

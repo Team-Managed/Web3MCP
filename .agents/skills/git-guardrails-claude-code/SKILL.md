@@ -26,6 +26,7 @@ Ask the user: install for **this project only** (`.claude/settings.json`) or **a
 ### 2. Copy the hook script
 
 The bundled script is at: [scripts/block-dangerous-git.sh](scripts/block-dangerous-git.sh)
+It requires `jq`; verify `command -v jq` before installation (on macOS, install it with `brew install jq` if absent). The hook blocks commands when parsing is unavailable.
 
 Copy it to the target location based on scope:
 
