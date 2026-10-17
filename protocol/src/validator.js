@@ -122,7 +122,7 @@ export function validateConfig(configInput) {
         if (buf.length > MAX_CONFIG_PAYLOAD_BYTES) {
           return { valid: false, errors: ['Raw JSON config exceeds 64 KiB payload limit'] };
         }
-        config = JSON.parse(buf.toString('utf8'));
+        config = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(buf));
       }
     } else if (typeof configInput === 'string') {
       if (Buffer.byteLength(configInput, 'utf8') > MAX_CONFIG_PAYLOAD_BYTES) {

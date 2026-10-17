@@ -53,7 +53,7 @@ function validateInstruction(tool, instruction, path, errors) {
     const binding = bindings[account.name];
     if (!binding) continue;
     const accountPath = `${path}/accounts/${account.name}`;
-    if (account.optional || Array.isArray(account.accounts) || !isRecord(account) || typeof account.writable !== 'boolean' && account.writable !== undefined ||
+    if (account.optional || Object.hasOwn(account, 'accounts') || !isRecord(account) || typeof account.writable !== 'boolean' && account.writable !== undefined ||
         typeof account.signer !== 'boolean' && account.signer !== undefined) {
       errors.push(`${accountPath}: unsupported or malformed IDL account`);
       continue;
@@ -65,7 +65,7 @@ function validateInstruction(tool, instruction, path, errors) {
     if (binding.source === 'signer' && account.signer !== true) {
       errors.push(`${accountPath}: wallet signer binding requires an IDL signer account`);
     }
-    if (account.address && (binding.source !== 'program' || account.address !== binding.address)) {
+    if (Object.hasOwn(account, 'address') && (!validPubkey(account.address) || binding.source !== 'program' || account.address !== binding.address)) {
       errors.push(`${accountPath}: fixed address differs from IDL address or binding source`);
     }
     if (binding.source === 'idl') {

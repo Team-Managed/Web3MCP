@@ -73,6 +73,8 @@ const badCases = [
   ['duplicate required property', (c) => { c.tools[0].inputSchema.required.push('amount'); }],
   ['duplicate IDL instructions', (c) => { c.idl.instructions.push(structuredClone(c.idl.instructions[0])); }],
   ['nested IDL instruction accounts', (c) => { c.idl.instructions[0].accounts[0].accounts = []; }],
+  ['object-valued nested IDL instruction accounts', (c) => { c.idl.instructions[0].accounts[0].accounts = {}; }],
+  ['empty IDL fixed address', (c) => { c.idl.instructions[0].accounts[0].address = ''; }],
 ];
 
 for (const [label, mutate] of badCases) {
@@ -90,4 +92,16 @@ test('rejects raw JSON larger than the on-chain payload limit', () => {
     assert.equal(result.valid, false);
     assert.match(result.errors.join(' '), /64 KiB|65,536|65536/);
   }
+});
+
+test('rejects malformed UTF-8 in a raw JSON buffer', () => {
+  const candidate = config();
+  candidate.tools[0].description = 'marker';
+  const raw = Buffer.from(JSON.stringify(candidate));
+  const index = raw.indexOf('marker');
+  assert.notEqual(index, -1);
+  raw[index] = 0xff;
+  const result = validateConfig(raw);
+  assert.equal(result.valid, false);
+  assert.match(result.errors.join(' '), /UTF-8/i);
 });
