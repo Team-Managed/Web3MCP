@@ -7,6 +7,7 @@ export default defineConfig({
     'llm/index': 'src/llm/index.ts',
     'wallet/index': 'src/wallet/index.ts',
     'agent/index': 'src/agent/index.ts',
+    'ui/index': 'src/ui/index.ts',
   },
   format: ['esm'],
   dts: true,
