@@ -15,6 +15,8 @@ export interface Web3McpAgentOptions {
   signer?: Keypair | null;
   programId?: string;
   onApprovalRequest?: ApprovalHandler;
+  includeKnowledge?: boolean;
+  knowledgeDir?: string;
 }
 
 /**
@@ -28,6 +30,8 @@ export class Web3McpAgent {
   signer: Keypair | null;
   programId?: string;
   onApprovalRequest?: ApprovalHandler;
+  includeKnowledge?: boolean;
+  knowledgeDir?: string;
   messages: Array<any>;
 
   constructor({
@@ -40,6 +44,8 @@ export class Web3McpAgent {
     signer = null,
     programId,
     onApprovalRequest,
+    includeKnowledge = true,
+    knowledgeDir,
   }: Web3McpAgentOptions) {
     if (!host) {
       throw new Error('Web3McpAgent requires an active Web3McpHost instance.');
@@ -48,6 +54,8 @@ export class Web3McpAgent {
     this.signer = signer;
     this.programId = programId;
     this.onApprovalRequest = onApprovalRequest;
+    this.includeKnowledge = includeKnowledge;
+    this.knowledgeDir = knowledgeDir;
 
     const resolvedLlmOptions: CreateLlmClientOptions = {
       ...(llmOptions || {}),
@@ -71,6 +79,8 @@ export class Web3McpAgent {
       programId: this.programId,
       signerAddress: this.signer ? this.signer.publicKey.toBase58() : undefined,
       tools,
+      includeKnowledge: this.includeKnowledge,
+      knowledgeDir: this.knowledgeDir,
     });
     this.messages = [{ role: 'system', content: systemContent }];
   }
@@ -139,3 +149,4 @@ export class Web3McpAgent {
 export * from './prompt.js';
 export * from './commands.js';
 export * from './loop.js';
+export * from './knowledge.js';
