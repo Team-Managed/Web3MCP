@@ -7,7 +7,7 @@ if ! COMMAND=$(printf '%s' "$INPUT" | jq -er '.tool_input.command | select(type 
 fi
 
 GIT_ARG="([^[:space:]\"']+|\"[^\"]+\"|'[^']+')"
-GIT_EXEC="(git|[^[:space:]\"']*/git|\"[^\"]*/git\"|'[^']*/git')"
+GIT_EXEC="(git|\"git\"|'git'|[^[:space:]\"']*/git|\"[^\"]*/git\"|'[^']*/git')"
 GIT_PREFIX="(^|[[:space:];|&])${GIT_EXEC}([[:space:]]+((-C|-c|--git-dir|--work-tree)[[:space:]]+${GIT_ARG}|(--git-dir|--work-tree|--config-env)=${GIT_ARG}|--[a-z][a-z-]*|-[pP]))*[[:space:]]+"
 DANGEROUS_PATTERNS=(
   "${GIT_PREFIX}push([[:space:]]|$)"

@@ -32,20 +32,16 @@ pub fn withdraw(ctx: Context<Withdraw>, amount: u64) -> Result<()> {
         VaultError::RentViolation
     );
 
-    **vault_info.try_borrow_mut_lamports()? = current_lamports
-        .checked_sub(amount)
-        .ok_or(VaultError::MathOverflow)?;
-    **ctx
-        .accounts
-        .owner
-        .to_account_info()
-        .try_borrow_mut_lamports()? = ctx
-        .accounts
-        .owner
-        .to_account_info()
+    let owner_info = ctx.accounts.owner.to_account_info();
+    let owner_lamports = owner_info
         .lamports()
         .checked_add(amount)
         .ok_or(VaultError::MathOverflow)?;
+
+    **vault_info.try_borrow_mut_lamports()? = current_lamports
+        .checked_sub(amount)
+        .ok_or(VaultError::MathOverflow)?;
+    **owner_info.try_borrow_mut_lamports()? = owner_lamports;
 
     let vault = &mut ctx.accounts.vault;
     vault.balance = vault

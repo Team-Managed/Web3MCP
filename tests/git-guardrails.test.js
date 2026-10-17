@@ -21,6 +21,8 @@ for (const command of [
   '/usr/bin/git push origin main',
   './git clean -df',
   '"/opt/git tools/git" push origin main',
+  '"git" push origin main',
+  "'git' push origin main",
 ]) {
   test(`git guardrail blocks ${command}`, () => {
     const result = spawnSync('bash', [hook.pathname], { input: JSON.stringify({ tool_input: { command } }), encoding: 'utf8' });

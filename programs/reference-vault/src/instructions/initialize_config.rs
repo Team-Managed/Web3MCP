@@ -116,12 +116,13 @@ pub fn initialize_config(
         if config_info.data_len() > CONFIG_HEADER_LEN {
             config_info.resize(CONFIG_HEADER_LEN)?;
         }
-        let minimum_balance = Rent::get()?.minimum_balance(CONFIG_HEADER_LEN);
-        let excess = config_info.lamports().saturating_sub(minimum_balance);
-        if excess > 0 {
-            **config_info.try_borrow_mut_lamports()? -= excess;
-            **ctx.accounts.authority.try_borrow_mut_lamports()? += excess;
-        }
+    }
+
+    let minimum_balance = Rent::get()?.minimum_balance(CONFIG_HEADER_LEN);
+    let excess = config_info.lamports().saturating_sub(minimum_balance);
+    if excess > 0 {
+        **config_info.try_borrow_mut_lamports()? -= excess;
+        **ctx.accounts.authority.try_borrow_mut_lamports()? += excess;
     }
 
     // Write new configuration header

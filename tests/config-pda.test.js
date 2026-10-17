@@ -112,16 +112,17 @@ describe("reference-vault: Web3MCP Config PDA chunked upload lifecycle", () => {
 
   it("pre-funds the canonical PDA before initialization", async () => {
     assert.equal(await provider.connection.getAccountInfo(configPda, "confirmed"), null);
-    const rentExemptLamports = await provider.connection.getMinimumBalanceForRentExemption(0);
+    const rentExemptLamports = await provider.connection.getMinimumBalanceForRentExemption(81);
     const transfer = new Transaction().add(SystemProgram.transfer({
       fromPubkey: authority.publicKey,
       toPubkey: configPda,
-      lamports: rentExemptLamports,
+      lamports: rentExemptLamports + 500_000,
     }));
     await provider.sendAndConfirm(transfer);
     const prefunded = await provider.connection.getAccountInfo(configPda, "confirmed");
     assert.equal(prefunded.owner.toBase58(), SystemProgram.programId.toBase58());
     assert.equal(prefunded.data.length, 0);
+    assert.equal(prefunded.lamports, rentExemptLamports + 500_000);
   });
 
   it("initializes config PDA in Uploading status (1)", async () => {
@@ -142,6 +143,8 @@ describe("reference-vault: Web3MCP Config PDA chunked upload lifecycle", () => {
     assert.equal(configAccount.expectedLen, expectedLen);
     assert.deepEqual(Buffer.from(configAccount.digest), correctDigest);
     assert.equal(configAccount.config.length, 0);
+    const initialized = await connection.getAccountInfo(configPda, "confirmed");
+    assert.equal(initialized.lamports, await connection.getMinimumBalanceForRentExemption(81));
   });
 
   it("writes chunks into config payload buffer with dynamic reallocation", async () => {
