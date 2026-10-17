@@ -86,7 +86,7 @@ export async function promptApproval(
 ): Promise<boolean> {
   output.write('\n' + reviewCard + '\n');
 
-  const rl = readline.createInterface({ input: input as any, output: output as any });
+  const rl = readline.createInterface({ input, output });
 
   return new Promise<boolean>((resolve) => {
     rl.question('? Approve and broadcast transaction to Devnet? [y/N] › ', (answer) => {

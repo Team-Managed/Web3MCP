@@ -15,6 +15,13 @@ export interface ApprovalRequest {
 
 export type ApprovalHandler = (req: ApprovalRequest) => Promise<boolean>;
 
+export interface AgentToolCall {
+  id: string;
+  name: string;
+  arguments: Record<string, unknown>;
+  extra_content?: unknown;
+}
+
 export interface ExecuteTurnParams {
   messages: Array<any>;
   llmClient: {
@@ -22,7 +29,7 @@ export interface ExecuteTurnParams {
       messages: Array<any>;
       tools?: Array<any>;
       onToken?: (token: string) => void;
-    }) => Promise<{ role: string; content: string; toolCalls?: Array<any> }>;
+    }) => Promise<{ role: string; content: string; toolCalls?: Array<AgentToolCall> }>;
   };
   host: Web3McpHost;
   signer?: Keypair | null;
@@ -68,13 +75,14 @@ export async function executeAgentTurn({
     };
 
     if (response.toolCalls && response.toolCalls.length > 0) {
-      assistantMsg.tool_calls = response.toolCalls.map((tc) => ({
+      assistantMsg.tool_calls = response.toolCalls.map((tc: AgentToolCall) => ({
         id: tc.id,
         type: 'function',
         function: {
           name: tc.name,
           arguments: JSON.stringify(tc.arguments),
         },
+        ...(tc.extra_content ? { extra_content: tc.extra_content } : {}),
       }));
     }
 
