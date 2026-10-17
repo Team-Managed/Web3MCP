@@ -7,6 +7,7 @@ import { PassThrough } from 'node:stream';
 import { Keypair, TransactionInstruction, PublicKey } from '@solana/web3.js';
 import {
   loadKeypair,
+  generateKeypairToFile,
   formatReviewCard,
   promptApproval,
   signAndBroadcastTransaction,
@@ -127,5 +128,31 @@ describe('Web3McpHost: Terminal Wallet Signer & Review Card', () => {
         return true;
       }
     );
+  });
+
+  it('generates and writes a valid keypair with 0600 permissions', () => {
+    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'web3mcp-keygen-test-'));
+    const tempPath = path.join(tempDir, 'new-id.json');
+
+    try {
+      const { keypair, path: savedPath } = generateKeypairToFile({ customPath: tempPath });
+      assert.equal(savedPath, tempPath);
+      assert.ok(keypair instanceof Keypair);
+      assert.ok(fs.existsSync(tempPath));
+
+      const stats = fs.statSync(tempPath);
+      assert.equal(stats.mode & 0o777, 0o600);
+
+      const reloaded = loadKeypair(tempPath);
+      assert.equal(reloaded.publicKey.toBase58(), keypair.publicKey.toBase58());
+
+      // Fails when file exists and overwrite is false
+      assert.throws(
+        () => generateKeypairToFile({ customPath: tempPath, overwrite: false }),
+        /already exists/
+      );
+    } finally {
+      fs.rmSync(tempDir, { recursive: true, force: true });
+    }
   });
 });
