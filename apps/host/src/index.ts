@@ -52,28 +52,28 @@ export class Web3McpHost {
    * @param {string} [programId] Optional programId to filter tools
    * @returns {any[]} Array of protocol-compliant tool descriptors
    */
-  getTools(programId) {
+  getTools(programId?: string) {
     return queryTools(this.programs, programId);
   }
 
   /**
    * Retrieves a specific tool descriptor by name.
    *
-   * @param {string} name Tool name
-   * @param {string} [programId] Optional programId to scope the search
-   * @returns {any} Tool descriptor
+   * @param name Tool name
+   * @param programId Optional programId to scope the search
+   * @returns Tool descriptor
    */
-  getTool(name, programId) {
+  getTool(name: string, programId?: string) {
     return findTool(this.programs, name, programId);
   }
 
   /**
    * Converts registered tool descriptors into the standard OpenAI tool/function calling format.
    *
-   * @param {string} [programId] Optional programId filter
-   * @returns {Array<{ type: 'function', function: { name: string, description: string, parameters: any } }>}
+   * @param programId Optional programId filter
+   * @returns Array of OpenAI tool definitions
    */
-  toOpenAiTools(programId) {
+  toOpenAiTools(programId?: string) {
     const tools = this.getTools(programId);
     return formatOpenAiTools(tools);
   }
@@ -123,3 +123,4 @@ export class Web3McpHost {
 export * from './errors.js';
 export * from './llm/index.js';
 export * from './wallet/index.js';
+export * from './agent/index.js';
