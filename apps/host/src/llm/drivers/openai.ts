@@ -64,7 +64,7 @@ export class OpenAiCompatibleDriver {
             if (!toolCallsMap.has(index)) {
               toolCallsMap.set(index, {
                 id: tc.id || `call_${index}`,
-                name: tc.function?.name || '',
+                name: '',
                 argumentsStr: '',
               });
             }

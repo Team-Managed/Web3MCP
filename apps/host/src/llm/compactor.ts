@@ -13,17 +13,19 @@ export function compactToolResult(toolName, result) {
   }
 
   // If this was an instruction execution/simulation result
-  if (result.instruction || result.simulation || result.confirmedSignature) {
+  if (result.instruction || result.simulation || result.confirmedSignature || result.declined) {
     return {
       tool: toolName,
-      status: result.simulation?.err
+      status: result.declined
+        ? 'declined'
+        : result.simulation?.err
         ? 'simulated_failure'
         : result.confirmedSignature
         ? 'confirmed'
         : 'simulated_success',
       computeUnits: result.simulation?.unitsConsumed ?? null,
       effects: result.effects || null,
-      accounts: (result.accounts || []).map((a) => ({
+      accounts: (result.accounts || []).map((a: any) => ({
         name: a.name,
         pubkey: a.pubkey,
         signer: a.isSigner,
@@ -32,7 +34,9 @@ export function compactToolResult(toolName, result) {
       confirmedSignature: result.confirmedSignature || null,
       explorerUrl: result.explorerUrl || null,
       declined: Boolean(result.declined),
-      error: result.simulation?.err || result.error || null,
+      error: result.declined
+        ? result.error || 'Transaction rejected by user.'
+        : result.simulation?.err || result.error || null,
     };
   }
 
