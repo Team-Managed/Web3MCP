@@ -1,13 +1,24 @@
 "use client";
 
 import React from "react";
+import { ArrowDown } from "lucide-react";
 
 export default function Hero() {
+  const scrollToDocs = () => {
+    const el = document.getElementById("docs-section");
+    if (el) {
+      el.scrollIntoView({ behavior: "smooth" });
+    }
+  };
+
   return (
     <section id="hero" className="hero-section">
       <div className="hero-container">
         <span className="eyebrow">SOLANA PROTOCOL</span>
-        <h1 className="hero-title">Web3MCP</h1>
+        <h1 className="hero-title">
+          <span className="title-white">Web3</span>
+          <span className="title-gradient">MCP</span>
+        </h1>
         <p className="hero-subtitle">
           Native on-chain tool discovery for AI agents on
           <br />
@@ -20,11 +31,17 @@ export default function Hero() {
         </p>
       </div>
 
+      <div className="scroll-hint" onClick={scrollToDocs}>
+        <span>Documentation &middot; Specifications &middot; Guides</span>
+        <ArrowDown size={13} className="bounce-arrow" />
+      </div>
+
       <style jsx>{`
         .hero-section {
           min-height: 100vh;
           width: 100%;
           display: flex;
+          flex-direction: column;
           align-items: center;
           justify-content: center;
           padding: 0 40px;
@@ -33,33 +50,45 @@ export default function Hero() {
         }
 
         .hero-container {
-          max-width: 860px;
-          width: 100%;
           display: flex;
           flex-direction: column;
-          align-items: flex-start;
-          text-align: left;
+          align-items: center;
+          text-align: center;
+          max-width: 860px;
+          width: 100%;
         }
 
         .eyebrow {
           font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
           font-size: 14px;
           font-weight: 700;
-          color: #FF2A85;
-          letter-spacing: 0.06em;
+          color: #38bdf8;
+          letter-spacing: 0.16em;
           text-transform: uppercase;
-          margin-bottom: 8px;
+          margin-bottom: 14px;
           display: block;
         }
 
         .hero-title {
           font-family: "Playfair Display", Georgia, "Times New Roman", serif;
-          font-size: clamp(4.8rem, 10vw, 7.5rem);
+          font-size: clamp(4.8rem, 10vw, 7.8rem);
           font-weight: 500;
           line-height: 1.0;
           letter-spacing: -0.02em;
-          color: #FFFFFF;
-          margin: 0 0 16px 0;
+          margin: 0 0 18px 0;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+
+        .title-white {
+          color: #ffffff;
+        }
+
+        .title-gradient {
+          background: linear-gradient(135deg, #a78bfa 0%, #60a5fa 45%, #38bdf8 100%);
+          -webkit-background-clip: text;
+          -webkit-text-fill-color: transparent;
         }
 
         .hero-subtitle {
@@ -68,7 +97,7 @@ export default function Hero() {
           font-weight: 400;
           line-height: 1.32;
           letter-spacing: -0.015em;
-          color: #FFFFFF;
+          color: #ffffff;
           margin: 0 0 16px 0;
           max-width: 720px;
         }
@@ -77,11 +106,38 @@ export default function Hero() {
           font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
           font-size: clamp(0.9rem, 1.3vw, 1.05rem);
           font-weight: 400;
-          color: #7E8085;
+          color: #7e8085;
           line-height: 1.45;
           letter-spacing: -0.01em;
           margin: 0;
           max-width: 600px;
+        }
+
+        .scroll-hint {
+          position: absolute;
+          bottom: 28px;
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          font-family: var(--font-sans);
+          font-size: 11.5px;
+          color: #64748b;
+          cursor: pointer;
+          transition: color 0.15s ease;
+          padding: 6px 12px;
+        }
+
+        .scroll-hint:hover {
+          color: #38bdf8;
+        }
+
+        .bounce-arrow {
+          animation: bounce 1.8s infinite;
+        }
+
+        @keyframes bounce {
+          0%, 100% { transform: translateY(0); }
+          50% { transform: translateY(4px); }
         }
 
         @media (max-width: 640px) {
