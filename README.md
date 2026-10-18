@@ -10,7 +10,7 @@ Web3MCP is a proposed Solana protocol for publishing agent-facing tool definitio
 | [Node.js SDK](packages/sdk/README.md) | Reusable discovery, reads, transaction preparation, and signed submission. |
 | [Web3MCP Compatible Host CLI](apps/host/README.md) | One terminal chat app that imports the SDK, runs a model loop, and requests wallet approval. |
 | [Reference program](reference-programs/reference-vault/README.md) | Publish real tools from a Solana program so the host can prove the protocol end to end. |
-| [Documentation site](apps/docs/README.md) | Present the whitepaper, protocol reference, and guides to program and host authors. |
+| [Website](apps/website/README.md) | Present the whitepaper, protocol reference, and guides to program and host authors. |
 
 The [npm release checklist](docs/npm-release.md) covers publishing the Node.js SDK. The protocol remains in this repository; the example Host CLI is not part of the npm release.
 
@@ -24,4 +24,4 @@ Program-ID discovery is the protocol entry point. The Host CLI can optionally re
 
 ## Status
 
-The protocol validator, reference vault, Node.js SDK, Host CLI, and documentation site are implemented locally. The current reference vault and Web3MCP v0.2 config are deployed on Devnet at program `9zJzM4rHDPR4pd3vXHQjQ7whTVmx4zxB3ZH4Gb9iXRwD`; the SDK discovered its five tools there. The v0.2 local-validator integration suite passed all 38 tests, including an SDK-backed signed write. A basic provider-backed OpenAI chat succeeded, and packed SDK and Host CLI installs worked outside the monorepo. A full provider-backed Devnet read/write rehearsal, npm publication, documentation site deployment, and the second-program interoperability demo remain pending.
+The protocol validator, reference vault, Node.js SDK, Host CLI, and website are implemented locally. The current reference vault and Web3MCP v0.2 config are deployed on Devnet at program `9zJzM4rHDPR4pd3vXHQjQ7whTVmx4zxB3ZH4Gb9iXRwD`; the SDK discovered its five tools there. The v0.2 local-validator integration suite passed all 38 tests, including an SDK-backed signed write. A basic provider-backed OpenAI chat succeeded, and packed SDK and Host CLI installs worked outside the monorepo. [@web3mcp/sdk@0.1.0](https://www.npmjs.com/package/@web3mcp/sdk) is published; a fresh public install discovered the five Devnet tools. A full provider-backed Devnet read/write rehearsal, website deployment, and the second-program interoperability demo remain pending.

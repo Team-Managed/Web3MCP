@@ -1,10 +1,10 @@
 # Publish the Web3MCP SDK
 
-Publish only `@web3mcp/sdk`. The protocol specification, schema, and conformance tests remain in `protocol/`; the SDK bundles the protocol validator and includes its schema in its npm package. The example Host CLI is not part of this release.
+Publish only `@web3mcp/sdk`. The protocol specification, schema, and conformance tests remain in `protocol/`; the SDK bundles the protocol validator and includes its schema in its npm package. The example Host CLI is not part of this release. Version [0.1.0](https://www.npmjs.com/package/@web3mcp/sdk) is public and passed a fresh install and Devnet discovery check.
 
-## Before the first release
+## Before a release
 
-1. Confirm the `web3mcp` npm organization and publisher access. Check that `@web3mcp/sdk@0.1.0` is not already published.
+1. Confirm the `web3mcp` npm organization and publisher access. Bump the SDK version and check that it is not already published.
 2. From the repository root, run:
 
    ```bash
@@ -18,7 +18,7 @@ Publish only `@web3mcp/sdk`. The protocol specification, schema, and conformance
 3. Review the pack list for compiled JavaScript, type declarations, the protocol schema, README, and LICENSE. Check that it contains no keys or `.env` files.
 4. Install the packed SDK in a clean Node.js project and run discovery against the reference Devnet program. Confirm that installation does not request `@web3mcp/protocol` from npm.
 
-## First publication
+## Manual publication
 
 The publisher must be signed into npm with access to the `web3mcp` organization and complete npm's required two-factor authentication. From the repository root:
 
@@ -26,7 +26,7 @@ The publisher must be signed into npm with access to the `web3mcp` organization 
 npm publish --workspace @web3mcp/sdk --access public
 ```
 
-Verify the public package page and a fresh `npm install @web3mcp/sdk @solana/web3.js`. Change the website's “pending publication” text only after that install succeeds.
+Verify the public package page and a fresh `npm install @web3mcp/sdk @solana/web3.js` before updating website install instructions.
 
 ## Later releases from GitHub Actions
 
