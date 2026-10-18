@@ -6,6 +6,7 @@ import DocsNavBox from "../components/DocsNavBox";
 import DocsArticleBox from "../components/DocsArticleBox";
 import DocsOnThisPage from "../components/DocsOnThisPage";
 import Footer from "../../components/Footer";
+import PixelCanvas from "../../components/PixelCanvas";
 import { DOCS_SECTIONS } from "../../data/docsContent";
 
 export default function DocsLatestPage() {
@@ -47,6 +48,11 @@ export default function DocsLatestPage() {
 
   return (
     <div className="docs-page-shell">
+      {/* Subtle Static Pixel Margin Backdrop with low density */}
+      <div className="docs-pixel-bg-wrapper">
+        <PixelCanvas density="low" transparentBg isStatic />
+      </div>
+
       <Navbar isSticky maxWidth="1440px" />
 
       {/* Main 3-Column Boxed Layout matching pi.dev */}
@@ -79,12 +85,27 @@ export default function DocsLatestPage() {
           min-height: 100vh;
           background: #000000;
           color: #ffffff;
+          position: relative;
+          overflow-x: clip;
+        }
+
+        .docs-pixel-bg-wrapper {
+          position: absolute;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 100%;
+          pointer-events: none;
+          z-index: 0;
+          opacity: 0.75;
         }
 
         .docs-three-column-grid {
+          position: relative;
+          z-index: 1;
           max-width: 1440px;
           margin: 0 auto;
-          padding: 24px 20px 64px 20px;
+          padding: 28px 24px 64px 24px;
           display: flex;
           align-items: flex-start;
           gap: 20px;

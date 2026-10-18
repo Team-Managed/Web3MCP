@@ -22,7 +22,19 @@ interface PixelBlock {
   settled: boolean;
 }
 
-export default function PixelCanvas({ triggerOnView = false }: { triggerOnView?: boolean } = {}) {
+interface PixelCanvasProps {
+  triggerOnView?: boolean;
+  density?: "normal" | "low";
+  transparentBg?: boolean;
+  isStatic?: boolean;
+}
+
+export default function PixelCanvas({
+  triggerOnView = false,
+  density = "normal",
+  transparentBg = false,
+  isStatic = false,
+}: PixelCanvasProps = {}) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
   useEffect(() => {
@@ -138,6 +150,10 @@ export default function PixelCanvas({ triggerOnView = false }: { triggerOnView?:
 
       const newBlocks: PixelBlock[] = [];
 
+      const isLowDensity = density === "low";
+      const distThreshold = isLowDensity ? 0.94 : 0.82;
+      const alphaScale = isLowDensity ? 0.4 : 1.0;
+
       for (let r = 0; r < rows; r++) {
         // Normalized Y distance from center (0 at center, ~1.0 at top/bottom edge)
         const normY = Math.abs((r + 0.5) - rows / 2) / (rows / 2);
@@ -166,9 +182,10 @@ export default function PixelCanvas({ triggerOnView = false }: { triggerOnView?:
           const regionalAlpha = fadeZone < -0.2 ? 0.4 : fadeZone > 0.3 ? 0.95 : 0.7;
 
           // Threshold for spawning frame blocks
-          if (effectiveDist > 0.82) {
-            const depth = effectiveDist - 0.82;
+          if (effectiveDist > distThreshold) {
+            const depth = effectiveDist - distThreshold;
             const noise = getNoise(c, r, 99);
+            if (isLowDensity && noise < 0.45) continue;
             const targetX = c * blockW;
             const targetY = r * blockH;
 
@@ -180,7 +197,7 @@ export default function PixelCanvas({ triggerOnView = false }: { triggerOnView?:
 
             // Outer cloud clusters (highest density)
             if (depth > 0.3) {
-              const alpha = Math.min(1.0, 0.75 * regionalAlpha + 0.25);
+              const alpha = Math.min(1.0, 0.75 * regionalAlpha + 0.25) * alphaScale;
               const color =
                 noise > 0.45 ? colors.base : noise > 0.2 ? colors.light : colors.deep;
 
@@ -204,7 +221,7 @@ export default function PixelCanvas({ triggerOnView = false }: { triggerOnView?:
             }
             // Mid-cloud billows (faded with dither)
             else if (depth > 0.12) {
-              const alpha = 0.55 * regionalAlpha;
+              const alpha = 0.55 * regionalAlpha * alphaScale;
               if (noise > 0.7) {
                 newBlocks.push({
                   c,
@@ -330,6 +347,16 @@ export default function PixelCanvas({ triggerOnView = false }: { triggerOnView?:
         }
       }
 
+      if (isStatic) {
+        for (let i = 0; i < newBlocks.length; i++) {
+          const b = newBlocks[i];
+          b.startY = b.targetY;
+          b.currentY = b.targetY;
+          b.currentAlpha = b.targetAlpha;
+          b.settled = true;
+        }
+      }
+
       blocks = newBlocks;
       startTime = performance.now();
     };
@@ -353,14 +380,42 @@ export default function PixelCanvas({ triggerOnView = false }: { triggerOnView?:
       ctx.fillRect(px + halfW, py + halfH, halfW, halfH);
     };
 
+    const drawStaticFrame = () => {
+      const parent = canvas.parentElement;
+      const width = parent?.clientWidth || window.innerWidth;
+      const height = parent?.clientHeight || window.innerHeight;
+      if (width <= 0 || height <= 0) return;
+
+      if (transparentBg) {
+        ctx.clearRect(0, 0, width, height);
+      } else {
+        ctx.fillStyle = "#000000";
+        ctx.fillRect(0, 0, width, height);
+      }
+
+      for (let i = 0; i < blocks.length; i++) {
+        const b = blocks[i];
+        if (b.isDither && b.c2 && b.a2 !== undefined) {
+          drawDitherBlock(b.x, b.targetY, b.width, b.height, b.c1, b.targetAlpha, b.c2, b.a2);
+        } else {
+          ctx.fillStyle = rgba(b.c1, b.targetAlpha);
+          ctx.fillRect(b.x, b.targetY, b.width, b.height);
+        }
+      }
+    };
+
     const animate = (currentTime: number) => {
       const parent = canvas.parentElement;
       const width = parent?.clientWidth || window.innerWidth;
       const height = parent?.clientHeight || window.innerHeight;
 
-      // Solid pitch black base
-      ctx.fillStyle = "#000000";
-      ctx.fillRect(0, 0, width, height);
+      // Clear canvas base
+      if (transparentBg) {
+        ctx.clearRect(0, 0, width, height);
+      } else {
+        ctx.fillStyle = "#000000";
+        ctx.fillRect(0, 0, width, height);
+      }
 
       if (!started) {
         animId = requestAnimationFrame(animate);
@@ -404,10 +459,17 @@ export default function PixelCanvas({ triggerOnView = false }: { triggerOnView?:
     };
 
     initBlocks();
-    animId = requestAnimationFrame(animate);
+    if (isStatic) {
+      drawStaticFrame();
+    } else {
+      animId = requestAnimationFrame(animate);
+    }
 
     const handleResize = () => {
       initBlocks();
+      if (isStatic) {
+        drawStaticFrame();
+      }
     };
 
     window.addEventListener("resize", handleResize);
@@ -418,6 +480,9 @@ export default function PixelCanvas({ triggerOnView = false }: { triggerOnView?:
         for (const entry of entries) {
           if (entry.contentRect.width > 0 && entry.contentRect.height > 0) {
             initBlocks();
+            if (isStatic) {
+              drawStaticFrame();
+            }
           }
         }
       });
@@ -433,6 +498,9 @@ export default function PixelCanvas({ triggerOnView = false }: { triggerOnView?:
               started = true;
               startTime = performance.now();
               initBlocks();
+              if (isStatic) {
+                drawStaticFrame();
+              }
             }
           }
         },
@@ -464,7 +532,7 @@ export default function PixelCanvas({ triggerOnView = false }: { triggerOnView?:
         pointerEvents: "none",
         zIndex: 0,
         overflow: "hidden",
-        backgroundColor: "#000000",
+        backgroundColor: transparentBg ? "transparent" : "#000000",
       }}
     >
       <canvas

@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
+import PixelCanvas from "../components/PixelCanvas";
 
 export default function QuickstartPage() {
   const [copiedId, setCopiedId] = useState<string | null>(null);
@@ -27,6 +28,11 @@ export default function QuickstartPage() {
 
   return (
     <div className="quickstart-page-shell">
+      {/* Subtle Static Pixel Margin Backdrop with low density */}
+      <div className="qs-pixel-bg-wrapper">
+        <PixelCanvas density="low" transparentBg isStatic />
+      </div>
+
       {/* Exact landing page Navbar, sticky pinned with maximum width 1200px */}
       <Navbar isSticky maxWidth="1200px" />
 
@@ -456,13 +462,27 @@ gemini-3.8-flash | devnet | GgVnzvsM...4Lyrgv
           min-height: 100vh;
           background: #000000;
           color: #ffffff;
+          position: relative;
           overflow-x: clip;
         }
 
+        .qs-pixel-bg-wrapper {
+          position: absolute;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 100%;
+          pointer-events: none;
+          z-index: 0;
+          opacity: 0.75;
+        }
+
         .quickstart-main-container {
+          position: relative;
+          z-index: 1;
           max-width: 1000px;
           margin: 0 auto;
-          padding: 40px 20px 80px 20px;
+          padding: 40px 24px 80px 24px;
         }
 
         .qs-header {
