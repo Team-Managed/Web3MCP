@@ -134,7 +134,7 @@ export default function QuickstartPage() {
               <span className="code-title">Terminal</span>
               <button
                 onClick={() =>
-                  handleCopy("cmd-discover", "npm run host:inspect -- discover GgVnzvsMhHHKeeGnqQhU9KAjBeCVhYiYmR17174Lyrgv")
+                  handleCopy("cmd-discover", "npx @web3mcp discover GgVnzvsMhHHKeeGnqQhU9KAjBeCVhYiYmR17174Lyrgv")
                 }
                 className="code-copy-btn"
               >
@@ -143,7 +143,7 @@ export default function QuickstartPage() {
               </button>
             </div>
             <pre className="code-block">
-              <code>npm run host:inspect -- discover GgVnzvsMhHHKeeGnqQhU9KAjBeCVhYiYmR17174Lyrgv</code>
+              <code>npx @web3mcp discover GgVnzvsMhHHKeeGnqQhU9KAjBeCVhYiYmR17174Lyrgv</code>
             </pre>
           </div>
 
@@ -183,7 +183,7 @@ export default function QuickstartPage() {
                 onClick={() =>
                   handleCopy(
                     "cmd-read",
-                    `npm run host:inspect -- read get_vault '{"vaultOwner":"CniPSdkAUaNTfZZUSKvAKU2VJuWecRjqvGhDmQjGSZEG"}' --program GgVnzvsMhHHKeeGnqQhU9KAjBeCVhYiYmR17174Lyrgv`
+                    `npx @web3mcp read get_vault '{"vaultOwner":"CniPSdkAUaNTfZZUSKvAKU2VJuWecRjqvGhDmQjGSZEG"}' --program GgVnzvsMhHHKeeGnqQhU9KAjBeCVhYiYmR17174Lyrgv`
                   )
                 }
                 className="code-copy-btn"
@@ -193,7 +193,7 @@ export default function QuickstartPage() {
               </button>
             </div>
             <pre className="code-block">
-              <code>{`npm run host:inspect -- read get_vault '{"vaultOwner":"CniPSdkAUaNTfZZUSKvAKU2VJuWecRjqvGhDmQjGSZEG"}' --program GgVnzvsMhHHKeeGnqQhU9KAjBeCVhYiYmR17174Lyrgv`}</code>
+              <code>{`npx @web3mcp read get_vault '{"vaultOwner":"CniPSdkAUaNTfZZUSKvAKU2VJuWecRjqvGhDmQjGSZEG"}' --program GgVnzvsMhHHKeeGnqQhU9KAjBeCVhYiYmR17174Lyrgv`}</code>
             </pre>
           </div>
 
@@ -228,7 +228,7 @@ export default function QuickstartPage() {
                 onClick={() =>
                   handleCopy(
                     "cmd-prep",
-                    `npm run host:inspect -- prepare deposit '{"amount":"50000000"}' --signer CniPSdkAUaNTfZZUSKvAKU2VJuWecRjqvGhDmQjGSZEG --program GgVnzvsMhHHKeeGnqQhU9KAjBeCVhYiYmR17174Lyrgv`
+                    `npx @web3mcp prepare deposit '{"amount":"50000000"}' --signer CniPSdkAUaNTfZZUSKvAKU2VJuWecRjqvGhDmQjGSZEG --program GgVnzvsMhHHKeeGnqQhU9KAjBeCVhYiYmR17174Lyrgv`
                   )
                 }
                 className="code-copy-btn"
@@ -238,7 +238,7 @@ export default function QuickstartPage() {
               </button>
             </div>
             <pre className="code-block">
-              <code>{`npm run host:inspect -- prepare deposit '{"amount":"50000000"}' --signer CniPSdkAUaNTfZZUSKvAKU2VJuWecRjqvGhDmQjGSZEG --program GgVnzvsMhHHKeeGnqQhU9KAjBeCVhYiYmR17174Lyrgv`}</code>
+              <code>{`npx @web3mcp prepare deposit '{"amount":"50000000"}' --signer CniPSdkAUaNTfZZUSKvAKU2VJuWecRjqvGhDmQjGSZEG --program GgVnzvsMhHHKeeGnqQhU9KAjBeCVhYiYmR17174Lyrgv`}</code>
             </pre>
           </div>
 
@@ -276,7 +276,7 @@ export default function QuickstartPage() {
                 onClick={() =>
                   handleCopy(
                     "cmd-agent",
-                    "npm run host:agent -- GgVnzvsMhHHKeeGnqQhU9KAjBeCVhYiYmR17174Lyrgv --model gemini-3.8-flash"
+                    "npx @web3mcp agent GgVnzvsMhHHKeeGnqQhU9KAjBeCVhYiYmR17174Lyrgv --model gemini-3.8-flash"
                   )
                 }
                 className="code-copy-btn"
@@ -286,11 +286,11 @@ export default function QuickstartPage() {
               </button>
             </div>
             <pre className="code-block">
-              <code>npm run host:agent -- GgVnzvsMhHHKeeGnqQhU9KAjBeCVhYiYmR17174Lyrgv --model gemini-3.8-flash</code>
+              <code>npx @web3mcp agent GgVnzvsMhHHKeeGnqQhU9KAjBeCVhYiYmR17174Lyrgv --model gemini-3.8-flash</code>
             </pre>
           </div>
 
-          {/* Exact Terminal CLI UI Box matching screenshot */}
+          {/* Terminal CLI UI Box matching HomeStoryGrid review card */}
           <div className="terminal-window">
             <div className="terminal-header-bar">
               <div className="terminal-dots">
@@ -298,68 +298,72 @@ export default function QuickstartPage() {
                 <span className="term-dot" />
                 <span className="term-dot" />
               </div>
-              <span className="terminal-bar-title">Web3MCP Agent Terminal (Live Devnet)</span>
+              <span className="terminal-bar-title">web3mcp-host · Terminal Review Card</span>
             </div>
 
-            <pre className="terminal-stream-code">
-              <code>{`────────────────────────────────────────────────────────
-gemini-3.8-flash | devnet | GgVnzvsM...4Lyrgv
-> deposit 10% of my remaining wallet balance into the vault
-⠇ Thinking...
+            <div className="terminal-cli-canvas">
+              <div className="cli-flow-view">
+                <div className="cli-session-meta">gemini-3.8-flash | devnet | GgVnzvsM...4Lyrgv</div>
+                <div className="cli-user-command">&gt; deposit 0.1 SOL into the vault</div>
+                <div className="cli-thinking-state">⠇ Thinking...</div>
 
-• Wallet Balance Required
+                <div className="cli-tool-invocation">
+                  <span className="bullet-sym">•</span>
+                  <span>Calling tool <span className="tool-hl">deposit</span> <span className="tag-write">[write]</span>(amount: &quot;100000000&quot;)...</span>
+                </div>
+                <div className="cli-invocation-res">
+                  <span className="check-mark">✓</span>
+                  <span>Simulated successfully against Devnet RPC (4,563 CUs)</span>
+                </div>
 
-The available on-chain tools allow reading vault PDA state (get_vault), but do not include a direct query for your external wallet's native SOL balance.
+                <div className="cli-rule">────────────────────────────────────────────────────</div>
+                <div className="cli-review-title-row">
+                  <span className="r-title">TRANSACTION REVIEW</span>
+                </div>
+                <div className="cli-rule">────────────────────────────────────────────────────</div>
 
-How to Proceed
+                <div className="cli-review-fields">
+                  <div className="rf-row">
+                    <span className="rf-k">Program:</span>
+                    <span className="rf-v">GgVnzvsMhHHKeeGnqQhU9KAjBeCVhYiYmR17174Lyrgv</span>
+                  </div>
+                  <div className="rf-row">
+                    <span className="rf-k">Tool:</span>
+                    <span className="rf-v tool-hl font-bold">deposit</span>
+                  </div>
+                  <div className="rf-row">
+                    <span className="rf-k">Amount:</span>
+                    <span className="rf-v font-semibold">100,000,000 lamports (0.1 SOL)</span>
+                  </div>
+                  <div className="rf-row">
+                    <span className="rf-k">Signer:</span>
+                    <span className="rf-v text-dim">CniPSdkAUaNTfZZUSKvAKU2VJuWecRjqvGhDmQjGSZEG</span>
+                  </div>
+                  <div className="rf-row">
+                    <span className="rf-k">Derived PDA:</span>
+                    <span className="rf-v text-dim">HfA1ExZS1cgYR5k5GEJmsQfyAcDK2J9NPi7p97dU3WLD</span>
+                  </div>
+                  <div className="rf-row">
+                    <span className="rf-k">Compute Units:</span>
+                    <span className="rf-v text-dim">4,563 CUs</span>
+                  </div>
+                  <div className="rf-row">
+                    <span className="rf-k">Network Fee:</span>
+                    <span className="rf-v text-dim">5,000 lamports</span>
+                  </div>
+                  <div className="rf-row">
+                    <span className="rf-k">Effects:</span>
+                    <span className="rf-v">Transfers native SOL to on-chain vault</span>
+                  </div>
+                </div>
 
-1. State your current wallet SOL balance (for example, "my wallet balance is 2.5 SOL"), or
-2. Specify the exact amount you want to deposit directly (for example, "deposit 0.1 SOL").
-
-Units and Considerations
-• 1 SOL = 1,000,000,000 lamports
-• Always leave a small amount of SOL (at least 0.005 SOL) in your wallet to cover network transaction fees.
-
-Once you provide the amount, I will prepare the deposit transaction for your wallet review.
-────────────────────────────────────────────────────────
-gemini-3.8-flash | devnet | GgVnzvsM...4Lyrgv
-> Deposit 0.05 SOL into my vault
-⠇ Thinking...
-
-● Calling tool get_vault [read](vaultOwner: "CniPSdkAUa...mQjGSZEG")...
-  ✔ Query resolved successfully (Current Balance: 35,001,000 lamports)
-
-● Calling tool deposit [write](amount: "50000000")...
-✔ Simulation passed (4563 CUs)
-
-╭────────────────────────────────────────────────────────────────────────╮
-│ ⚠️   TRANSACTION APPROVAL REQUIRED                                     │
-├────────────────────────────────────────────────────────────────────────┤
-│ Tool:             deposit                                              │
-│ Program ID:       GgVnzvsMhHHKeeGnqQhU9KAjBeCVhYiYmR17174Lyrgv         │
-│ Effects:          Deposits lamports from user to vault (⚠️ FINANCIAL WRITE) │
-│ Estimated Fee:    ~0.000005 SOL (5000 lamports)                        │
-├────────────────────────────────────────────────────────────────────────┤
-│ Accounts Touched:                                                      │
-│   • owner         : CniPSdkAUaNTfZZU...cRjqvGhDmQjGSZEG (SIGNER, WRITABLE) │
-│   • vault         : 7Nm9VsUWReKcBrhe...g9UwXCabnd11TwXB (WRITABLE)     │
-│   • system_program: 11111111111111111111111111111111 (READONLY)        │
-├────────────────────────────────────────────────────────────────────────┤
-│ Simulation Status: ✅ SUCCESS (4563 CUs consumed)                       │
-│ Key Logs:                                                              │
-│   > Program log: Instruction: Deposit                                  │
-│   > Program 11111111111111111111111111111111 success                   │
-│   > Program GgVnzvsMhHHKeeGnqQhU9KAjBeCVhYiYmR17174Lyrgv consumed...   │
-╰────────────────────────────────────────────────────────────────────────╯
-
-? Approve and broadcast transaction to Devnet? [y/N] › y
-
-✔ Transaction confirmed on Devnet:
-  https://explorer.solana.com/tx/5k...c9?cluster=devnet
-────────────────────────────────────────────────────────
-gemini-3.8-flash | devnet | GgVnzvsM...4Lyrgv
-> █`}</code>
-            </pre>
+                <div className="cli-rule">────────────────────────────────────────────────────</div>
+                <div className="cli-wallet-prompt">
+                  <span className="prompt-q-text">? Approve and broadcast transaction to Devnet? [y/N] › </span>
+                  <span className="cursor-blink">_</span>
+                </div>
+              </div>
+            </div>
           </div>
         </section>
 
@@ -809,7 +813,8 @@ gemini-3.8-flash | devnet | GgVnzvsM...4Lyrgv
           width: 9px;
           height: 9px;
           border-radius: 50%;
-          background: rgba(255, 255, 255, 0.2);
+          background: #262626;
+          border: 1px solid rgba(255, 255, 255, 0.12);
         }
 
         .terminal-bar-title {
@@ -818,15 +823,139 @@ gemini-3.8-flash | devnet | GgVnzvsM...4Lyrgv
           color: #94a3b8;
         }
 
-        .terminal-stream-code {
-          margin: 0;
-          padding: 16px 20px;
+        .terminal-cli-canvas {
+          background: #000000;
+          padding: 22px 22px;
           font-family: var(--font-mono);
-          font-size: 12px;
-          line-height: 1.6;
-          color: #f1f5f9;
-          overflow-x: auto;
         }
+
+        .cli-flow-view {
+          display: flex;
+          flex-direction: column;
+          gap: 11px;
+          font-family: var(--font-mono);
+          font-size: 11px;
+          line-height: 1.5;
+          color: #e2e8f0;
+        }
+
+        .cli-session-meta {
+          color: #64748b;
+          font-size: 10px;
+        }
+
+        .cli-user-command {
+          color: #ffffff;
+          font-size: 11.5px;
+          font-weight: 500;
+        }
+
+        .cli-thinking-state {
+          color: #64748b;
+          font-size: 10px;
+        }
+
+        .cli-tool-invocation {
+          display: flex;
+          align-items: baseline;
+          gap: 6px;
+          font-size: 10.5px;
+          color: #cbd5e1;
+        }
+
+        .bullet-sym {
+          color: #ffffff;
+          font-weight: 700;
+          font-size: 12px;
+        }
+
+        .tool-hl {
+          color: #ffffff;
+          font-weight: 600;
+        }
+
+        .tag-write {
+          color: #f59e0b;
+          font-weight: 600;
+          font-size: 9.5px;
+        }
+
+        .cli-invocation-res {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          padding-left: 14px;
+          font-size: 10px;
+          color: #e2e8f0;
+        }
+
+        .check-mark {
+          color: #e2e8f0;
+          font-weight: 700;
+        }
+
+        .cli-rule {
+          color: #333333;
+          font-size: 10px;
+          letter-spacing: -0.05em;
+          margin: 2px 0;
+          overflow: hidden;
+          white-space: nowrap;
+          user-select: none;
+        }
+
+        .cli-review-title-row {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+        }
+
+        .r-title {
+          font-weight: 700;
+          color: #ffffff;
+          font-size: 11px;
+          letter-spacing: 0.05em;
+        }
+
+        .cli-review-fields {
+          display: flex;
+          flex-direction: column;
+          gap: 5px;
+        }
+
+        .rf-row {
+          display: flex;
+          justify-content: space-between;
+          align-items: baseline;
+          font-size: 11px;
+          gap: 12px;
+        }
+
+        .rf-k { color: #64748b; flex-shrink: 0; }
+        .rf-v { color: #ffffff; text-align: right; word-break: break-all; }
+
+        .cli-wallet-prompt {
+          color: #ffffff;
+          font-weight: 600;
+          font-size: 11px;
+          line-height: 1.4;
+          margin-top: 2px;
+        }
+
+        .cursor-blink {
+          display: inline-block;
+          color: #ffffff;
+          animation: blink 1s infinite;
+        }
+
+        @keyframes blink {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0; }
+        }
+
+        .text-dim { color: #71717a; }
+        .font-bold { font-weight: 700; }
+        .font-semibold { font-weight: 600; }
 
         /* Tables */
         .commands-table-wrapper {
