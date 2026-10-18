@@ -7,7 +7,7 @@ export default function HeroCodeWindow() {
   const [copiedPane, setCopiedPane] = useState<string | null>(null);
 
   const serverCode = `// 1. Program publishes Tool Config PDA
-import { Web3McpConfig } from "@web3mcp/protocol";
+import { Web3McpConfig } from "@web3mcp";
 
 export const vaultToolConfig: Web3McpConfig = {
   version: 1,
@@ -112,7 +112,7 @@ Effects:        Transfers native SOL to on-chain vault
                 <span className="token-keyword">import</span> {"{ "}
                 <span className="token-type">Web3McpConfig</span>
                 {" }"} <span className="token-keyword">from</span>{" "}
-                <span className="token-string">"@web3mcp/protocol"</span>;{"\n\n"}
+                <span className="token-string">"@web3mcp"</span>;{"\n\n"}
                 <span className="token-keyword">export const</span>{" "}
                 <span className="token-def">vaultToolConfig</span>:{" "}
                 <span className="token-type">Web3McpConfig</span> = {"{\n"}

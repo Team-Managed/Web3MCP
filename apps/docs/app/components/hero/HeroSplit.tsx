@@ -10,7 +10,7 @@ export default function HeroSplit() {
   const [copied, setCopied] = useState<boolean>(false);
 
   const PROTOCOL_COMMANDS: Record<string, string> = {
-    inspect: "npx @web3mcp/host GgVnzvsMhHHKeeGnqQhU9KAjBeCVhYiYmR17174Lyrgv",
+    inspect: "npx @web3mcp GgVnzvsMhHHKeeGnqQhU9KAjBeCVhYiYmR17174Lyrgv",
     agent: "npm run host:agent -- --model gemini-3.8-flash",
     protocol: "npm --prefix protocol test",
     devnet: "solana account HfA1ExZS1cgYR5k5GEJmsQfyAcDK2J9NPi7p97dU3WLD --url devnet",
