@@ -6,6 +6,7 @@ node_modules/
 target/
 dist/
 build/
+packages/sdk/schema/
 coverage/
 .next/
 test-ledger/

@@ -15,6 +15,13 @@
     "test:protocol": "npm --prefix protocol test",
     "test:host": "npm --prefix packages/sdk run build && npm --prefix apps/host run build && npm --prefix apps/host test",
     "test:integration": "npm --prefix packages/sdk run build && npm --prefix apps/host run build && node --test --test-concurrency=1 tests/*.test.js",
+    "test:vault": "node --test --test-concurrency=1 tests/*.test.js",
+    "dev": "npm --prefix apps/website run dev",
+    "build": "npm --prefix apps/website run build",
+    "start": "npm --prefix apps/website run start",
+    "dev:docs": "npm --prefix apps/website run dev",
+    "build:docs": "npm --prefix apps/website run build",
+    "deck:generate": "node scripts/generate-deck.js && cp Web3MCP_Pitch_Deck.pptx apps/website/public/Web3MCP_Pitch_Deck.pptx",
     "generate:config": "node reference-programs/reference-vault/scripts/generate-config.js",
     "publish:vault": "node reference-programs/reference-vault/scripts/publish.js",
     "host": "node apps/host/bin/web3mcp.js"
@@ -25,6 +32,8 @@
   },
   "license": "Apache-2.0",
   "devDependencies": {
-    "@coral-xyz/anchor": "^0.32.1"
+    "@coral-xyz/anchor": "^0.32.1",
+    "@napi-rs/canvas": "^1.0.11",
+    "pptxgenjs": "^4.0.1"
   }
 }

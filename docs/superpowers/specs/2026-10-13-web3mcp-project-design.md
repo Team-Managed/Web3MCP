@@ -18,6 +18,8 @@ Define a program-published tool protocol for Solana and demonstrate it with a ge
 
 The SDK and Host CLI read Solana directly. They contain no MCP server, MCP client, or adapter. An [MCP client](https://modelcontextprotocol.io/docs/learn/architecture) uses MCP transport; this project does not.
 
+The npm release contains only `@web3mcp/sdk`. It bundles the protocol validator and schema for Node.js consumers. `protocol/` remains the language-independent specification and conformance source in this repository; the Host CLI remains an example application.
+
 ## Protocol direction
 
 The first profile starts from a program ID. The target program owns a config PDA at the canonical seeds `["web3mcp", "config"]`. Its account carries publication metadata and a versioned UTF-8 JSON config with `standard`, `version`, `programId`, `idl`, and `tools`. The IDL is embedded so the host does not need a program-specific URL or a second metadata account. Tool descriptors follow the useful serializable shape of WebMCP; a Solana binding identifies either an `accountRead` or one `instruction`. v0.2 read tools may publish deterministic PDA seeds so an agent can find an account from a wallet public key. The account stores declarations, never executable callbacks or arbitrary resolver code.
