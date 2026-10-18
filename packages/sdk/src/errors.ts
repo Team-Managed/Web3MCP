@@ -69,6 +69,14 @@ export class SimulationError extends Web3McpHostError {
   }
 }
 
+/** Broadcast returned a signature, but RPC could not establish its final status. */
+export class TransactionConfirmationUnknownError extends Web3McpHostError {
+  constructor(public signature: string, cause?: unknown) {
+    super(`Transaction ${signature} was submitted, but confirmation is uncertain. Check its status before retrying.`, cause);
+    this.name = 'TransactionConfirmationUnknownError';
+  }
+}
+
 /**
  * Thrown when a requested tool is not found in the registry.
  */

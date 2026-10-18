@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { Keypair, SystemProgram, Transaction } from '@solana/web3.js';
 import crypto from 'node:crypto';
-import { Web3McpSdk } from '../dist/index.js';
+import { Web3McpSdk, TransactionConfirmationUnknownError } from '../dist/index.js';
 
 function fixture() {
   const signer = Keypair.generate();
@@ -23,10 +23,14 @@ test('signed submission rejects changed messages and expired blockhashes before 
   let sends = 0;
   let height = 50;
   let confirmationError = null;
+  let confirmationThrows = false;
   const connection = {
     getBlockHeight: async () => height,
     sendRawTransaction: async () => { sends++; return 'sig'; },
-    confirmTransaction: async () => ({ value: { err: confirmationError } }),
+    confirmTransaction: async () => {
+      if (confirmationThrows) throw new Error('RPC timed out');
+      return { value: { err: confirmationError } };
+    },
   };
   const sdk = new Web3McpSdk({ connection });
   const { signer, prepared } = fixture();
@@ -52,4 +56,11 @@ test('signed submission rejects changed messages and expired blockhashes before 
   assert.equal(sends, 1);
   confirmationError = 'InstructionError';
   await assert.rejects(sdk.submitSignedTransaction(prepared, signed), /confirmation/i);
+  confirmationThrows = true;
+  await assert.rejects(sdk.submitSignedTransaction(prepared, signed), error => {
+    assert.ok(error instanceof TransactionConfirmationUnknownError);
+    assert.equal(error.signature, 'sig');
+    assert.match(error.message, /check its status before retrying/i);
+    return true;
+  });
 });

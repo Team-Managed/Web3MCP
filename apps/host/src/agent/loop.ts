@@ -1,5 +1,5 @@
 import { Keypair } from '@solana/web3.js';
-import { Web3McpSdk } from '@web3mcp/sdk';
+import { Web3McpSdk, TransactionConfirmationUnknownError } from '@web3mcp/sdk';
 import { compactToolResult } from '../llm/compactor.js';
 import { formatReviewCard, promptApproval } from '../wallet/review-card.js';
 
@@ -125,6 +125,7 @@ export async function executeAgentTurn({
     }
 
     // Process all proposed tool calls
+    let discoveredThisTurn = false;
     for (const toolCall of response.toolCalls) {
       const toolName = toolCall.name;
       const toolArgs = toolCall.arguments || {};
@@ -134,6 +135,7 @@ export async function executeAgentTurn({
           if (typeof toolArgs.reference !== 'string' || !toolArgs.reference.trim()) throw new Error('A program ID or .sns name is required.');
           const found = await onDiscoverProgram(toolArgs.reference);
           activeProgramId = found.programId;
+          discoveredThisTurn = true;
           onProgress?.({ type: 'discovery_result', programId: found.programId, toolNames: found.toolNames });
           messages.push({ role: 'tool', tool_call_id: toolCall.id, content: JSON.stringify(found) });
         } catch (err: any) {
@@ -146,7 +148,7 @@ export async function executeAgentTurn({
         messages.push({ role: 'tool', tool_call_id: toolCall.id, content: JSON.stringify({ error: 'Discover a program before calling its tools.' }) });
         continue;
       }
-      if (onDiscoverProgram && !advertisedNames.has(toolName)) {
+      if (onDiscoverProgram && (discoveredThisTurn || !advertisedNames.has(toolName))) {
         messages.push({ role: 'tool', tool_call_id: toolCall.id, content: JSON.stringify({ error: `Tool '${toolName}' was not advertised for this turn. Discover the program first.` }) });
         continue;
       }
@@ -168,7 +170,10 @@ export async function executeAgentTurn({
 
       if (toolKind === 'accountRead') {
         try {
-          const rawResult = await host.executeRead(toolName, toolArgs, { programId: activeProgramId });
+          const rawResult = await host.executeRead(toolName, toolArgs, {
+            programId: activeProgramId,
+            ...(signer ? { signer: signer.publicKey } : {}),
+          });
           const compacted = compactToolResult(toolName, rawResult);
           messages.push({
             role: 'tool',
@@ -275,11 +280,15 @@ export async function executeAgentTurn({
             });
           }
         } catch (err: any) {
+          const uncertain = err instanceof TransactionConfirmationUnknownError;
           messages.push({
             role: 'tool',
             tool_call_id: toolCall.id,
-            content: JSON.stringify({ error: `Instruction preparation/signing failed: ${err.message}` }),
+            content: JSON.stringify(uncertain
+              ? { status: 'confirmation_unknown', signature: err.signature, error: err.message }
+              : { error: `Instruction preparation/signing failed: ${err.message}` }),
           });
+          onProgress?.({ type: 'tool_result', tool: toolName, success: false, summary: err.message });
         }
       }
     }

@@ -36,11 +36,12 @@ export class AnthropicDriver {
               contentBlocks.push({ type: 'text', text: msg.content });
             }
             for (const tc of msg.tool_calls) {
+              const args = tc.function?.arguments ?? tc.arguments ?? {};
               contentBlocks.push({
                 type: 'tool_use',
                 id: tc.id,
                 name: tc.name || tc.function?.name,
-                input: typeof tc.arguments === 'string' ? JSON.parse(tc.arguments) : tc.arguments,
+                input: typeof args === 'string' ? JSON.parse(args) : args,
               });
             }
             anthropicMessages.push({ role: 'assistant', content: contentBlocks });

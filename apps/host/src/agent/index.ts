@@ -112,11 +112,16 @@ export class Web3McpAgent {
    * @returns Command result
    */
   async handleCommand(input: string): Promise<CommandResult> {
+    if (!input.trimStart().startsWith('/')) return { handled: false };
+    let tools: Array<any> = [];
+    if (/^\/tools(?:\s|$)/i.test(input.trim())) {
+      try { tools = this.host.getTools(this.programId); } catch { /* A pending or failed discovery has no tools. */ }
+    }
     return handleSlashCommand(input, {
       connection: this.host.connection,
       programId: this.programId,
       signerPubkey: this.signer ? this.signer.publicKey : null,
-      tools: this.host.getTools(this.programId),
+      tools,
       clearHistory: () => this.clearHistory(),
     });
   }

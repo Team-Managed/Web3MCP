@@ -79,6 +79,7 @@ export function generateKeypairToFile(options: GenerateKeypairOptions = {}): Gen
 
   const keypair = Keypair.generate();
   const secretKeyArray = Array.from(keypair.secretKey);
+  if (options.overwrite && fs.existsSync(targetPath)) fs.chmodSync(targetPath, 0o600);
   fs.writeFileSync(targetPath, JSON.stringify(secretKeyArray), { mode: 0o600 });
 
   return { keypair, path: targetPath };

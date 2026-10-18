@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import os from 'node:os';
 import path from 'node:path';
 import { Connection, type Keypair } from '@solana/web3.js';
@@ -29,6 +29,7 @@ const COMMANDS = [
 ] as const;
 
 export function TransactionReview({ request, walletAddress, onDecision }: { request: ApprovalRequest; walletAddress?: string; onDecision: (approved: boolean) => void }) {
+  const logs = Array.isArray(request.simulation?.logs) ? request.simulation.logs : [];
   useInput((input, key) => {
     if (input.toLowerCase() === 's') onDecision(true);
     else if (input.toLowerCase() === 'n' || key.return || key.escape || (key.ctrl && input === 'c')) onDecision(false);
@@ -42,6 +43,8 @@ export function TransactionReview({ request, walletAddress, onDecision }: { requ
     <Text wrap="wrap">Instruction data {request.instruction?.data?.toString('hex') || 'none'}</Text>
     {request.accounts.map((account, index) => <Text key={index} wrap="wrap">{account.name}: {account.pubkey} {account.isSigner ? 'signer ' : ''}{account.isWritable ? 'writable' : 'read only'}</Text>)}
     <Text>Simulation {request.simulation?.err ? 'FAILED' : 'passed'}  ·  {request.simulation?.unitsConsumed ?? '?'} compute units</Text>
+    <Text>Validator logs ({Math.min(logs.length, 8)} of {logs.length})</Text>
+    {logs.slice(0, 8).map((log: string, index: number) => <Text key={index} wrap="wrap">  {log.replace(/[\x00-\x1f\x7f]/g, ' ').slice(0, 240)}</Text>)}
     <Text>Estimated fee {request.estimatedFeeLamports == null ? 'unavailable' : `${request.estimatedFeeLamports} lamports`}</Text>
     <Text wrap="wrap">Message SHA-256 {request.messageHash}</Text>
     <Text bold>Press s to sign this transaction with the selected keypair; n or Enter rejects.</Text>
@@ -65,6 +68,7 @@ export function ChatScreen({ sdk: initialSdk, programId, rpcUrl, model = '', pro
   const { exit } = useApp();
   const [settings, setSettings] = useState<Settings>({ provider, model, apiKey, walletPath, rpcUrl });
   const [runtimeSdk, setRuntimeSdk] = useState(() => initialSdk || new Web3McpSdk({ connection: new Connection(rpcUrl, 'confirmed') }));
+  const sdkRef = useRef(runtimeSdk);
   const [signer, setSigner] = useState<Keypair | null>(initialSigner);
   const [detectedWallets, setDetectedWallets] = useState(() => walletPaths || discoverWalletPaths());
   const [view, setView] = useState<'settings' | 'chat' | 'commands' | 'models' | 'model-provider' | 'model-key' | 'model-manual'>('chat');
@@ -73,7 +77,7 @@ export function ChatScreen({ sdk: initialSdk, programId, rpcUrl, model = '', pro
   const [availableModels, setAvailableModels] = useState<string[]>([]);
   const [settingsError, setSettingsError] = useState('');
   const [lines, setLines] = useState<Line[]>([]);
-  const [activeProgram, setActiveProgram] = useState<string | null>(programId || null);
+  const [activeProgram, setActiveProgram] = useState<string | null>(null);
   const [agent, setAgent] = useState<Web3McpAgent | null>(null);
   const [status, setStatus] = useState(programId ? 'Discovering program tools' : 'Type / for commands');
   const [toolCount, setToolCount] = useState(0);
@@ -99,6 +103,7 @@ export function ChatScreen({ sdk: initialSdk, programId, rpcUrl, model = '', pro
   async function activateProgram(nextProgram: string, targetSdk = runtimeSdk): Promise<{ programId: string; toolNames: string[] }> {
     setStatus('Discovering program tools');
     await targetSdk.discover(nextProgram);
+    if (targetSdk !== sdkRef.current) throw new Error('RPC changed during discovery; retry on the current endpoint.');
     const tools = targetSdk.getTools(nextProgram);
     setActiveProgram(nextProgram);
     setToolCount(tools.length);
@@ -108,7 +113,9 @@ export function ChatScreen({ sdk: initialSdk, programId, rpcUrl, model = '', pro
   }
 
   useEffect(() => {
-    if (programId) void activateProgram(programId).catch(error => {
+    const startSdk = runtimeSdk;
+    if (programId) void activateProgram(programId, startSdk).catch(error => {
+      if (startSdk !== sdkRef.current) return;
       setStatus('Discovery failed');
       addLine('system', error instanceof Error ? error.message : String(error));
     });
@@ -133,11 +140,14 @@ export function ChatScreen({ sdk: initialSdk, programId, rpcUrl, model = '', pro
       } else if (field === 'rpcUrl') {
         const endpoint = new URL(value);
         if (!['http:', 'https:'].includes(endpoint.protocol)) throw new Error('RPC URL must use HTTP or HTTPS.');
-        setRuntimeSdk(new Web3McpSdk({ connection: new Connection(value, 'confirmed') }));
+        const nextSdk = new Web3McpSdk({ connection: new Connection(value, 'confirmed') });
+        sdkRef.current = nextSdk;
+        setRuntimeSdk(nextSdk);
         setSettings(previous => ({ ...previous, rpcUrl: value }));
         setActiveProgram(null);
         setToolCount(0);
         setAgent(null);
+        setStatus('RPC updated; mention a program');
       }
       setSettingsError('');
       return true;

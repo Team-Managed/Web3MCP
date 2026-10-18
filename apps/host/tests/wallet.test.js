@@ -125,6 +125,12 @@ describe('Web3McpHost: Terminal Wallet Signer & Review Card', () => {
         () => generateKeypairToFile({ customPath: tempPath, overwrite: false }),
         /already exists/
       );
+
+      fs.chmodSync(tempPath, 0o644);
+      const replacement = generateKeypairToFile({ customPath: tempPath, overwrite: true });
+      assert.notEqual(replacement.keypair.publicKey.toBase58(), keypair.publicKey.toBase58());
+      assert.equal(fs.statSync(tempPath).mode & 0o777, 0o600);
+      assert.equal(loadKeypair(tempPath).publicKey.toBase58(), replacement.keypair.publicKey.toBase58());
     } finally {
       fs.rmSync(tempDir, { recursive: true, force: true });
     }

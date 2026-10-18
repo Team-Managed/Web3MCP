@@ -1,19 +1,20 @@
 import { Connection, Commitment, Transaction } from '@solana/web3.js';
 import crypto from 'node:crypto';
-import { Web3McpHostError, ValidationError } from './errors.js';
+import { Web3McpHostError, ValidationError, TransactionConfirmationUnknownError } from './errors.js';
 import { discoverProgram } from './discovery/index.js';
 import { queryTools, findTool } from './tools/registry.js';
 import { formatOpenAiTools } from './tools/schema.js';
 import { readAccount } from './accounts/reader.js';
 import { prepareAndSimulateInstruction } from './instructions/simulator.js';
+import type { AccountReadResult, DiscoveredProgram, InstructionOptions, PreparedInstruction, ReadOptions, Web3McpTool } from './types.js';
 
 export interface Web3McpHostOptions {
-  connection?: Connection;
+  connection: Connection;
   commitment?: Commitment;
 }
 
 /**
- * Web3MCP Host: Generic runtime for discovering, querying, and preparing
+ * Web3MCP SDK: Generic runtime for discovering, querying, and preparing
  * Solana program tools directly from on-chain accounts.
  */
 export class Web3McpSdk {
@@ -24,9 +25,10 @@ export class Web3McpSdk {
   /**
    * @param options
    */
-  constructor({ connection, commitment = 'confirmed' }: Web3McpHostOptions = {}) {
+  constructor(options: Web3McpHostOptions) {
+    const { connection, commitment = 'confirmed' } = options || {};
     if (!connection) {
-      throw new Web3McpHostError('Web3McpHost requires an active @solana/web3.js Connection instance.');
+      throw new Web3McpHostError('Web3McpSdk requires an active @solana/web3.js Connection instance.');
     }
     this.connection = connection;
     this.commitment = commitment;
@@ -39,9 +41,9 @@ export class Web3McpSdk {
    * Discovers a Solana program's published Web3MCP tools via RPC.
    *
    * @param {string} programId Base58 Solana program ID
-   * @returns {Promise<{ programId: string, configPda: string, config: any, idl: any, coders: any, tools: any[] }>}
+   * @returns {Promise<DiscoveredProgram>}
    */
-  async discover(programId) {
+  async discover(programId: string): Promise<DiscoveredProgram> {
     const context = await discoverProgram(this.connection, programId, this.commitment);
     this.programs.set(programId, context);
     return context;
@@ -51,9 +53,9 @@ export class Web3McpSdk {
    * Retrieves registered tool descriptors across all discovered programs or for a specific programId.
    *
    * @param {string} [programId] Optional programId to filter tools
-   * @returns {any[]} Array of protocol-compliant tool descriptors
+   * @returns {Web3McpTool[]} Array of protocol-compliant tool descriptors
    */
-  getTools(programId?: string) {
+  getTools(programId?: string): Web3McpTool[] {
     return queryTools(this.programs, programId);
   }
 
@@ -64,7 +66,7 @@ export class Web3McpSdk {
    * @param programId Optional programId to scope the search
    * @returns Tool descriptor
    */
-  getTool(name: string, programId?: string) {
+  getTool(name: string, programId?: string): Web3McpTool {
     return findTool(this.programs, name, programId);
   }
 
@@ -93,9 +95,9 @@ export class Web3McpSdk {
    * @param {string} toolName Name of the tool to execute
    * @param {Record<string, any>} [args={}] Tool arguments
    * @param {object} [options] Query options
-   * @returns {Promise<{ exists: boolean, address: string, account: string, data: any }>}
+   * @returns {Promise<AccountReadResult>}
    */
-  async executeRead(toolName, args = {}, options = {}) {
+  async executeRead(toolName: string, args: Record<string, unknown> = {}, options: ReadOptions = {}): Promise<AccountReadResult> {
     return readAccount({
       connection: this.connection,
       programs: this.programs,
@@ -114,9 +116,9 @@ export class Web3McpSdk {
    * @param {string} toolName Name of the instruction tool
    * @param {Record<string, any>} [args={}] Tool arguments
    * @param {object} [options] Instruction options
-   * @returns {Promise<{ tool: string, programId: string, instruction: any, simulation: any, effects: any, accounts: any[] }>}
+   * @returns {Promise<PreparedInstruction>}
    */
-  async prepareInstruction(toolName, args = {}, options = {}) {
+  async prepareInstruction(toolName: string, args: Record<string, unknown> = {}, options: InstructionOptions = {}): Promise<PreparedInstruction> {
     return prepareAndSimulateInstruction({
       connection: this.connection,
       programs: this.programs,
@@ -128,12 +130,8 @@ export class Web3McpSdk {
   }
 
   /** Broadcast only a wallet-signed copy of the reviewed, successfully simulated message. */
-  async submitSignedTransaction(prepared: {
-    transaction: Transaction;
-    messageHash: string;
-    simulation: { err: unknown } | null;
-    lastValidBlockHeight: number;
-  }, signedTransaction: Transaction): Promise<{ signature: string }> {
+  async submitSignedTransaction(prepared: Pick<PreparedInstruction, 'transaction' | 'messageHash' | 'simulation' | 'lastValidBlockHeight'>,
+    signedTransaction: Transaction): Promise<{ signature: string }> {
     if (!prepared?.simulation || prepared.simulation.err) {
       throw new Web3McpHostError('A successful simulation is required before submission.');
     }
@@ -155,16 +153,22 @@ export class Web3McpSdk {
       skipPreflight: false,
       preflightCommitment: this.commitment,
     });
-    const result = await this.connection.confirmTransaction({
-      signature,
-      blockhash: prepared.transaction.recentBlockhash,
-      lastValidBlockHeight: prepared.lastValidBlockHeight,
-    }, this.commitment);
+    let result;
+    try {
+      result = await this.connection.confirmTransaction({
+        signature,
+        blockhash: prepared.transaction.recentBlockhash,
+        lastValidBlockHeight: prepared.lastValidBlockHeight,
+      }, this.commitment);
+    } catch (error) {
+      throw new TransactionConfirmationUnknownError(signature, error);
+    }
     if (result.value.err) {
-      throw new Web3McpHostError(`Transaction failed during confirmation: ${JSON.stringify(result.value.err)}`);
+      throw new Web3McpHostError(`Transaction ${signature} failed during confirmation: ${JSON.stringify(result.value.err)}`);
     }
     return { signature };
   }
 }
 
 export * from './errors.js';
+export type * from './types.js';

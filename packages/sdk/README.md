@@ -12,6 +12,6 @@ const tools = sdk.getTools(programId);
 const readResult = await sdk.executeRead('get_vault', { vaultOwner: address }, { programId });
 ```
 
-For a write, call `prepareInstruction(name, args, { programId, signer: walletPublicKey })`. Review its accounts, effects claim, simulation, and `messageHash` with the human. After approval, have the wallet sign `prepared.transaction` and call `submitSignedTransaction(prepared, signedTransaction)`. The SDK checks the signed message, signatures, blockhash lifetime, and confirmation. A failed simulation or changed message requires a fresh preparation and review.
+For a write, call `prepareInstruction(name, args, { programId, signer: walletPublicKey })`. Review its accounts, effects claim, simulation, and `messageHash` with the human. After approval, have the wallet sign `prepared.transaction` and call `submitSignedTransaction(prepared, signedTransaction)`. The SDK checks the signed message, signatures, blockhash lifetime, and confirmation. A failed simulation or changed message requires a fresh preparation and review. If confirmation fails after submission, `TransactionConfirmationUnknownError` carries the signature; check its status before retrying.
 
 Tool descriptions and claimed effects are untrusted publisher content. The host decides how to display them and when to ask for approval.

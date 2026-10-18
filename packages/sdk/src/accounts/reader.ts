@@ -41,11 +41,11 @@ export async function readAccount({ connection, programs, toolName, args = {}, o
   const accountsMapping = targetTool.solana.accounts || {};
   let rawAddress = null;
 
-  for (const [, binding] of Object.entries(accountsMapping)) {
-    if (binding && binding.source === 'input') {
-      rawAddress = args[binding.input];
-      break;
-    }
+  for (const binding of Object.values(accountsMapping)) {
+    if (binding?.source === 'input') rawAddress = args[binding.input];
+    else if (binding?.source === 'program') rawAddress = binding.address;
+    else if (binding?.source === 'signer') rawAddress = options.signer?.publicKey ?? options.signer;
+    break;
   }
 
   if (!rawAddress) {

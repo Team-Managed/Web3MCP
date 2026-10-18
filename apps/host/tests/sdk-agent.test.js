@@ -2,7 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import crypto from 'node:crypto';
 import { Keypair, SystemProgram, Transaction } from '@solana/web3.js';
-import { executeAgentTurn } from '../dist/agent/index.js';
+import { executeAgentTurn, Web3McpAgent } from '../dist/agent/index.js';
+import { TransactionConfirmationUnknownError } from '@web3mcp/sdk';
 
 function model(tool) {
   let turn = 0;
@@ -51,6 +52,20 @@ test('agent signs and submits only after approval through SDK handoff', async ()
   const response = await executeAgentTurn({ messages, llmClient: model('deposit'), host, signer, onApprovalRequest: async () => true });
   assert.equal(response, 'Finished.');
   assert.equal(getSubmissions(), 1);
+});
+
+test('agent preserves a submitted signature when RPC confirmation is uncertain', async () => {
+  const signer = Keypair.generate();
+  const { host } = hostFixture(signer);
+  host.submitSignedTransaction = async () => { throw new TransactionConfirmationUnknownError('known-signature'); };
+  const messages = [];
+  const progress = [];
+  await executeAgentTurn({ messages, llmClient: model('deposit'), host, signer,
+    onApprovalRequest: async () => true, onProgress: event => progress.push(event) });
+  const outcome = JSON.parse(messages.find(message => message.role === 'tool').content);
+  assert.equal(outcome.status, 'confirmation_unknown');
+  assert.equal(outcome.signature, 'known-signature');
+  assert.match(progress.find(event => event.type === 'tool_result').summary, /known-signature/);
 });
 
 test('agent rejects a model-invented tool before execution', async () => {
@@ -104,6 +119,23 @@ test('model discovers a program and receives its published tools on the next tur
   assert.deepEqual(discovered, [{ type: 'discovery_result', programId, toolNames: ['get_vault'] }]);
 });
 
+test('agent supplies the selected wallet address to signer-sourced account reads', async () => {
+  const signer = Keypair.generate();
+  let options;
+  let turn = 0;
+  await executeAgentTurn({ signer, messages: [],
+    host: {
+      toOpenAiTools: () => [],
+      getTool: () => ({ solana: { kind: 'accountRead' } }),
+      executeRead: async (_name, _args, readOptions) => { options = readOptions; return { exists: false }; },
+    },
+    llmClient: { chat: async () => ++turn === 1
+      ? { content: '', toolCalls: [{ id: 'read', name: 'get_account', arguments: {} }] }
+      : { content: 'Done.' } },
+  });
+  assert.equal(options.signer.toBase58(), signer.publicKey.toBase58());
+});
+
 test('newly discovered tools cannot run before the model receives their definitions', async () => {
   const programId = Keypair.generate().publicKey.toBase58();
   let reads = 0;
@@ -123,4 +155,37 @@ test('newly discovered tools cannot run before the model receives their definiti
   });
   assert.equal(reads, 0);
   assert.match(messages.find(message => message.tool_call_id === 'guessed').content, /not advertised/);
+});
+
+test('a shared tool name cannot switch from one program to another in the same model turn', async () => {
+  const firstProgram = Keypair.generate().publicKey.toBase58();
+  const secondProgram = Keypair.generate().publicKey.toBase58();
+  let reads = 0;
+  let turns = 0;
+  const messages = [];
+  await executeAgentTurn({ messages, programId: firstProgram,
+    host: {
+      toOpenAiTools: () => [{ type: 'function', function: { name: 'get_vault' } }],
+      getTool: () => { reads++; throw new Error('Should not execute'); },
+    },
+    onDiscoverProgram: async () => ({ programId: secondProgram, toolNames: ['get_vault'] }),
+    llmClient: { chat: async () => ++turns === 1
+      ? { content: '', toolCalls: [
+        { id: 'switch', name: 'web3mcp_host_discover_program', arguments: { reference: secondProgram } },
+        { id: 'stale', name: 'get_vault', arguments: {} },
+      ] }
+      : { content: 'Ready.' } },
+  });
+  assert.equal(reads, 0);
+  assert.match(messages.find(message => message.tool_call_id === 'stale').content, /not advertised for this turn/);
+});
+
+test('ordinary prompts and /tools tolerate a program whose discovery has not completed', async () => {
+  const agent = new Web3McpAgent({
+    host: { connection: {}, getTools: () => { throw new Error('Program not discovered'); } },
+    llmClient: { chat: async () => ({ content: 'Ready.' }) },
+    programId: Keypair.generate().publicKey.toBase58(),
+  });
+  assert.deepEqual(await agent.handleCommand('Discover another program'), { handled: false });
+  assert.match((await agent.handleCommand('/tools')).output, /No tools discovered/);
 });

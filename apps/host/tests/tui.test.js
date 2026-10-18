@@ -265,6 +265,51 @@ test('a preloaded program discovers tools before a model is selected', async () 
   } finally { app.unmount(); }
 });
 
+test('failed program preload leaves chat able to discover another program', async () => {
+  const programId = '11111111111111111111111111111111';
+  const sdk = { discover: async () => { throw new Error('Missing config'); }, getTools: () => { throw new Error('Not discovered'); } };
+  const app = render(React.createElement(ChatScreen, { sdk, programId, rpcUrl: 'https://api.devnet.solana.com' }));
+  try {
+    await tick();
+    assert.match(app.lastFrame(), /Discovery failed/);
+    assert.match(app.lastFrame(), /Program mention an ID or \.sns name in chat/);
+    app.stdin.write('/tools');
+    await tick();
+    app.stdin.write('\r');
+    await tick();
+    assert.match(app.lastFrame(), /No program loaded/);
+  } finally { app.unmount(); }
+});
+
+test('old program discovery cannot restore tools after RPC changes', async () => {
+  let finishDiscovery;
+  const sdk = {
+    discover: () => new Promise(resolve => { finishDiscovery = resolve; }),
+    getTools: () => [{ name: 'old_tool' }],
+  };
+  const app = render(React.createElement(ChatScreen, {
+    sdk, programId: '11111111111111111111111111111111', rpcUrl: 'http://localhost:8899',
+  }));
+  try {
+    await tick();
+    app.stdin.write('/rpc');
+    await tick();
+    app.stdin.write('\r');
+    await tick();
+    app.stdin.write('\u007f'.repeat('http://localhost:8899'.length));
+    await tick();
+    app.stdin.write('http://localhost:8898');
+    await tick();
+    app.stdin.write('\r');
+    await tick();
+    finishDiscovery();
+    await tick();
+    assert.match(app.lastFrame(), /Tools 0/);
+    assert.match(app.lastFrame(), /Program mention an ID or \.sns name in chat/);
+    assert.match(app.lastFrame(), /RPC updated; mention a program/);
+  } finally { app.unmount(); }
+});
+
 test('chat screen discovers tools and keeps program, model, and wallet status visible', async () => {
   let discoveries = 0;
   const sdk = {
@@ -290,12 +335,14 @@ test('transaction review rejects Enter and requires explicit s to sign', async (
   const request = {
     tool: 'deposit', programId: '11111111111111111111111111111111',
     arguments: { amount: '1' }, accounts: [], effects: { summary: 'Deposits funds', financial: true },
-    simulation: { err: null, unitsConsumed: 1 }, estimatedFeeLamports: 5000, messageHash: 'abc', instruction: { data: Buffer.from([1]) },
+    simulation: { err: null, unitsConsumed: 1, logs: ['Program log: Instruction: Deposit', 'Program success'] }, estimatedFeeLamports: 5000, messageHash: 'abc', instruction: { data: Buffer.from([1]) },
   };
   let decision;
   const app = render(React.createElement(TransactionReview, { request, onDecision: value => { decision = value; } }));
   await tick();
   assert.match(app.lastFrame(), /Estimated fee 5000 lamports/);
+  assert.match(app.lastFrame(), /Validator logs \(2 of 2\)/);
+  assert.match(app.lastFrame(), /Instruction: Deposit/);
   app.stdin.write('\r');
   await tick();
   assert.equal(decision, false);

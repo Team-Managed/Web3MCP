@@ -178,6 +178,23 @@ describe('Web3McpHost: Universal LLM Client & Log Compaction (Ticket 01)', () =>
     await assert.rejects(driver.chat({ messages: [{ role: 'user', content: 'initialize' }] }), /invalid JSON arguments/);
   });
 
+  it('replays agent tool calls with their arguments to Anthropic', async () => {
+    const driver = new AnthropicDriver({ apiKey: 'test', model: 'test' });
+    let request;
+    driver.client.messages.create = async input => {
+      request = input;
+      return (async function* () {})();
+    };
+    await driver.chat({ messages: [
+      { role: 'assistant', content: '', tool_calls: [{ id: 'call-1', type: 'function', function: { name: 'get_vault', arguments: '{"vaultAddress":"abc"}' } }] },
+      { role: 'tool', tool_call_id: 'call-1', content: '{"exists":true}' },
+    ] });
+    assert.deepEqual(request.messages[0].content[0], {
+      type: 'tool_use', id: 'call-1', name: 'get_vault', input: { vaultAddress: 'abc' },
+    });
+    assert.equal(request.messages[1].content[0].tool_use_id, 'call-1');
+  });
+
   it('compacts simulation result into a token-efficient summary', () => {
     const rawSimulationResult = {
       tool: 'deposit',
