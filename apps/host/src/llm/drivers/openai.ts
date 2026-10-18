@@ -27,16 +27,19 @@ interface ToolCallEntry {
 export class OpenAiCompatibleDriver {
   client: OpenAI;
   model: string;
+  useOpenAiParameters: boolean;
 
   constructor({
     apiKey,
     baseURL,
     model,
+    useOpenAiParameters = false,
     defaultHeaders = {},
   }: {
     apiKey?: string;
     baseURL?: string;
     model?: string;
+    useOpenAiParameters?: boolean;
     defaultHeaders?: Record<string, string>;
   }) {
     if (!model) {
@@ -48,6 +51,7 @@ export class OpenAiCompatibleDriver {
       defaultHeaders,
     });
     this.model = model;
+    this.useOpenAiParameters = useOpenAiParameters;
   }
 
   async chat({
@@ -68,8 +72,11 @@ export class OpenAiCompatibleDriver {
           model: this.model,
           messages: messages as unknown as Array<OpenAI.Chat.Completions.ChatCompletionMessageParam>,
           tools: formattedTools,
-          temperature,
-          max_tokens: maxTokens,
+          // Chat Completions accepts function tools on these models only without reasoning.
+          ...(this.useOpenAiParameters && formattedTools && (this.model === 'gpt-6-luna' || this.model === 'gpt-6-sol')
+            ? { reasoning_effort: 'none' as const } : {}),
+          ...(!this.useOpenAiParameters || !/^(?:gpt-[56]|o\d)/i.test(this.model) ? { temperature } : {}),
+          ...(this.useOpenAiParameters ? { max_completion_tokens: maxTokens } : { max_tokens: maxTokens }),
           stream: true,
         });
 
@@ -116,7 +123,7 @@ export class OpenAiCompatibleDriver {
             try {
               parsedArgs = JSON.parse(call.argumentsStr);
             } catch {
-              parsedArgs = {};
+              throw new LlmError(`Model returned invalid JSON arguments for tool '${call.name}'.`);
             }
           }
           toolCalls.push({

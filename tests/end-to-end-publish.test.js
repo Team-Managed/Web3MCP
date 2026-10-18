@@ -4,7 +4,7 @@ import fs from "node:fs";
 import path from "node:path";
 import os from "node:os";
 import { Connection, PublicKey } from "@solana/web3.js";
-import { publishConfig } from "../programs/reference-vault/scripts/publish.js";
+import { publishConfig } from "../reference-programs/reference-vault/scripts/publish.js";
 import { validateDiscoveredConfig } from "../protocol/src/validator.js";
 
 if (!process.env.ANCHOR_WALLET) {
@@ -65,7 +65,7 @@ describe("Ticket 04: End-to-End Publisher & On-Chain Protocol Conformance", () =
   });
 
   it("preserves strict host boundary: host packages do not import reference program source or static IDLs (ADR 0007)", () => {
-    // Assert protocol and future host directories have zero imports of programs/reference-vault or target/idl
+    // Assert protocol and future host directories have zero imports of reference-programs/reference-vault or target/idl
     const dirsToCheck = ["../protocol/src"];
     const hostDir = new URL("../apps/host/src", import.meta.url);
     if (fs.existsSync(hostDir)) {

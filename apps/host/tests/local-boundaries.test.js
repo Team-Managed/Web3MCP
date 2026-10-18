@@ -52,6 +52,7 @@ test('failed simulation never reaches wallet approval', async () => {
         : { role: 'assistant', content: 'The transaction failed simulation.' },
     },
     host,
+    signer: Keypair.generate(),
     programId: Keypair.generate().publicKey.toBase58(),
     onApprovalRequest: async () => { approvalCalls++; return true; },
   });

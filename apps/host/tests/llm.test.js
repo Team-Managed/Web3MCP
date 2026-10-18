@@ -1,6 +1,6 @@
 import test, { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { createLlmClient, compactToolResult, LlmError, OpenAiCompatibleDriver, AnthropicDriver } from '../dist/llm/index.js';
+import { createLlmClient, listAvailableModels, compactToolResult, LlmError, OpenAiCompatibleDriver, AnthropicDriver } from '../dist/llm/index.js';
 
 describe('Web3McpHost: Universal LLM Client & Log Compaction (Ticket 01)', () => {
   it('fails closed when no model is specified', () => {
@@ -100,6 +100,82 @@ describe('Web3McpHost: Universal LLM Client & Log Compaction (Ticket 01)', () =>
 
     assert.equal(client.model, 'gemini-2.5-flash');
     assert.equal(client.client.baseURL, 'https://generativelanguage.googleapis.com/v1beta/openai/');
+  });
+
+  it('uses current OpenAI completion parameters for a reasoning model without changing other providers', async () => {
+    const requests = [];
+    const openai = createLlmClient({ provider: 'openai', model: 'gpt-6-luna', apiKey: 'test' });
+    const groq = createLlmClient({ provider: 'groq', model: 'llama-test', apiKey: 'test' });
+    for (const driver of [openai, groq]) {
+      driver.client.chat.completions.create = async request => {
+        requests.push(request);
+        return (async function* () { yield { choices: [{ delta: { content: 'ok' } }] }; })();
+      };
+      await driver.chat({ messages: [{ role: 'user', content: 'hi' }] });
+    }
+    assert.equal(requests[0].max_completion_tokens, 1024);
+    assert.equal('max_tokens' in requests[0], false);
+    assert.equal('temperature' in requests[0], false);
+    assert.equal('reasoning_effort' in requests[0], false);
+    assert.equal(requests[1].max_tokens, 1024);
+    assert.equal(requests[1].temperature, 0.2);
+  });
+
+  it('uses supported reasoning effort for Luna and Sol function tools only', async () => {
+    const requests = [];
+    for (const [provider, model] of [
+      ['openai', 'gpt-6-luna'], ['openai', 'gpt-6-sol'],
+      ['openai', 'gpt-6-astra'], ['groq', 'llama-test'],
+    ]) {
+      const driver = createLlmClient({ provider, model, apiKey: 'test' });
+      driver.client.chat.completions.create = async request => {
+        requests.push(request);
+        return (async function* () { yield { choices: [{ delta: { content: 'ok' } }] }; })();
+      };
+      await driver.chat({ messages: [{ role: 'user', content: 'hi' }], tools: [
+        { type: 'function', function: { name: 'discover', description: 'Find tools', parameters: { type: 'object', properties: {} } } },
+      ] });
+    }
+    assert.equal(requests[0].reasoning_effort, 'none');
+    assert.equal(requests[1].reasoning_effort, 'none');
+    assert.equal('reasoning_effort' in requests[2], false);
+    assert.equal('reasoning_effort' in requests[3], false);
+  });
+
+  it('lists models offered to the configured OpenAI key', async () => {
+    const originalFetch = globalThis.fetch;
+    globalThis.fetch = async (input, init) => {
+      assert.match(String(input), /\/v1\/models$/);
+      assert.equal(new Headers(init.headers).get('authorization'), 'Bearer test-key');
+      return new Response(JSON.stringify({ object: 'list', data: [
+        { id: 'gpt-6-luna', object: 'model' }, { id: 'gpt-4o-mini', object: 'model' },
+      ] }), { status: 200, headers: { 'content-type': 'application/json' } });
+    };
+    try {
+      const models = await listAvailableModels({ provider: 'openai', apiKey: 'test-key',
+        baseURL: 'https://models.test/v1' });
+      assert.deepEqual(models, ['gpt-4o-mini', 'gpt-6-luna']);
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+
+  it('rejects malformed streamed tool arguments from OpenAI-compatible models', async () => {
+    const driver = new OpenAiCompatibleDriver({ apiKey: 'test', model: 'test' });
+    driver.client.chat.completions.create = async () => (async function* () {
+      yield { choices: [{ delta: { tool_calls: [{ index: 0, id: 'call-1', function: { name: 'initialize', arguments: '{bad' } }] } }] };
+    })();
+    await assert.rejects(driver.chat({ messages: [{ role: 'user', content: 'initialize' }] }), /invalid JSON arguments/);
+  });
+
+  it('rejects malformed streamed tool arguments from Anthropic models', async () => {
+    const driver = new AnthropicDriver({ apiKey: 'test', model: 'test' });
+    driver.client.messages.create = async () => (async function* () {
+      yield { type: 'content_block_start', content_block: { type: 'tool_use', id: 'call-1', name: 'initialize' } };
+      yield { type: 'content_block_delta', delta: { type: 'input_json_delta', partial_json: '{bad' } };
+      yield { type: 'content_block_stop' };
+    })();
+    await assert.rejects(driver.chat({ messages: [{ role: 'user', content: 'initialize' }] }), /invalid JSON arguments/);
   });
 
   it('compacts simulation result into a token-efficient summary', () => {

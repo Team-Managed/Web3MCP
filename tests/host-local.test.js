@@ -1,9 +1,8 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { Connection, Keypair, PublicKey, LAMPORTS_PER_SOL } from '@solana/web3.js';
-import { Web3McpHost } from '../apps/host/dist/index.js';
-import { signAndBroadcastTransaction } from '../apps/host/dist/wallet/index.js';
-import { publishConfig } from '../programs/reference-vault/scripts/publish.js';
+import { Web3McpSdk } from '@web3mcp/sdk';
+import { publishConfig } from '../reference-programs/reference-vault/scripts/publish.js';
 
 describe('generic host against the current local reference program', () => {
   const url = process.env.ANCHOR_PROVIDER_URL || 'http://127.0.0.1:8899';
@@ -17,7 +16,7 @@ describe('generic host against the current local reference program', () => {
     const airdrop = await connection.requestAirdrop(signer.publicKey, LAMPORTS_PER_SOL);
     await connection.confirmTransaction(airdrop, 'confirmed');
     const { programId } = await publishConfig({ url });
-    const host = new Web3McpHost({ connection });
+    const host = new Web3McpSdk({ connection });
 
     await host.discover(programId);
     assert.deepEqual(host.getTools(programId).map((tool) => tool.name).sort(),
@@ -36,13 +35,9 @@ describe('generic host against the current local reference program', () => {
       signer: signer.publicKey,
     });
     assert.equal(prepared.simulation.err, null);
-    await signAndBroadcastTransaction({
-      connection,
-      transaction: prepared.transaction,
-      lastValidBlockHeight: prepared.lastValidBlockHeight,
-      expectedMessageHash: prepared.messageHash,
-      signer,
-    });
+    assert.ok(Number.isInteger(prepared.estimatedFeeLamports));
+    prepared.transaction.sign(signer);
+    await host.submitSignedTransaction(prepared, prepared.transaction);
 
     const after = await host.executeRead('get_vault', { vaultAddress: vaultAddress.toBase58() }, { programId });
     assert.equal(after.exists, true);

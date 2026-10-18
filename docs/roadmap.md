@@ -6,23 +6,23 @@ This is the build order for the first complete demo. The current [design spec](s
 
 The account layout, JSON schema, version rules, supported input types, Anchor IDL 0.1.0 profile, and initial account/argument binding checks are implemented in `protocol/`. Local-validator publication and RPC discovery passed on 2026-10-17. More adversarial conformance vectors are still needed before freezing v0.1.
 
-## 2. Publish from a reference program (In review)
+## 2. Publish from a reference program (Completed)
 
 Build a small Anchor SOL vault with `get_vault`, `initialize`, `deposit`, and `withdraw` capabilities. Add a program-owned config PDA and authorized publication instructions. Generate the config from the compiled IDL, publish it in bounded chunks, and verify its bytes and account owner on a local validator. No host code may import the generated IDL.
 
-**Status:** An earlier reference vault is deployed on devnet at `GgVnzvsMhHHKeeGnqQhU9KAjBeCVhYiYmR17174Lyrgv` with Config PDA `HfA1ExZS1cgYR5k5GEJmsQfyAcDK2J9NPi7p97dU3WLD`. A read-only RPC check on 2026-10-14 found an executable program and a published, program-owned config with four tools. That deployed version predates the authorization and read-binding corrections in this review. The updated program built and passed 18 local-validator integration tests on 2026-10-17, including config publication, RPC conformance, and vault operations. It has not been deployed to devnet.
+**Status:** The current vault was deployed on Devnet on 2026-10-18 at `9zJzM4rHDPR4pd3vXHQjQ7whTVmx4zxB3ZH4Gb9iXRwD`, with Config PDA `J8Ph37LoQsv4yED6USdupCooCZzsVMqJkgBTm9uSkvCw`. The deployed program's upgrade authority matches the publisher, and the published config passed v0.1 discovery validation. All 38 local-validator integration tests passed with this program ID. The earlier Devnet program at `GgVnzvsMhHHKeeGnqQhU9KAjBeCVhYiYmR17174Lyrgv` remains historical.
 
-## 3. Build the generic host core (Completed)
+## 3. Build the generic SDK and one Host CLI (Local implementation)
 
 Given a program ID, verify the executable program and config PDA, parse the config, and dynamically register its tools for the LLM. Implement account reads, instruction encoding, supported account resolution, and strict input validation. Prove the host works from the published config alone.
 
-**Status:** `@web3mcp/host` is implemented under `apps/host/`, with RPC discovery, validated tool export, account reads, instruction preparation, and simulation. The earlier Devnet reference config does not satisfy the current v0.1 validator, so its older host tests are an optional rehearsal until the corrected program and config are deployed. Current protocol interoperability is checked against a local validator.
+**Status:** Generic RPC discovery, validated tool export, account reads, instruction preparation, simulation, and signed submission now live in `@web3mcp/sdk` under `packages/sdk/`. The single `web3mcp` command in `apps/host/` imports that SDK. The extracted SDK discovered all four tools from the current Devnet deployment; the local-validator integration suite passed 38 tests, including an SDK-backed signed write. The older Devnet tests still target the superseded program and need updating for the new CLI rehearsal.
 
 ## 4. Add the LLM and wallet flow (In review)
 
 Choose one tool-calling model for the demo. Add a generic chat interface that exposes only validated on-chain tools to the model. For writes, construct and simulate the transaction, show the exact program, accounts, amount, fee, and uncertainty, then request explicit wallet approval of that exact message. Confirm the signature and report the chain result. Keep model credentials out of the browser bundle and repository.
 
-**Status:** Model adapters, a terminal agent, and wallet approval are implemented. A provider-backed rehearsal against the current protocol remains pending.
+**Status:** Model adapters and one Ink terminal chat with wallet approval are implemented locally. Chat opens by default; `/` opens commands, `/model` configures provider, key, and model, `/wallet` selects a detected or entered keypair path, and `/rpc` sets the endpoint. API keys are saved in the operating system credential store. A generic host discovery tool lets the model load a program's validated PDA tools during a conversation. The CLI requires an explicit **Sign** action for each simulated transaction. A basic provider-backed OpenAI chat retry succeeded; a full Devnet read/write rehearsal remains pending.
 
 ## 5. Publish the explanation and demonstrate interoperability
 
@@ -36,4 +36,4 @@ Build a static documentation site from the whitepaper, protocol reference, publi
 - The host rejects malformed config, mismatched program ownership, unsupported account rules, and altered transactions.
 - A second compatible program is discovered without a host release.
 
-SNS discovery, arbitrary third-party programs, swaps, MCP adapters, and mainnet are outside the first demo.
+The host can optionally resolve a `.sns` name to a program address using the current SNS SDK before normal SDK discovery. This is host-side convenience; the protocol still starts from a program ID. `.sol` name resolution, arbitrary third-party programs, swaps, MCP adapters, and mainnet execution are outside the first demo.

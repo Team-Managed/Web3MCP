@@ -1,10 +1,12 @@
 # Spec: LLM and Wallet Flow (llm-wallet-flow)
 
+**Historical:** The current product is one `web3mcp` Host CLI using `@web3mcp/sdk`. See [the current project design](../../docs/superpowers/specs/2026-10-13-web3mcp-project-design.md).
+
 Status: ready-for-agent · Date: 2026-10-16
 
 ## Problem Statement
 
-The Web3MCP Host core engine can discover on-chain tools, query accounts via RPC, and prepare/simulate transaction instructions. However, end users and AI developers currently have no interactive conversational agent that ties these primitives together into an autonomous tool-calling loop with human-in-the-loop wallet approval. Without this layer, interacting with on-chain programs requires writing programmatic scripts, and AI agents cannot assist non-technical users in exploring programs, understanding state, and safely proposing state-changing transactions.
+The Web3MCP Compatible Host core engine can discover on-chain tools, query accounts via RPC, and prepare/simulate transaction instructions. However, end users and AI developers currently have no interactive conversational agent that ties these primitives together into an autonomous tool-calling loop with human-in-the-loop wallet approval. Without this layer, interacting with on-chain programs requires writing programmatic scripts, and AI agents cannot assist non-technical users in exploring programs, understanding state, and safely proposing state-changing transactions.
 
 ## Solution
 

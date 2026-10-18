@@ -4,6 +4,7 @@ import { PublicKey, Transaction, TransactionInstruction } from '@solana/web3.js'
 import { DiscoveryError, ToolNotFoundError, ValidationError } from '../errors.js';
 import { formatArgForCoder } from '../accounts/coder.js';
 import { resolveInstructionAccounts } from './resolver.js';
+import { resolveToolContext } from '../tools/registry.js';
 
 /**
  * Prepares a state-changing instruction tool for wallet handoff.
@@ -27,33 +28,7 @@ export async function prepareAndSimulateInstruction({
   options = {},
   defaultCommitment = 'confirmed',
 }) {
-  let targetContext = null;
-  let targetTool = null;
-
-  if (options.programId) {
-    targetContext = programs.get(options.programId);
-    if (!targetContext) {
-      throw new DiscoveryError(`Program '${options.programId}' has not been discovered.`);
-    }
-    targetTool = targetContext.tools.find((t) => t.name === toolName);
-  } else {
-    for (const ctx of programs.values()) {
-      const found = ctx.tools.find((t) => t.name === toolName);
-      if (found) {
-        targetContext = ctx;
-        targetTool = found;
-        break;
-      }
-    }
-  }
-
-  if (!targetTool) {
-    throw new ToolNotFoundError(
-      options.programId
-        ? `Tool '${toolName}' not found for program '${options.programId}'.`
-        : `Tool '${toolName}' not found in registered tools.`
-    );
-  }
+  const { context: targetContext, tool: targetTool } = resolveToolContext(programs, toolName, options.programId);
 
   if (targetTool.solana?.kind !== 'instruction') {
     throw new ValidationError(`Tool '${toolName}' is not an instruction tool.`);
@@ -142,6 +117,14 @@ export async function prepareAndSimulateInstruction({
     };
   }
 
+  let estimatedFeeLamports = null;
+  try {
+    const fee = await connection.getFeeForMessage(transaction.compileMessage(), options.commitment || defaultCommitment);
+    estimatedFeeLamports = fee.value;
+  } catch {
+    // Fee is an estimate; the approval UI must show when it is unavailable.
+  }
+
   return {
     tool: targetTool.name,
     programId: targetContext.programId,
@@ -150,6 +133,7 @@ export async function prepareAndSimulateInstruction({
     lastValidBlockHeight: latestBlockhash.lastValidBlockHeight,
     messageHash,
     simulation,
+    estimatedFeeLamports,
     effects: targetTool.solana.effects || null,
     accounts: accountsSummary,
   };

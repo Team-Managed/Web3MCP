@@ -1,12 +1,12 @@
 import { Keypair, PublicKey } from '@solana/web3.js';
-import { Web3McpHost } from '../index.js';
+import { Web3McpSdk } from '@web3mcp/sdk';
 import { createLlmClient, CreateLlmClientOptions } from '../llm/index.js';
 import { createSystemPrompt } from './prompt.js';
 import { handleSlashCommand, CommandResult } from './commands.js';
 import { executeAgentTurn, ApprovalHandler } from './loop.js';
 
 export interface Web3McpAgentOptions {
-  host: Web3McpHost;
+  host: Web3McpSdk;
   llmClient?: any;
   llmOptions?: CreateLlmClientOptions;
   model?: string;
@@ -15,6 +15,7 @@ export interface Web3McpAgentOptions {
   signer?: Keypair | null;
   programId?: string;
   onApprovalRequest?: ApprovalHandler;
+  onDiscoverProgram?: (reference: string) => Promise<{ programId: string; toolNames: string[] }>;
   includeKnowledge?: boolean;
   knowledgeDir?: string;
 }
@@ -25,11 +26,12 @@ export interface Web3McpAgentOptions {
  * halts on state-changing transactions for wallet review and signing, and processes slash commands.
  */
 export class Web3McpAgent {
-  host: Web3McpHost;
+  host: Web3McpSdk;
   llmClient: any;
   signer: Keypair | null;
   programId?: string;
   onApprovalRequest?: ApprovalHandler;
+  onDiscoverProgram?: (reference: string) => Promise<{ programId: string; toolNames: string[] }>;
   includeKnowledge?: boolean;
   knowledgeDir?: string;
   messages: Array<any>;
@@ -44,6 +46,7 @@ export class Web3McpAgent {
     signer = null,
     programId,
     onApprovalRequest,
+    onDiscoverProgram,
     includeKnowledge = true,
     knowledgeDir,
   }: Web3McpAgentOptions) {
@@ -54,6 +57,7 @@ export class Web3McpAgent {
     this.signer = signer;
     this.programId = programId;
     this.onApprovalRequest = onApprovalRequest;
+    this.onDiscoverProgram = onDiscoverProgram;
     this.includeKnowledge = includeKnowledge;
     this.knowledgeDir = knowledgeDir;
 
@@ -68,7 +72,7 @@ export class Web3McpAgent {
     this.initSystemPrompt();
   }
 
-  private initSystemPrompt(): void {
+  private initSystemPrompt(preserveHistory = false): void {
     let tools: any[] = [];
     try {
       tools = this.programId ? this.host.getTools(this.programId) : this.host.getTools();
@@ -79,10 +83,12 @@ export class Web3McpAgent {
       programId: this.programId,
       signerAddress: this.signer ? this.signer.publicKey.toBase58() : undefined,
       tools,
+      canDiscoverPrograms: Boolean(this.onDiscoverProgram),
       includeKnowledge: this.includeKnowledge,
       knowledgeDir: this.knowledgeDir,
     });
-    this.messages = [{ role: 'system', content: systemContent }];
+    if (preserveHistory && this.messages.length) this.messages[0] = { role: 'system', content: systemContent };
+    else this.messages = [{ role: 'system', content: systemContent }];
   }
 
   /**
@@ -112,10 +118,6 @@ export class Web3McpAgent {
       signerPubkey: this.signer ? this.signer.publicKey : null,
       tools: this.host.getTools(this.programId),
       clearHistory: () => this.clearHistory(),
-      setSigner: (signer: Keypair) => {
-        this.signer = signer;
-        this.initSystemPrompt();
-      },
     });
   }
 
@@ -147,6 +149,12 @@ export class Web3McpAgent {
       programId: this.programId,
       onToken,
       onApprovalRequest: this.onApprovalRequest,
+      onDiscoverProgram: this.onDiscoverProgram ? async reference => {
+        const result = await this.onDiscoverProgram!(reference);
+        this.programId = result.programId;
+        this.initSystemPrompt(true);
+        return result;
+      } : undefined,
       onProgress,
     });
   }

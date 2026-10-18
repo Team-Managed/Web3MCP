@@ -7,7 +7,7 @@ export interface ReviewCardParams {
   accounts?: Array<any>;
   simulation?: any;
   effects?: any;
-  fee?: number;
+  fee?: number | null;
   messageHash?: string;
   args?: Record<string, unknown>;
 }
@@ -30,7 +30,7 @@ export function formatReviewCard({
   accounts = [],
   simulation,
   effects,
-  fee = 5000,
+  fee = null,
   messageHash,
   args,
 }: ReviewCardParams): string {
@@ -85,8 +85,7 @@ export function formatReviewCard({
     row(`Effects:          ${effects.summary || 'None'} (${styledFinancial})`);
   }
 
-  const feeSol = (fee / 1e9).toFixed(6);
-  row(`Estimated Fee:    ~${feeSol} SOL (${fee} lamports)`);
+  row(fee == null ? 'Estimated Fee:    unavailable' : `Estimated Fee:    ~${(fee / 1e9).toFixed(6)} SOL (${fee} lamports)`);
 
   // Divider
   lines.push(`${border}├${line}┤${rst}`);
@@ -156,8 +155,8 @@ export async function promptApproval(
 
   const rl = readline.createInterface({ input, output });
   const promptText = isColorSupported
-    ? `? ${c.bold}Approve and broadcast transaction to Devnet?${c.reset} [${c.brightGreen}y${c.reset}/${c.brightRed}N${c.reset}] › `
-    : '? Approve and broadcast transaction to Devnet? [y/N] › ';
+    ? `? ${c.bold}Approve and broadcast this transaction?${c.reset} [${c.brightGreen}y${c.reset}/${c.brightRed}N${c.reset}] › `
+    : '? Approve and broadcast this transaction? [y/N] › ';
 
   return new Promise<boolean>((resolve) => {
     rl.question(promptText, (answer) => {

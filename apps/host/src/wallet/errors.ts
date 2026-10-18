@@ -1,4 +1,4 @@
-import { Web3McpHostError } from '../errors.js';
+import { Web3McpHostError } from '@web3mcp/sdk/errors';
 
 export class WalletError extends Web3McpHostError {
   constructor(message: string, cause?: unknown) {

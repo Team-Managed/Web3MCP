@@ -4,6 +4,7 @@ export interface SystemPromptContext {
   programId?: string;
   signerAddress?: string;
   tools?: Array<any>;
+  canDiscoverPrograms?: boolean;
   includeKnowledge?: boolean;
   knowledgeDir?: string;
 }
@@ -18,6 +19,7 @@ export function createSystemPrompt({
   programId,
   signerAddress,
   tools = [],
+  canDiscoverPrograms = false,
   includeKnowledge = true,
   knowledgeDir,
 }: SystemPromptContext = {}): string {
@@ -30,12 +32,13 @@ export function createSystemPrompt({
           : kind === 'instruction'
           ? ' [State-changing instruction: Requires user wallet review & approval]'
           : '';
-      return `• ${t.name}: ${t.description || 'No description'} (${kind})${annotation}`;
+      return `• ${t.name} (${kind})${annotation}`;
     })
     .join('\n');
 
   let prompt = `You are Web3MCP Agent, an AI pair programmer and transaction assistant for the Solana blockchain.
 You interact with Solana programs by discovering and executing on-chain tools published through the Web3MCP protocol.
+${canDiscoverPrograms ? 'When the user gives a program ID or .sns name, call web3mcp_host_discover_program first. Its result makes validated program tools available on your next turn. You may call it again to switch programs. Never invent program tools.\n' : ''}
 
 Current Context:
 ${programId ? `• Connected Program ID: ${programId}` : '• No specific program connected.'}

@@ -1,5 +1,7 @@
 # Native LLM Seam and Interactive Wallet Handoff
 
+**Package boundary update (2026-10-18):** The native model loop and human approval decision remain, while generic Solana operations now live in `@web3mcp/sdk` and the single `web3mcp` Host CLI owns the terminal UI. The package names and separate runtime assumptions below are historical.
+
 ## Context
 
 Phase 4 of Web3MCP introduces conversational AI reasoning and wallet handoffs. An agent host requires:

@@ -1,4 +1,4 @@
-import { DiscoveryError, ToolNotFoundError } from '../errors.js';
+import { DiscoveryError, ToolNotFoundError, ValidationError } from '../errors.js';
 
 /**
  * Retrieves registered tool descriptors across all discovered programs or for a specific programId.
@@ -32,14 +32,27 @@ export function queryTools(programs, programId) {
  * @returns {any} Tool descriptor
  */
 export function findTool(programs, name, programId) {
-  const tools = queryTools(programs, programId);
-  const tool = tools.find((t) => t.name === name);
-  if (!tool) {
+  return resolveToolContext(programs, name, programId).tool;
+}
+
+export function resolveToolContext(programs, name, programId) {
+  const contexts = programId ? [[programId, programs.get(programId)]] : [...programs.entries()];
+  if (programId && !contexts[0][1]) {
+    throw new DiscoveryError(`Program '${programId}' has not been discovered.`);
+  }
+  const matches = contexts.flatMap(([id, context]) => {
+    const tool = context.tools.find(t => t.name === name);
+    return tool ? [{ context, tool }] : [];
+  });
+  if (matches.length > 1) {
+    throw new ValidationError(`Tool '${name}' exists in multiple programs; specify a program ID.`);
+  }
+  if (!matches.length) {
     throw new ToolNotFoundError(
       programId
         ? `Tool '${name}' not found for program '${programId}'.`
         : `Tool '${name}' not found in registered tools.`
     );
   }
-  return tool;
+  return matches[0];
 }

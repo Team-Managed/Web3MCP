@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { Keypair, SystemProgram, Transaction } from '@solana/web3.js';
-import * as publisher from '../programs/reference-vault/scripts/publish.js';
+import * as publisher from '../reference-programs/reference-vault/scripts/publish.js';
 
 test('publisher retries RPC 429s with one signed transaction', async () => {
   const payer = Keypair.generate();

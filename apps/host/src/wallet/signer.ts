@@ -1,13 +1,9 @@
 import fs from 'node:fs';
-import crypto from 'node:crypto';
 import path from 'node:path';
 import os from 'node:os';
 import {
   Keypair,
-  Transaction,
   Connection,
-  TransactionInstruction,
-  Commitment,
   PublicKey,
   LAMPORTS_PER_SOL,
 } from '@solana/web3.js';
@@ -44,7 +40,6 @@ export function loadKeypair(customPath?: string): Keypair {
     throw new WalletError(`Failed to load keypair from '${targetPath}': ${message}`, err);
   }
 }
-
 export const loadKeypairFromFile = loadKeypair;
 
 export interface GenerateKeypairOptions {
@@ -121,85 +116,5 @@ export async function requestDevnetAirdrop(
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : String(err);
     throw new WalletError(`Airdrop request failed on Devnet: ${message}`, err);
-  }
-}
-
-export interface SignAndBroadcastParams {
-  connection: Connection;
-  instruction?: TransactionInstruction;
-  transaction?: Transaction;
-  lastValidBlockHeight?: number;
-  expectedMessageHash?: string;
-  signer: Keypair;
-  commitment?: Commitment;
-}
-
-export interface BroadcastResult {
-  signature: string;
-  explorerUrl: string;
-}
-
-/**
- * Signs and broadcasts a TransactionInstruction to Solana RPC, waiting for confirmation.
- */
-export async function signAndBroadcastTransaction({
-  connection,
-  instruction,
-  transaction,
-  lastValidBlockHeight,
-  expectedMessageHash,
-  signer,
-  commitment = 'confirmed',
-}: SignAndBroadcastParams): Promise<BroadcastResult> {
-  if (!connection) throw new WalletError('Missing active Solana connection.');
-  if (!transaction && !instruction) throw new WalletError('Missing transaction to sign.');
-  if (!signer || !(signer instanceof Keypair)) {
-    throw new WalletError('A valid Keypair instance is required to sign transactions.');
-  }
-
-  try {
-    const tx = transaction || new Transaction().add(instruction!);
-    if (transaction) {
-      if (!tx.feePayer?.equals(signer.publicKey) || !tx.recentBlockhash || lastValidBlockHeight === undefined) {
-        throw new WalletError('Prepared transaction is missing its approved fee payer or blockhash.');
-      }
-    } else {
-      tx.feePayer = signer.publicKey;
-      const latestBlockhash = await connection.getLatestBlockhash(commitment);
-      tx.recentBlockhash = latestBlockhash.blockhash;
-      lastValidBlockHeight = latestBlockhash.lastValidBlockHeight;
-    }
-
-    const messageHash = crypto.createHash('sha256').update(tx.serializeMessage()).digest('hex');
-    if (expectedMessageHash && messageHash !== expectedMessageHash) {
-      throw new WalletError('Prepared transaction changed after approval.');
-    }
-
-    tx.sign(signer);
-
-    const rawTransaction = tx.serialize();
-    const signature = await connection.sendRawTransaction(rawTransaction, {
-      skipPreflight: false,
-      preflightCommitment: commitment,
-    });
-
-    const confirmation = await connection.confirmTransaction(
-      {
-        signature,
-        blockhash: tx.recentBlockhash,
-        lastValidBlockHeight: lastValidBlockHeight!,
-      },
-      commitment
-    );
-    if (confirmation.value.err) {
-      throw new WalletError(`Transaction confirmed with error: ${JSON.stringify(confirmation.value.err)}`);
-    }
-
-    return {
-      signature,
-      explorerUrl: `https://explorer.solana.com/tx/${signature}?cluster=devnet`,
-    };
-  } catch (err) {
-    throw new WalletError(`Transaction submission failed on Devnet: ${err.message}`, err);
   }
 }

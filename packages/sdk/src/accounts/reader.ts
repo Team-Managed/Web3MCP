@@ -1,14 +1,12 @@
-import crypto from 'node:crypto';
 import { validateToolInput } from '@web3mcp/protocol/validator';
 import { PublicKey } from '@solana/web3.js';
 import {
-  DiscoveryError,
-  ToolNotFoundError,
   ValidationError,
   AccountSecurityError,
   AccountDiscriminatorMismatchError,
 } from '../errors.js';
 import { formatDecodedValue } from './coder.js';
+import { resolveToolContext } from '../tools/registry.js';
 
 /**
  * Executes an accountRead tool by querying live Solana RPC, verifying account ownership
@@ -24,33 +22,7 @@ import { formatDecodedValue } from './coder.js';
  * @returns {Promise<{ exists: boolean, address: string, account: string, data: any }>}
  */
 export async function readAccount({ connection, programs, toolName, args = {}, options = {}, defaultCommitment = 'confirmed' }) {
-  let targetContext = null;
-  let targetTool = null;
-
-  if (options.programId) {
-    targetContext = programs.get(options.programId);
-    if (!targetContext) {
-      throw new DiscoveryError(`Program '${options.programId}' has not been discovered.`);
-    }
-    targetTool = targetContext.tools.find((t) => t.name === toolName);
-  } else {
-    for (const ctx of programs.values()) {
-      const found = ctx.tools.find((t) => t.name === toolName);
-      if (found) {
-        targetContext = ctx;
-        targetTool = found;
-        break;
-      }
-    }
-  }
-
-  if (!targetTool) {
-    throw new ToolNotFoundError(
-      options.programId
-        ? `Tool '${toolName}' not found for program '${options.programId}'.`
-        : `Tool '${toolName}' not found in registered tools.`
-    );
-  }
+  const { context: targetContext, tool: targetTool } = resolveToolContext(programs, toolName, options.programId);
 
   if (targetTool.solana?.kind !== 'accountRead') {
     throw new ValidationError(`Tool '${toolName}' is not an accountRead tool.`);
@@ -105,12 +77,12 @@ export async function readAccount({ connection, programs, toolName, args = {}, o
     );
   }
 
-  // 4. Verify 8-Byte Anchor Discriminator
-  const expectedDiscriminator = crypto
-    .createHash('sha256')
-    .update(`account:${accountTypeName}`)
-    .digest()
-    .subarray(0, 8);
+  // 4. Verify the validated IDL discriminator, including Anchor custom discriminators.
+  const accountDefinition = targetContext.idl?.accounts?.find(account => account.name === accountTypeName);
+  if (!Array.isArray(accountDefinition?.discriminator) || accountDefinition.discriminator.length !== 8) {
+    throw new ValidationError(`Account '${accountTypeName}' has no validated 8-byte IDL discriminator.`);
+  }
+  const expectedDiscriminator = Buffer.from(accountDefinition.discriminator);
 
   if (accountInfo.data.length < 8) {
     throw new AccountDiscriminatorMismatchError(

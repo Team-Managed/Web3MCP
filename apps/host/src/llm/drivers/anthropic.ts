@@ -108,7 +108,7 @@ export class AnthropicDriver {
             try {
               parsedArgs = JSON.parse(currentToolUse.jsonStr || '{}');
             } catch {
-              parsedArgs = {};
+              throw new LlmError(`Model returned invalid JSON arguments for tool '${currentToolUse.name}'.`);
             }
             toolCalls.push({
               id: currentToolUse.id,

@@ -3,15 +3,13 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
-import crypto from 'node:crypto';
 import { PassThrough } from 'node:stream';
-import { Keypair, Transaction, TransactionInstruction, PublicKey } from '@solana/web3.js';
+import { Keypair } from '@solana/web3.js';
 import {
   loadKeypair,
   generateKeypairToFile,
   formatReviewCard,
   promptApproval,
-  signAndBroadcastTransaction,
   WalletError,
 } from '../dist/wallet/index.js';
 
@@ -79,6 +77,11 @@ describe('Web3McpHost: Terminal Wallet Signer & Review Card', () => {
     assert.ok(card.includes('4563 CUs consumed'));
   });
 
+  it('does not invent a network fee when the estimate is unavailable', () => {
+    const card = formatReviewCard({ tool: 'deposit', programId: Keypair.generate().publicKey.toBase58() });
+    assert.match(card, /Estimated Fee:.*unavailable/);
+  });
+
   it('promptApproval resolves true when user inputs "y" or "yes"', async () => {
     const input = new PassThrough();
     const output = new PassThrough();
@@ -99,83 +102,6 @@ describe('Web3McpHost: Terminal Wallet Signer & Review Card', () => {
 
     const result = await promptPromise;
     assert.equal(result, false);
-  });
-
-  it('signAndBroadcastTransaction fails closed when signer or connection is missing', async () => {
-    await assert.rejects(
-      () =>
-        signAndBroadcastTransaction({
-          connection: null,
-          instruction: new TransactionInstruction({ keys: [], programId: PublicKey.default }),
-          signer: Keypair.generate(),
-        }),
-      (err) => {
-        assert.ok(err instanceof WalletError);
-        assert.ok(err.message.includes('Missing active Solana connection'));
-        return true;
-      }
-    );
-
-    await assert.rejects(
-      () =>
-        signAndBroadcastTransaction({
-          connection: {},
-          instruction: new TransactionInstruction({ keys: [], programId: PublicKey.default }),
-          signer: null,
-        }),
-      (err) => {
-        assert.ok(err instanceof WalletError);
-        assert.ok(err.message.includes('valid Keypair instance is required'));
-        return true;
-      }
-    );
-  });
-
-  it('signs the exact approved transaction message', async () => {
-    const signer = Keypair.generate();
-    const transaction = new Transaction().add(new TransactionInstruction({
-      programId: PublicKey.default,
-      keys: [],
-      data: Buffer.from([1]),
-    }));
-    transaction.feePayer = signer.publicKey;
-    transaction.recentBlockhash = Keypair.generate().publicKey.toBase58();
-    const messageHash = crypto.createHash('sha256').update(transaction.serializeMessage()).digest('hex');
-    let sentMessageHash;
-    const connection = {
-      sendRawTransaction: async (raw) => {
-        sentMessageHash = crypto.createHash('sha256').update(Transaction.from(raw).serializeMessage()).digest('hex');
-        return 'test-signature';
-      },
-      confirmTransaction: async () => ({ value: { err: null } }),
-    };
-
-    await signAndBroadcastTransaction({
-      connection,
-      transaction,
-      lastValidBlockHeight: 100,
-      expectedMessageHash: messageHash,
-      signer,
-    });
-    assert.equal(sentMessageHash, messageHash);
-
-    transaction.recentBlockhash = Keypair.generate().publicKey.toBase58();
-    await assert.rejects(
-      () => signAndBroadcastTransaction({ connection, transaction, lastValidBlockHeight: 100, expectedMessageHash: messageHash, signer }),
-      /changed after approval/,
-    );
-
-    const updatedHash = crypto.createHash('sha256').update(transaction.serializeMessage()).digest('hex');
-    await assert.rejects(
-      () => signAndBroadcastTransaction({
-        connection: { ...connection, confirmTransaction: async () => ({ value: { err: 'rejected' } }) },
-        transaction,
-        lastValidBlockHeight: 100,
-        expectedMessageHash: updatedHash,
-        signer,
-      }),
-      /confirmed with error/,
-    );
   });
 
   it('generates and writes a valid keypair with 0600 permissions', () => {

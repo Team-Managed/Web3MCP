@@ -1,14 +1,14 @@
 import { Keypair } from '@solana/web3.js';
-import { Web3McpHost } from '../index.js';
+import { Web3McpSdk } from '@web3mcp/sdk';
 import { compactToolResult } from '../llm/compactor.js';
 import { formatReviewCard, promptApproval } from '../wallet/review-card.js';
-import { signAndBroadcastTransaction } from '../wallet/signer.js';
 
 export interface ApprovalRequest {
   tool: string;
   programId: string;
   accounts: Array<any>;
   simulation: any;
+  estimatedFeeLamports?: number | null;
   effects: any;
   instruction: any;
   messageHash: string;
@@ -19,12 +19,13 @@ export type ApprovalHandler = (req: ApprovalRequest) => Promise<boolean>;
 
 export type AgentProgressEvent =
   | { type: 'thinking'; turn: number }
+  | { type: 'discovery_result'; programId: string; toolNames: string[] }
   | { type: 'tool_call'; tool: string; kind: 'accountRead' | 'instruction'; args: Record<string, unknown> }
   | { type: 'tool_result'; tool: string; success: boolean; summary?: string }
   | { type: 'simulating'; tool: string }
   | { type: 'simulation_result'; tool: string; success: boolean; unitsConsumed?: number }
   | { type: 'broadcasting'; tool: string }
-  | { type: 'broadcast_confirmed'; tool: string; signature: string; explorerUrl: string };
+  | { type: 'broadcast_confirmed'; tool: string; signature: string; explorerUrl?: string };
 
 export type AgentProgressHandler = (event: AgentProgressEvent) => void;
 
@@ -44,9 +45,10 @@ export interface ExecuteTurnParams {
       onToken?: (token: string) => void;
     }) => Promise<{ role: string; content: string; toolCalls?: Array<AgentToolCall> }>;
   };
-  host: Web3McpHost;
+  host: Web3McpSdk;
   signer?: Keypair | null;
   programId?: string;
+  onDiscoverProgram?: (reference: string) => Promise<{ programId: string; toolNames: string[] }>;
   onToken?: (token: string) => void;
   onApprovalRequest?: ApprovalHandler;
   onProgress?: AgentProgressHandler;
@@ -67,16 +69,29 @@ export async function executeAgentTurn({
   host,
   signer,
   programId,
+  onDiscoverProgram,
   onToken,
   onApprovalRequest,
   onProgress,
   maxTurns = 5,
 }: ExecuteTurnParams): Promise<string> {
-  const tools = host.toOpenAiTools(programId);
+  let activeProgramId = programId;
   let turnsCount = 0;
 
   while (turnsCount < maxTurns) {
     turnsCount++;
+    const tools = onDiscoverProgram && !activeProgramId ? [] : host.toOpenAiTools(activeProgramId);
+    if (onDiscoverProgram) {
+      if (tools.some((tool: any) => tool.function?.name === 'web3mcp_host_discover_program')) {
+        throw new Error('Program tool conflicts with the host discovery tool.');
+      }
+      tools.unshift({ type: 'function', function: {
+        name: 'web3mcp_host_discover_program',
+        description: 'Resolve a Solana program ID or .sns name, validate its Web3MCP config PDA, and register its published tools for the next turn.',
+        parameters: { type: 'object', properties: { reference: { type: 'string', description: 'Solana program ID or .sns name' } }, required: ['reference'], additionalProperties: false },
+      } } as any);
+    }
+    const advertisedNames = new Set(tools.map((tool: any) => tool.function?.name));
 
     onProgress?.({ type: 'thinking', turn: turnsCount });
 
@@ -114,9 +129,31 @@ export async function executeAgentTurn({
       const toolName = toolCall.name;
       const toolArgs = toolCall.arguments || {};
 
+      if (toolName === 'web3mcp_host_discover_program' && onDiscoverProgram) {
+        try {
+          if (typeof toolArgs.reference !== 'string' || !toolArgs.reference.trim()) throw new Error('A program ID or .sns name is required.');
+          const found = await onDiscoverProgram(toolArgs.reference);
+          activeProgramId = found.programId;
+          onProgress?.({ type: 'discovery_result', programId: found.programId, toolNames: found.toolNames });
+          messages.push({ role: 'tool', tool_call_id: toolCall.id, content: JSON.stringify(found) });
+        } catch (err: any) {
+          messages.push({ role: 'tool', tool_call_id: toolCall.id, content: JSON.stringify({ error: err.message }) });
+        }
+        continue;
+      }
+
+      if (onDiscoverProgram && !activeProgramId) {
+        messages.push({ role: 'tool', tool_call_id: toolCall.id, content: JSON.stringify({ error: 'Discover a program before calling its tools.' }) });
+        continue;
+      }
+      if (onDiscoverProgram && !advertisedNames.has(toolName)) {
+        messages.push({ role: 'tool', tool_call_id: toolCall.id, content: JSON.stringify({ error: `Tool '${toolName}' was not advertised for this turn. Discover the program first.` }) });
+        continue;
+      }
+
       let descriptor: any;
       try {
-        descriptor = host.getTool(toolName, programId);
+        descriptor = host.getTool(toolName, activeProgramId);
       } catch (err: any) {
         messages.push({
           role: 'tool',
@@ -131,7 +168,7 @@ export async function executeAgentTurn({
 
       if (toolKind === 'accountRead') {
         try {
-          const rawResult = await host.executeRead(toolName, toolArgs, { programId });
+          const rawResult = await host.executeRead(toolName, toolArgs, { programId: activeProgramId });
           const compacted = compactToolResult(toolName, rawResult);
           messages.push({
             role: 'tool',
@@ -149,10 +186,11 @@ export async function executeAgentTurn({
         }
       } else if (toolKind === 'instruction') {
         try {
+          if (!signer) throw new Error('No wallet configured; use /wallet to select a keypair before requesting a write.');
           onProgress?.({ type: 'simulating', tool: toolName });
           const prep = await host.prepareInstruction(toolName, toolArgs, {
             signer: signer?.publicKey,
-            programId,
+            programId: activeProgramId,
           });
 
           onProgress?.({
@@ -174,6 +212,7 @@ export async function executeAgentTurn({
               programId: prep.programId,
               accounts: prep.accounts,
               simulation: prep.simulation,
+              estimatedFeeLamports: prep.estimatedFeeLamports,
               effects: prep.effects,
               instruction: prep.instruction,
               messageHash: prep.messageHash,
@@ -186,6 +225,7 @@ export async function executeAgentTurn({
               accounts: prep.accounts,
               simulation: prep.simulation,
               effects: prep.effects,
+              fee: prep.estimatedFeeLamports,
               messageHash: prep.messageHash,
               args: toolArgs,
             });
@@ -197,25 +237,23 @@ export async function executeAgentTurn({
               throw new Error('Cannot sign transaction: no signer keypair configured on host.');
             }
             onProgress?.({ type: 'broadcasting', tool: toolName });
-            const broadcastResult = await signAndBroadcastTransaction({
-              connection: host.connection,
-              transaction: prep.transaction,
-              lastValidBlockHeight: prep.lastValidBlockHeight,
-              expectedMessageHash: prep.messageHash,
-              signer,
-            });
+            prep.transaction.sign(signer);
+            const broadcastResult = await host.submitSignedTransaction(prep, prep.transaction);
+            const explorerUrl = host.connection.rpcEndpoint?.includes('devnet')
+              ? `https://explorer.solana.com/tx/${broadcastResult.signature}?cluster=devnet`
+              : undefined;
 
             onProgress?.({
               type: 'broadcast_confirmed',
               tool: toolName,
               signature: broadcastResult.signature,
-              explorerUrl: broadcastResult.explorerUrl,
+              explorerUrl,
             });
 
             const compacted = compactToolResult(toolName, {
               ...prep,
               confirmedSignature: broadcastResult.signature,
-              explorerUrl: broadcastResult.explorerUrl,
+              explorerUrl,
             });
 
             messages.push({

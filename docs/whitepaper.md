@@ -19,11 +19,10 @@ AI agents need a reliable way to discover what a Solana program can do. Today, e
 ## How it works
 
 1. **Publish:** A program author publishes a versioned config in a canonical PDA (`["web3mcp", "config"]`) owned by the target program.
-2. **Discover:** A Web3MCP host receives the program ID, verifies executability and account ownership, and retrieves the config via Solana RPC.
-3. **Register:** The host validates the configuration against the normative schema and makes supported tools available to an agent runtime.
+2. **Discover:** The model calls a generic host tool with a program ID or supported name. The host verifies executability and account ownership, then retrieves the config through Solana RPC.
+3. **Register:** The host validates the config and adds its supported program tools to the model's next turn.
 4. **Query (Read):** Read tools fetch and decode Solana accounts directly through RPC against verified account discriminators.
-5. **Simulate & Approve (Write):** Instruction tools resolve accounts, serialize Anchor instruction data, simulate the transaction against RPC, and present the exact transaction to the wallet for approval.
-6. **AI Ingestion (Phase 4):** Downstream AI agents ingest these validated tool descriptors to understand available capabilities and propose user-directed actions, while never holding signing authority.
+5. **Simulate & Sign (Write):** Instruction tools resolve accounts, serialize Anchor instruction data, simulate the transaction against RPC, and present the exact transaction for the user's explicit **Sign** action. The CLI signs with the selected keypair only after that action.
 
 The host needs generic Web3MCP support, Solana RPC access, and a wallet. It needs no target-program website or program-specific MCP server. Program authors must opt in by implementing and publishing the config; an existing unrelated program does not become compatible automatically.
 
@@ -34,6 +33,6 @@ On-chain publication makes tool definitions publicly readable and ties a config 
 ## Project Status
 
 - **Phase 1: Protocol v0.1 (In review)**: The binary layout, schema, version rules, and conformance tests are implemented in `protocol/SPEC.md`.
-- **Phase 2: Reference Program (Implemented)**: The current vault passes local-validator tests. An earlier version is deployed on Devnet; the corrected program and config await redeployment.
-- **Phase 3: Generic Host Core (Implemented)**: The host discovers on-chain tools, reads accounts, prepares instructions, and simulates transactions. Current protocol compatibility is verified on a local validator; the older Devnet config awaits an update.
+- **Phase 2: Reference Program (Deployed)**: The current vault and Web3MCP config are published on Devnet at program `9zJzM4rHDPR4pd3vXHQjQ7whTVmx4zxB3ZH4Gb9iXRwD`.
+- **Phase 3: Generic Host Core (Implemented)**: The host discovers on-chain tools, reads accounts, prepares instructions, and simulates transactions. Discovery passed against the current Devnet config; wallet-approved Devnet transactions remain to be rehearsed.
 - **Phase 4: LLM and Wallet Flow (In review)**: Model adapters, a terminal agent, and wallet approval are implemented; a provider-backed rehearsal remains pending.

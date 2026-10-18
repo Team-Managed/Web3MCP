@@ -41,5 +41,5 @@ The deterministic mechanism by which the Web3MCP Host resolves account public ke
 _Avoid_: Address mapping, Parameter binding
 
 **Reference Vault**:
-The sample Anchor program in `programs/reference-vault` used to demonstrate publishing tools; never imported by the host.
+The sample Anchor program in `reference-programs/reference-vault` used to demonstrate publishing tools; never imported by the host.
 _Avoid_: Sample backend, Target program

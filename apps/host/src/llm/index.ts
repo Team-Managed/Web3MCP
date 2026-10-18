@@ -110,7 +110,15 @@ export function createLlmClient(options: CreateLlmClientOptions = {}): OpenAiCom
     apiKey,
     baseURL: options.baseURL || process.env.OPENAI_BASE_URL,
     model,
+    useOpenAiParameters: true,
   });
+}
+
+/** Return model IDs advertised to this provider key; execution may still reject an incompatible model. */
+export async function listAvailableModels(options: CreateLlmClientOptions): Promise<string[]> {
+  const driver = createLlmClient({ ...options, model: options.model || 'model-list' });
+  const page = await driver.client.models.list();
+  return [...new Set(page.data.map(model => model.id))].sort((a, b) => a.localeCompare(b));
 }
 
 export { compactToolResult, OpenAiCompatibleDriver, AnthropicDriver, LlmError };

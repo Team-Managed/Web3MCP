@@ -1,5 +1,7 @@
 # Spec: Generic Host Core (generic-host-core)
 
+**Historical:** The current generic runtime has moved to `@web3mcp/sdk`. See [the current project design](../../docs/superpowers/specs/2026-10-13-web3mcp-project-design.md).
+
 Status: ready-for-agent · Date: 2026-10-15
 
 ## Problem Statement
@@ -8,11 +10,11 @@ AI agent hosts and developers connecting to Solana programs currently require cu
 
 ## Solution
 
-Build the headless Web3MCP Host core engine as a standalone workspace package (`@web3mcp/host`). Given a target Solana Program ID and an active Solana RPC connection, the host verifies executable status, derives the canonical Config PDA, parses and validates publication status and integrity using the protocol validator, and dynamically registers all valid tools. The host exposes high-leverage entry points to inspect protocol-compliant tool descriptors (`getTools()`), execute strongly validated account queries (`executeRead()`), and resolve accounts, serialize Anchor instruction data, and simulate transactions (`prepareInstruction()`) ready for downstream human wallet approval. All RPC interactions and verification run against real Solana RPC endpoints without synthetic mocks.
+Build the headless Web3MCP Compatible Host core engine as a standalone workspace package (`@web3mcp/host`). Given a target Solana Program ID and an active Solana RPC connection, the host verifies executable status, derives the canonical Config PDA, parses and validates publication status and integrity using the protocol validator, and dynamically registers all valid tools. The host exposes high-leverage entry points to inspect protocol-compliant tool descriptors (`getTools()`), execute strongly validated account queries (`executeRead()`), and resolve accounts, serialize Anchor instruction data, and simulate transactions (`prepareInstruction()`) ready for downstream human wallet approval. All RPC interactions and verification run against real Solana RPC endpoints without synthetic mocks.
 
 ## User Stories
 
-1. As an agent host developer, I want to initialize a Web3MCP Host by providing an RPC connection, so that the host can interact directly with the Solana network.
+1. As an agent host developer, I want to initialize a Web3MCP Compatible Host by providing an RPC connection, so that the host can interact directly with the Solana network.
 2. As an agent host developer, I want to discover tools from a Program ID with a single method call, so that I do not have to manually derive PDAs or verify program account flags.
 3. As an agent host developer, I want discovery to verify that the target Program ID is an executable program account on-chain, so that non-program addresses fail immediately.
 4. As an agent host developer, I want discovery to derive the canonical Config PDA using seeds `["web3mcp", "config"]`, so that discovery requires zero out-of-band address configuration.

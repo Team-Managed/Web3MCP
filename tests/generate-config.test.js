@@ -1,7 +1,7 @@
 import test, { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
-import { generateConfig } from "../programs/reference-vault/scripts/generate-config.js";
+import { generateConfig } from "../reference-programs/reference-vault/scripts/generate-config.js";
 import { validateConfig } from "../protocol/src/validator.js";
 
 const fixtureIdl = {
