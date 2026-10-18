@@ -1,12 +1,10 @@
 import { AsyncEntry } from '@napi-rs/keyring';
-import type { Provider } from './settings.js';
-
 export interface CredentialStore {
-  get(provider: Provider): Promise<string>;
-  set(provider: Provider, key: string): Promise<void>;
+  get(account: string): Promise<string>;
+  set(account: string, key: string): Promise<void>;
 }
 
-const entry = (provider: Provider) => new AsyncEntry('Web3MCP Compatible Host', provider,
+const entry = (account: string) => new AsyncEntry('Web3MCP Compatible Host', account,
   { linux: { store: 'secret-service' } });
 
 export const keychainCredentials: CredentialStore = {

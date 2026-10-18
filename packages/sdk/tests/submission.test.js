@@ -72,3 +72,25 @@ test('signed submission rejects changed messages and expired blockhashes before 
     return true;
   });
 });
+
+test('submission sends the verified signed bytes if a caller mutates the transaction during RPC wait', async () => {
+  const { signer, prepared } = fixture();
+  const signed = new Transaction().add(...prepared.transaction.instructions);
+  signed.feePayer = signer.publicKey;
+  signed.recentBlockhash = prepared.transaction.recentBlockhash;
+  signed.sign(signer);
+  const reviewedBytes = Buffer.from(signed.serialize());
+  let sentBytes;
+  const sdk = new Web3McpSdk({ connection: {
+    getBlockHeight: async () => {
+      signed.instructions[0] = SystemProgram.transfer({ fromPubkey: signer.publicKey,
+        toPubkey: Keypair.generate().publicKey, lamports: 999 });
+      signed.sign(signer);
+      return 50;
+    },
+    sendRawTransaction: async bytes => { sentBytes = bytes; return 'signature'; },
+    confirmTransaction: async () => ({ value: { err: null } }),
+  } });
+  await sdk.submitSignedTransaction(prepared, signed);
+  assert.deepEqual(sentBytes, reviewedBytes);
+});

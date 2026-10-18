@@ -44,7 +44,7 @@ export function TransactionReview({ request, walletAddress, onDecision }: { requ
     <Text bold color="yellow">Transaction approval required</Text>
     {walletAddress && <Text>Signing wallet {safeReviewText(walletAddress)}</Text>}
     <Text>Tool {safeReviewText(request.tool)}  ·  Program {safeReviewText(request.programId)}</Text>
-    <Text wrap="wrap">Arguments {safeReviewText(JSON.stringify(request.arguments), 800)}</Text>
+    <Text wrap="wrap">Arguments {safeReviewText(JSON.stringify(request.arguments), Infinity)}</Text>
     <Text wrap="wrap">Claimed effects {safeReviewText(request.effects?.summary || 'State change')}{request.effects?.financial ? ' (financial)' : ''}</Text>
     <Text wrap="wrap">Instruction data {request.instruction?.data?.toString('hex') || 'none'}</Text>
     {request.accounts.map((account, index) => <Text key={index} wrap="wrap">{safeReviewText(account.name)}: {safeReviewText(account.pubkey)} {account.isSigner ? 'signer ' : ''}{account.isWritable ? 'writable' : 'read only'}</Text>)}
@@ -100,6 +100,10 @@ export function ChatScreen({ sdk: initialSdk, programId, rpcUrl, model = '', pro
   const [slashSelected, setSlashSelected] = useState(0);
   const [slashSelectionActive, setSlashSelectionActive] = useState(false);
   const slashMatches = /^\/\S*$/.test(draft) ? COMMANDS.filter(([name]) => name.startsWith(draft)) : [];
+  const customOpenAiBaseURL = process.env.OPENAI_BASE_URL && new URL(process.env.OPENAI_BASE_URL).origin !== 'https://api.openai.com'
+    ? process.env.OPENAI_BASE_URL : undefined;
+  const credentialName = (selected: Provider): string =>
+    selected === 'openai' && customOpenAiBaseURL ? `openai-compatible:${customOpenAiBaseURL}` : selected;
   const selectedCommand = slashMatches[slashSelected]?.[0];
   const changeDraft = useCallback((value: string) => {
     setDraft(value);
@@ -142,6 +146,9 @@ export function ChatScreen({ sdk: initialSdk, programId, rpcUrl, model = '', pro
   }, []);
   useEffect(() => () => approval?.resolve(false), [approval]);
   useEffect(() => () => abortRef.current?.abort(), []);
+  useEffect(() => {
+    if (agent && activeProgram && agent.programId !== activeProgram) agent.setProgramId(activeProgram);
+  }, [agent, activeProgram]);
 
   function requestExit(interrupted = false) {
     if (broadcastingRef.current) { addLine('system', 'Transaction submission is in progress. Wait for its signature or failure before exiting.'); return; }
@@ -189,20 +196,14 @@ export function ChatScreen({ sdk: initialSdk, programId, rpcUrl, model = '', pro
   }
 
   async function chooseProvider(nextProvider: Provider) {
-    if (nextProvider === 'openai' && process.env.OPENAI_BASE_URL &&
-        new URL(process.env.OPENAI_BASE_URL).origin !== 'https://api.openai.com') {
-      const nextDraft = { provider: nextProvider, apiKey: '', newKey: false };
-      setModelDraft(nextDraft);
-      void showModels(nextDraft);
-      return;
-    }
     let storedKey = nextProvider === settings.provider ? settings.apiKey : '';
     try {
-      if (!storedKey && credentialStore && nextProvider !== 'ollama') storedKey = await credentialStore.get(nextProvider);
+      if (!storedKey && credentialStore && nextProvider !== 'ollama') storedKey = await credentialStore.get(credentialName(nextProvider));
     } catch {
       setSettingsError('System credential store could not be read. Enter a key for this session.');
     }
-    const nextDraft = { provider: nextProvider, apiKey: storedKey || process.env[`${nextProvider.toUpperCase()}_API_KEY`] || '', newKey: false };
+    const envKey = nextProvider === 'openai' && customOpenAiBaseURL ? process.env.OPENAI_COMPAT_API_KEY : process.env[`${nextProvider.toUpperCase()}_API_KEY`];
+    const nextDraft = { provider: nextProvider, apiKey: storedKey || envKey || '', newKey: false };
     setModelDraft(nextDraft);
     if (nextProvider === 'ollama') void showModels(nextDraft);
     else setView('model-key');
@@ -214,7 +215,8 @@ export function ChatScreen({ sdk: initialSdk, programId, rpcUrl, model = '', pro
     setStatus('Loading provider models');
     try {
       const found = await listAvailableModels({ provider: nextDraft.provider, model: settings.model,
-        apiKey: nextDraft.apiKey || undefined });
+        apiKey: nextDraft.apiKey || undefined,
+        baseURL: nextDraft.provider === 'openai' ? customOpenAiBaseURL : undefined });
       if (!found.length) throw new Error('The provider returned no models.');
       setAvailableModels(found);
       setView('models');
@@ -231,7 +233,7 @@ export function ChatScreen({ sdk: initialSdk, programId, rpcUrl, model = '', pro
     const selected = nextModel.trim();
     if (!selected) { setSettingsError('Enter a model name.'); return; }
     if (nextDraft.newKey && credentialStore) {
-      try { await credentialStore.set(nextDraft.provider, nextDraft.apiKey); }
+      try { await credentialStore.set(credentialName(nextDraft.provider), nextDraft.apiKey); }
       catch { addLine('system', 'System credential store could not save the API key. It is available only for this session.'); }
     }
     setSettings(previous => ({ ...previous, provider: nextDraft.provider, apiKey: nextDraft.apiKey, model: selected }));
@@ -259,7 +261,7 @@ export function ChatScreen({ sdk: initialSdk, programId, rpcUrl, model = '', pro
     }
     if (name === '/tools') {
       const tools = activeProgram ? runtimeSdk.getTools(activeProgram) : [];
-      addLine('system', tools.length ? tools.map(tool => `${tool.name}: ${tool.description}`).join('\n') : 'No program loaded. Mention a program ID or .sns name in chat.');
+      addLine('system', tools.length ? tools.map(tool => `${safeReviewText(tool.name)}: ${safeReviewText(tool.description)}`).join('\n') : 'No program loaded. Mention a program ID or .sns name in chat.');
       return;
     }
     if (name === '/balance') {
@@ -292,7 +294,7 @@ export function ChatScreen({ sdk: initialSdk, programId, rpcUrl, model = '', pro
     if (key.escape && (view === 'commands' || view === 'models' || view === 'model-provider' || view === 'model-key' || view === 'model-manual')) { setView('chat'); return; }
     if (key.ctrl && input === 't' && view === 'chat') {
       const tools = activeProgram ? runtimeSdk.getTools(activeProgram) : [];
-      addLine('system', tools.length ? tools.map(tool => `${tool.name}: ${tool.description}`).join('\n') : 'No program loaded. Mention a program ID or .sns name in chat.');
+      addLine('system', tools.length ? tools.map(tool => `${safeReviewText(tool.name)}: ${safeReviewText(tool.description)}`).join('\n') : 'No program loaded. Mention a program ID or .sns name in chat.');
     }
   });
 
@@ -321,6 +323,7 @@ export function ChatScreen({ sdk: initialSdk, programId, rpcUrl, model = '', pro
       const ready = agent || new Web3McpAgent({
         host: runtimeSdk, signer, programId: activeProgram || undefined,
         model: settings.model, provider: settings.provider, apiKey: settings.apiKey || undefined,
+        llmOptions: settings.provider === 'openai' && customOpenAiBaseURL ? { baseURL: customOpenAiBaseURL } : undefined,
         onApprovalRequest: request => new Promise<boolean>(resolve => setApproval({ request, resolve })),
         onDiscoverProgram: async inputReference => {
           const reference = extractProgramReference(inputReference);
@@ -368,12 +371,12 @@ export function ChatScreen({ sdk: initialSdk, programId, rpcUrl, model = '', pro
   </Box>;
   if (view === 'model-key') return <Box flexDirection="column" borderStyle="round" borderColor="cyan" paddingX={1}>
     <Text bold color="cyan">API key for {modelDraft.provider}</Text>
-    <Text>{modelDraft.apiKey ? 'Press Enter to reuse the configured key, or enter a new one.' : 'Enter an API key. Input is masked.'}</Text>
+    <Text>{modelDraft.apiKey ? 'Press Enter to reuse the configured key, or enter a new one.' : customOpenAiBaseURL && modelDraft.provider === 'openai' ? 'Enter a key for this endpoint, or press Enter if it needs none.' : 'Enter an API key. Input is masked.'}</Text>
     {settingsError && <Text color="red">{settingsError}</Text>}
     <PasswordInput key={modelDraft.provider} placeholder="API key" onSubmit={value => {
       const entered = value.trim();
       const nextDraft = entered ? { ...modelDraft, apiKey: entered, newKey: true } : modelDraft;
-      if (!nextDraft.apiKey) { setSettingsError('Enter an API key.'); return; }
+      if (!nextDraft.apiKey && !(customOpenAiBaseURL && nextDraft.provider === 'openai')) { setSettingsError('Enter an API key.'); return; }
       setModelDraft(nextDraft);
       setSettingsError('');
       void showModels(nextDraft);

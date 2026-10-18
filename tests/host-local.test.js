@@ -20,7 +20,7 @@ describe('generic host against the current local reference program', () => {
 
     await host.discover(programId);
     assert.deepEqual(host.getTools(programId).map((tool) => tool.name).sort(),
-      ['deposit', 'get_vault', 'initialize', 'withdraw']);
+      ['deposit', 'get_vault', 'get_vault_by_owner', 'initialize', 'withdraw']);
 
     const [vaultAddress] = PublicKey.findProgramAddressSync(
       [Buffer.from('vault'), signer.publicKey.toBuffer()],

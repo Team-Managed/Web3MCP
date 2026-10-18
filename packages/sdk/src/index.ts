@@ -168,24 +168,27 @@ export class Web3McpSdk {
     if (!signedTransaction.verifySignatures(true)) {
       throw new Web3McpHostError('Signed transaction has missing or invalid required signatures.');
     }
+    const signedBytes = Buffer.from(signedTransaction.serialize());
+    const signedSignature = utils.bytes.bs58.encode(signedTransaction.signature!);
+    const reviewedBlockhash = prepared.transaction.recentBlockhash;
     if (await this.connection.getBlockHeight(this.commitment) > prepared.lastValidBlockHeight) {
       throw new Web3McpHostError('Prepared transaction blockhash expired; prepare and review again.');
     }
     let signature;
     try {
-      signature = await this.connection.sendRawTransaction(signedTransaction.serialize(), {
+      signature = await this.connection.sendRawTransaction(signedBytes, {
         skipPreflight: false,
         preflightCommitment: this.commitment,
       });
     } catch (error) {
       if (error instanceof SendTransactionError) throw error;
-      throw new TransactionConfirmationUnknownError(utils.bytes.bs58.encode(signedTransaction.signature!), error);
+      throw new TransactionConfirmationUnknownError(signedSignature, error);
     }
     let result;
     try {
       result = await this.connection.confirmTransaction({
         signature,
-        blockhash: prepared.transaction.recentBlockhash,
+        blockhash: reviewedBlockhash,
         lastValidBlockHeight: prepared.lastValidBlockHeight,
       }, this.commitment);
     } catch (error) {

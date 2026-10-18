@@ -50,16 +50,11 @@ export class AnthropicDriver {
             anthropicMessages.push({ role: 'assistant', content: msg.content || '' });
           }
         } else if (msg.role === 'tool') {
-          anthropicMessages.push({
-            role: 'user',
-            content: [
-              {
-                type: 'tool_result',
-                tool_use_id: msg.tool_call_id,
-                content: typeof msg.content === 'string' ? msg.content : JSON.stringify(msg.content),
-              },
-            ],
-          });
+          const result = { type: 'tool_result', tool_use_id: msg.tool_call_id,
+            content: typeof msg.content === 'string' ? msg.content : JSON.stringify(msg.content) };
+          const previous = anthropicMessages.at(-1);
+          if (previous?.role === 'user' && Array.isArray(previous.content)) previous.content.push(result);
+          else anthropicMessages.push({ role: 'user', content: [result] });
         }
       }
 

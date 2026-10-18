@@ -103,6 +103,11 @@ export class Web3McpAgent {
     this.initSystemPrompt(true);
   }
 
+  setProgramId(programId: string): void {
+    this.programId = programId;
+    this.initSystemPrompt(true);
+  }
+
   /**
    * Returns current conversation messages.
    */
@@ -162,8 +167,7 @@ export class Web3McpAgent {
       onApprovalRequest: this.onApprovalRequest,
       onDiscoverProgram: this.onDiscoverProgram ? async reference => {
         const result = await this.onDiscoverProgram!(reference);
-        this.programId = result.programId;
-        this.initSystemPrompt(true);
+        this.setProgramId(result.programId);
         return result;
       } : undefined,
       onProgress,

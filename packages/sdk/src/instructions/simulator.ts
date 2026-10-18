@@ -1,6 +1,6 @@
 import { validateToolInput } from '@web3mcp/protocol/validator';
 import crypto from 'node:crypto';
-import { PublicKey, Transaction, TransactionInstruction } from '@solana/web3.js';
+import { PublicKey, Transaction, TransactionInstruction, VersionedTransaction } from '@solana/web3.js';
 import { AccountResolutionError, ValidationError } from '../errors.js';
 import { formatArgForCoder } from '../accounts/coder.js';
 import { resolveInstructionAccounts } from './resolver.js';
@@ -109,7 +109,11 @@ export async function prepareAndSimulateInstruction({
   // 9. Live RPC Simulation
   let simulation = null;
   if (options.simulate !== false) {
-    const simResult = await connection.simulateTransaction(transaction);
+    const simResult = await connection.simulateTransaction(new VersionedTransaction(transaction.compileMessage()), {
+      commitment: options.commitment || defaultCommitment,
+      replaceRecentBlockhash: false,
+      sigVerify: false,
+    });
     simulation = {
       err: simResult.value.err,
       logs: simResult.value.logs,

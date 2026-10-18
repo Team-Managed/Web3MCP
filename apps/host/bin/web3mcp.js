@@ -63,12 +63,11 @@ try {
       if (values.keypair || process.env.SOLANA_KEYPAIR || process.env.ANCHOR_WALLET) throw error;
       process.stderr.write(`web3mcp: saved wallet unavailable: ${error.message}; select one with /wallet.\n`);
     }
-    let apiKey = process.env[`${provider.toUpperCase()}_API_KEY`] || '';
-    if (provider === 'openai' && process.env.OPENAI_BASE_URL && new URL(process.env.OPENAI_BASE_URL).origin !== 'https://api.openai.com') {
-      if (apiKey) throw new Error('A custom OpenAI endpoint cannot reuse OPENAI_API_KEY. Remove the override or use a keyless local endpoint.');
-    } else {
-      try { apiKey = await keychainCredentials.get(provider) || apiKey; } catch { /* A locked or unavailable store leaves env/UI entry available. */ }
-    }
+    const customOpenAi = provider === 'openai' && process.env.OPENAI_BASE_URL &&
+      new URL(process.env.OPENAI_BASE_URL).origin !== 'https://api.openai.com';
+    let apiKey = customOpenAi ? process.env.OPENAI_COMPAT_API_KEY || '' : process.env[`${provider.toUpperCase()}_API_KEY`] || '';
+    try { apiKey = await keychainCredentials.get(customOpenAi ? `openai-compatible:${process.env.OPENAI_BASE_URL}` : provider) || apiKey; }
+    catch { /* A locked or unavailable store leaves env/UI entry available. */ }
     const sdk = new Web3McpSdk({ connection: new Connection(rpcUrl, 'confirmed') });
     const app = startChat({ sdk, programId, rpcUrl, model, provider, apiKey, credentialStore: keychainCredentials,
       signer, walletPath: signer ? keypairPath : '', onSettingsChange: savePreferences });

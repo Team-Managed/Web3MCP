@@ -121,6 +121,13 @@ describe('Web3McpHost: Terminal Wallet Signer & Review Card', () => {
     assert.match(card, /vault.*WRITABLE/);
   });
 
+  it('shows every instruction argument in the fallback approval card', () => {
+    const card = formatReviewCard({ tool: 'deposit', programId: '11111111111111111111111111111111',
+      args: { memo: 'x'.repeat(850), amount: '9000000000' } });
+    assert.match(card, /9000000000/);
+    assert.equal((card.match(/x/g) || []).length, 850);
+  });
+
   it('promptApproval resolves true when user inputs "y" or "yes"', async () => {
     const input = new PassThrough();
     const output = new PassThrough();

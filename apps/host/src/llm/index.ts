@@ -86,12 +86,13 @@ export function createLlmClient(options: CreateLlmClientOptions = {}): OpenAiCom
   }
 
   // Default: OpenAI / generic OpenAI-compatible
-  const apiKey = options.apiKey || process.env.OPENAI_API_KEY;
-  if (!options.baseURL && process.env.OPENAI_BASE_URL &&
-      new URL(process.env.OPENAI_BASE_URL).origin !== 'https://api.openai.com' && apiKey) {
+  const baseURL = options.baseURL || process.env.OPENAI_BASE_URL;
+  const customEndpoint = baseURL && new URL(baseURL).origin !== 'https://api.openai.com';
+  const apiKey = options.apiKey || (customEndpoint ? process.env.OPENAI_COMPAT_API_KEY : process.env.OPENAI_API_KEY);
+  if (!options.baseURL && customEndpoint && options.apiKey) {
     throw new LlmError('A custom OpenAI endpoint cannot reuse an OpenAI provider key. Pass baseURL and its own key explicitly to an SDK caller.');
   }
-  if (!apiKey && !options.baseURL && !process.env.OPENAI_BASE_URL) {
+  if (!apiKey && !baseURL) {
     throw new LlmError(
       'OpenAI provider requested but OPENAI_API_KEY is not set. Provide an API key or use Ollama/Groq.'
     );
@@ -99,7 +100,7 @@ export function createLlmClient(options: CreateLlmClientOptions = {}): OpenAiCom
 
   return new OpenAiCompatibleDriver({
     apiKey,
-    baseURL: options.baseURL || process.env.OPENAI_BASE_URL,
+    baseURL,
     model,
     useOpenAiParameters: true,
   });

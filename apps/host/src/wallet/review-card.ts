@@ -76,7 +76,11 @@ export function formatReviewCard({
   row(`Tool:             ${isColorSupported ? bld + safeText(tool) + rst : safeText(tool)}`);
   row(`Program ID:       ${isColorSupported ? bld + safeText(programId) + rst : safeText(programId)}`);
   if (args && Object.keys(args).length > 0) {
-    row(`Arguments:        ${safeText(JSON.stringify(args))}`);
+    const argumentText = safeText(JSON.stringify(args), Infinity);
+    const chunkWidth = contentWidth - 18;
+    for (let offset = 0; offset < argumentText.length; offset += chunkWidth) {
+      row(`${offset ? '                 ' : 'Arguments:        '}${argumentText.slice(offset, offset + chunkWidth)}`);
+    }
   }
   if (messageHash) {
     row(`Message SHA-256:  ${safeText(messageHash.slice(0, 32))}`);

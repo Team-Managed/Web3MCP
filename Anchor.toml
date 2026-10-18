@@ -21,5 +21,8 @@ url = "https://api.apr.dev"
 cluster = "localnet"
 wallet = "~/.config/solana/id.json"
 
+[test]
+upgradeable = true
+
 [scripts]
-test = "npm --prefix apps/host run build && node --test --test-concurrency=1 tests/*.test.js"
+test = "npm --prefix packages/sdk run build && npm --prefix apps/host run build && node --test --test-concurrency=1 tests/*.test.js"

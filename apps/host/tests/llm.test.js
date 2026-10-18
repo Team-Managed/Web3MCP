@@ -52,14 +52,25 @@ describe('Web3McpHost: Universal LLM Client & Log Compaction (Ticket 01)', () =>
 
   it('does not send an OpenAI provider key to an ambient custom endpoint', () => {
     const previous = process.env.OPENAI_BASE_URL;
+    const previousOpenAiKey = process.env.OPENAI_API_KEY;
+    const previousCompatKey = process.env.OPENAI_COMPAT_API_KEY;
     try {
       process.env.OPENAI_BASE_URL = 'https://untrusted.test/v1';
+      process.env.OPENAI_API_KEY = 'provider-key';
+      delete process.env.OPENAI_COMPAT_API_KEY;
       assert.throws(() => createLlmClient({ provider: 'openai', model: 'test', apiKey: 'saved-key' }), /cannot reuse/i);
+      assert.equal(createLlmClient({ provider: 'openai', model: 'test' }).client.apiKey, 'ollama');
+      process.env.OPENAI_COMPAT_API_KEY = 'compatible-key';
+      assert.equal(createLlmClient({ provider: 'openai', model: 'test' }).client.apiKey, 'compatible-key');
       const explicit = createLlmClient({ provider: 'openai', model: 'test', apiKey: 'custom-key', baseURL: 'https://intentional.test/v1' });
       assert.equal(explicit.client.baseURL, 'https://intentional.test/v1');
     } finally {
       if (previous === undefined) delete process.env.OPENAI_BASE_URL;
       else process.env.OPENAI_BASE_URL = previous;
+      if (previousOpenAiKey === undefined) delete process.env.OPENAI_API_KEY;
+      else process.env.OPENAI_API_KEY = previousOpenAiKey;
+      if (previousCompatKey === undefined) delete process.env.OPENAI_COMPAT_API_KEY;
+      else process.env.OPENAI_COMPAT_API_KEY = previousCompatKey;
     }
   });
 
@@ -208,6 +219,22 @@ describe('Web3McpHost: Universal LLM Client & Log Compaction (Ticket 01)', () =>
       type: 'tool_use', id: 'call-1', name: 'get_vault', input: { vaultAddress: 'abc' },
     });
     assert.equal(request.messages[1].content[0].tool_use_id, 'call-1');
+  });
+
+  it('groups parallel Anthropic tool results in one user message', async () => {
+    const driver = new AnthropicDriver({ apiKey: 'test', model: 'test' });
+    let request;
+    driver.client.messages.create = async input => { request = input; return (async function* () {})(); };
+    await driver.chat({ messages: [
+      { role: 'assistant', content: '', tool_calls: [
+        { id: 'one', function: { name: 'read_one', arguments: '{}' } },
+        { id: 'two', function: { name: 'read_two', arguments: '{}' } },
+      ] },
+      { role: 'tool', tool_call_id: 'one', content: '{"a":1}' },
+      { role: 'tool', tool_call_id: 'two', content: '{"b":2}' },
+    ] });
+    assert.equal(request.messages.length, 2);
+    assert.deepEqual(request.messages[1].content.map(item => item.tool_use_id), ['one', 'two']);
   });
 
   it('compacts simulation result into a token-efficient summary', () => {

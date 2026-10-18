@@ -147,14 +147,39 @@ test('preload discovery cannot replace a newer chat discovery', async () => {
   } finally { app.unmount(); globalThis.fetch = previousFetch; }
 });
 
+test('a retained agent adopts a program after preload finishes', async () => {
+  const previousFetch = globalThis.fetch;
+  const programId = Keypair.generate().publicKey.toBase58();
+  let finishDiscovery;
+  const requests = [];
+  globalThis.fetch = async (_url, init) => { requests.push(JSON.parse(init.body)); return chatStream({ content: 'Ready.' }); };
+  const sdk = { discover: () => new Promise(resolve => { finishDiscovery = resolve; }),
+    getTools: () => [{ name: 'get_vault', solana: { kind: 'accountRead' } }],
+    toOpenAiTools: id => id === programId ? [{ type: 'function', function: { name: 'get_vault' } }] : [] };
+  const app = render(React.createElement(ChatScreen, { sdk, programId, rpcUrl: 'http://localhost:8899', provider: 'ollama', model: 'test' }));
+  try {
+    await tick();
+    app.stdin.write('first'); await tick(); app.stdin.write('\r');
+    await new Promise(resolve => setTimeout(resolve, 100));
+    finishDiscovery(); await tick();
+    app.stdin.write('second'); await tick(); app.stdin.write('\r');
+    await new Promise(resolve => setTimeout(resolve, 100));
+    assert.equal(requests.length, 2);
+    assert.ok(requests[1].tools.some(tool => tool.function.name === 'get_vault'));
+  } finally { app.unmount(); globalThis.fetch = previousFetch; }
+});
+
 test('OpenAI-compatible local endpoint can chat without an API key', async () => {
   const previousFetch = globalThis.fetch;
   const previousUrl = process.env.OPENAI_BASE_URL;
   const previousKey = process.env.OPENAI_API_KEY;
+  const previousCompatKey = process.env.OPENAI_COMPAT_API_KEY;
   let requests = 0;
+  let authorization;
   process.env.OPENAI_BASE_URL = 'http://127.0.0.1:8080/v1';
-  delete process.env.OPENAI_API_KEY;
-  globalThis.fetch = async () => { requests++; return chatStream({ content: 'Local reply.' }); };
+  process.env.OPENAI_API_KEY = 'real-provider-key';
+  delete process.env.OPENAI_COMPAT_API_KEY;
+  globalThis.fetch = async (_url, init) => { requests++; authorization = new Headers(init.headers).get('authorization'); return chatStream({ content: 'Local reply.' }); };
   const sdk = { toOpenAiTools: () => [], getTools: () => [] };
   const app = render(React.createElement(ChatScreen, { sdk, rpcUrl: 'http://localhost:8899', provider: 'openai', model: 'local-model' }));
   try {
@@ -164,11 +189,13 @@ test('OpenAI-compatible local endpoint can chat without an API key', async () =>
     app.stdin.write('\r');
     await new Promise(resolve => setTimeout(resolve, 100));
     assert.equal(requests, 1);
+    assert.doesNotMatch(authorization || '', /real-provider-key/);
     assert.match(app.lastFrame(), /Local reply/);
   } finally {
     app.unmount(); globalThis.fetch = previousFetch;
     if (previousUrl === undefined) delete process.env.OPENAI_BASE_URL; else process.env.OPENAI_BASE_URL = previousUrl;
     if (previousKey === undefined) delete process.env.OPENAI_API_KEY; else process.env.OPENAI_API_KEY = previousKey;
+    if (previousCompatKey === undefined) delete process.env.OPENAI_COMPAT_API_KEY; else process.env.OPENAI_COMPAT_API_KEY = previousCompatKey;
   }
 });
 
@@ -261,6 +288,39 @@ test('/model masks a new key and saves it only after model selection', async () 
   } finally {
     app.unmount();
     globalThis.fetch = originalFetch;
+  }
+});
+
+test('/model keeps a custom endpoint key separate from the OpenAI key', async () => {
+  const previousFetch = globalThis.fetch;
+  const previousUrl = process.env.OPENAI_BASE_URL;
+  const previousKey = process.env.OPENAI_API_KEY;
+  process.env.OPENAI_BASE_URL = 'https://gateway.example/v1';
+  process.env.OPENAI_API_KEY = 'provider-only-key';
+  const saved = [];
+  let authorization;
+  let requestedUrl;
+  globalThis.fetch = async (url, init) => {
+    requestedUrl = String(url);
+    authorization = new Headers(init.headers).get('authorization');
+    return new Response(JSON.stringify({ object: 'list', data: [{ id: 'gateway-model', object: 'model' }] }),
+      { status: 200, headers: { 'content-type': 'application/json' } });
+  };
+  const app = render(React.createElement(ChatScreen, { rpcUrl: 'http://localhost:8899',
+    credentialStore: { get: async () => '', set: async (account, key) => saved.push([account, key]) } }));
+  try {
+    await tick(); app.stdin.write('/model'); await tick(); app.stdin.write('\r'); await tick();
+    app.stdin.write('\r'); await tick();
+    assert.match(app.lastFrame(), /API key for openai/);
+    app.stdin.write('gateway-key'); await tick(); app.stdin.write('\r'); await tick();
+    assert.match(requestedUrl, /^https:\/\/gateway\.example\/v1\/models/);
+    assert.equal(authorization, 'Bearer gateway-key');
+    app.stdin.write('\r'); await tick();
+    assert.deepEqual(saved, [['openai-compatible:https://gateway.example/v1', 'gateway-key']]);
+  } finally {
+    app.unmount(); globalThis.fetch = previousFetch;
+    if (previousUrl === undefined) delete process.env.OPENAI_BASE_URL; else process.env.OPENAI_BASE_URL = previousUrl;
+    if (previousKey === undefined) delete process.env.OPENAI_API_KEY; else process.env.OPENAI_API_KEY = previousKey;
   }
 });
 
@@ -491,6 +551,31 @@ test('transaction review neutralizes publisher control text', async () => {
     await tick();
     assert.match(app.lastFrame(), /Safe \[2JHidden/);
     assert.match(app.lastFrame(), /vault \[2J/);
+    assert.doesNotMatch(app.lastFrame(), /\u001b\[2J/);
+  } finally { app.unmount(); }
+});
+
+test('transaction review displays arguments beyond 800 characters before signing', async () => {
+  const request = { tool: 'deposit', programId: '11111111111111111111111111111111',
+    arguments: { memo: 'x'.repeat(850), destination: 'last-visible-destination' }, accounts: [],
+    simulation: { err: null, logs: [] }, messageHash: 'abc', instruction: { data: Buffer.from([1]) } };
+  const app = render(React.createElement(TransactionReview, { request, onDecision: () => {} }));
+  try {
+    await tick();
+    assert.match(app.lastFrame(), /last-visible-destination/);
+    assert.doesNotMatch(app.lastFrame(), /\[truncated\]/);
+  } finally { app.unmount(); }
+});
+
+test('/tools and Ctrl+T neutralize publisher terminal controls', async () => {
+  const programId = Keypair.generate().publicKey.toBase58();
+  const sdk = { discover: async () => {}, getTools: () => [{ name: 'read', description: 'Safe\u001b[2Jhidden' }] };
+  const app = render(React.createElement(ChatScreen, { sdk, programId, rpcUrl: 'http://localhost:8899' }));
+  try {
+    await tick();
+    app.stdin.write('/tools'); await tick(); app.stdin.write('\r'); await tick();
+    assert.match(app.lastFrame(), /Safe \[2Jhidden/);
+    app.stdin.write('\u0014'); await tick();
     assert.doesNotMatch(app.lastFrame(), /\u001b\[2J/);
   } finally { app.unmount(); }
 });
