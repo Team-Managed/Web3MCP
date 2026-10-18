@@ -18,11 +18,7 @@ export default function DocsOnThisPage({ section }: DocsOnThisPageProps) {
     });
   }
 
-  // If section has tables or specific widgets, add jump anchors
-  if (section.id === "on-chain-wire-format") {
-    anchors.unshift({ id: "anchor-layout-inspector", title: "Layout Inspector (81B)" });
-  }
-
+  // If section has specific reference explorer, add jump anchor
   if (section.id === "playground") {
     anchors.unshift({ id: "devnet-playground", title: "Devnet Tool Explorer" });
   }

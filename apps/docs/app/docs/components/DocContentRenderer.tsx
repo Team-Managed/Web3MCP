@@ -3,7 +3,6 @@
 import React from "react";
 import { DocSection } from "../../data/docsContent";
 import CodeSnippet from "./CodeSnippet";
-import AnchorLayoutInspector from "./AnchorLayoutInspector";
 import DevnetPlayground from "./DevnetPlayground";
 import { Info, AlertTriangle, Shield, CheckCircle } from "lucide-react";
 
@@ -23,8 +22,7 @@ export default function DocContentRenderer({ section }: DocContentRendererProps)
         <p className="article-summary">{section.summary}</p>
       </div>
 
-      {/* Interactive visualizers */}
-      {section.id === "on-chain-wire-format" && <AnchorLayoutInspector />}
+      {/* Devnet Reference Tool Explorer */}
       {section.id === "playground" && <DevnetPlayground />}
 
       <div className="article-body">

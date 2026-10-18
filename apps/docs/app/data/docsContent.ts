@@ -219,51 +219,190 @@ node protocol/bin/validate.js protocol/fixtures/binary/valid-published.bin`,
     title: "Solana Program Publisher Guide",
     badge: "Anchor & Solana",
     summary:
-      "How Solana program developers publish self-sovereign AI tool manifests using chunked uploads and on-chain SHA-256 verification.",
+      "Comprehensive, end-to-end guide for Solana program developers to declare, chunk, and publish self-sovereign AI tool manifests with on-chain SHA-256 verification.",
     content: {
       overview:
-        "Solana transactions have a 1,232-byte MTU limit. Full Web3MCP configurations with embedded Anchor IDLs frequently range from 4 KiB to 30 KiB. Web3MCP solves this with an authorized 3-phase chunked upload lifecycle with native on-chain SHA-256 verification using the Solana sol_sha256 syscall.",
+        "Solana transactions are strictly constrained by a 1,232-byte IPv6 MTU limit. However, rich AI tool manifests with embedded Anchor IDLs frequently range from 4 KiB to 30 KiB. Web3MCP resolves this by defining an on-chain publishing standard: a program-owned Config PDA derived at canonical seeds ['web3mcp', 'config'], an 81-byte normative Anchor binary header, a 3-phase chunked upload lifecycle, and cryptographic verification via Solana's native sol_sha256 syscall.",
+      callouts: [
+        {
+          type: "info",
+          title: "Self-Sovereign On-Chain Tooling",
+          text: "When you publish your Web3MCP manifest to your program's Config PDA, any Web3MCP host anywhere on Solana instantly discovers your tools over standard RPC. You never need to host an off-chain server, submit tools to a centralized registry, or maintain bespoke API endpoints.",
+        },
+      ],
       subsections: [
         {
-          id: "upload-lifecycle",
-          title: "1. Three-Phase Upload Lifecycle",
+          id: "canonical-pda-and-header",
+          title: "1. Canonical PDA & Binary Layout",
           description:
-            "Configurations transition strictly from Uninitialized (0) to Uploading (1) to Published (2):",
+            "Every program publishes its tools to a deterministic PDA derived using its own Program ID and the literal seeds ['web3mcp', 'config']. The account begins with an 81-byte fixed Anchor binary header followed by a 4-byte length prefix and the raw UTF-8 JSON payload buffer:",
           table: {
-            headers: ["Phase Instruction", "Signer", "On-Chain Action & Invariants"],
+            headers: ["Offset", "Size", "Field Name", "Rust Type", "Description & Invariants"],
+            rows: [
+              ["0", "8 bytes", "discriminator", "[u8; 8]", "Anchor account discriminator: sha256('account:Web3McpConfig')[..8]"],
+              ["8", "32 bytes", "authority", "Pubkey", "Authorized updater / publisher public key with mutation rights"],
+              ["40", "1 byte", "status", "u8", "0 = Uninitialized, 1 = Uploading, 2 = Published (verified)"],
+              ["41", "32 bytes", "digest", "[u8; 32]", "Expected SHA-256 hash of the complete uncompressed UTF-8 payload"],
+              ["73", "4 bytes", "expected_len", "u32", "Expected total payload length in bytes (little-endian, capped at 65,536)"],
+              ["77", "4 bytes", "payload_len", "u32", "Current uploaded payload byte length prefix (little-endian)"],
+              ["81+", "Dynamic", "payload", "Vec<u8>", "Raw UTF-8 JSON payload buffer containing tool definitions and IDL"],
+            ],
+          },
+        },
+        {
+          id: "anchor-account-struct",
+          title: "2. Anchor Account Struct & Custom Errors",
+          description:
+            "Define the Web3McpConfig account and specific error codes in your Anchor program:",
+          code: {
+            language: "rust",
+            code: `use anchor_lang::prelude::*;
+
+pub const CONFIG_SEED_PREFIX: &[u8] = b"web3mcp";
+pub const CONFIG_SEED_SUFFIX: &[u8] = b"config";
+pub const MAX_PAYLOAD_SIZE: usize = 65_536; // 64 KiB protocol cap
+
+#[account]
+pub struct Web3McpConfig {
+    pub authority: Pubkey,     // 32 bytes (offset 8)
+    pub status: u8,            // 1 byte   (offset 40)
+    pub digest: [u8; 32],      // 32 bytes (offset 41)
+    pub expected_len: u32,     // 4 bytes  (offset 73)
+    pub payload: Vec<u8>,      // 4 bytes prefix + N bytes dynamic (offset 77)
+}
+
+#[error_code]
+pub enum Web3McpError {
+    #[msg("Config account is not in Uploading status (expected 1)")]
+    InvalidStatus,
+    #[msg("Uploaded chunk offset does not match current buffer length")]
+    OffsetMismatch,
+    #[msg("Total payload length does not match expected_len declared at initialization")]
+    LengthMismatch,
+    #[msg("On-chain SHA-256 hash does not match expected digest")]
+    DigestMismatch,
+    #[msg("Payload size exceeds maximum allowed capacity (64 KiB)")]
+    ExceedsMaxCapacity,
+    #[msg("Unauthorized: caller does not match config authority")]
+    Unauthorized,
+}`,
+          },
+        },
+        {
+          id: "upload-lifecycle-matrix",
+          title: "3. Three-Phase Upload State Machine",
+          description:
+            "The publishing lifecycle enforces a strict state machine to guarantee atomicity and prevent hosts from reading partial or corrupted tool manifests:",
+          table: {
+            headers: ["Phase Instruction", "Allowed Status", "Target Status", "On-Chain Validation & Action"],
             rows: [
               [
-                "initialize_config",
-                "Authority",
-                "Sets status = 1 (Uploading), records expected_len and SHA-256 digest, truncates existing buffer. Hosts fail closed while in status 1.",
+                "01. initialize_config",
+                "0, 1, or 2",
+                "1 (Uploading)",
+                "Sets status = 1, records expected_len and SHA-256 digest, zeroes existing buffer. External hosts immediately fail-closed.",
               ],
               [
-                "write_config_chunk",
-                "Authority",
-                "Asserts status == 1 & offset == current_len. Appends chunk slice and reallocates account storage funded by authority.",
+                "02. write_config_chunk",
+                "1 (Uploading)",
+                "1 (Uploading)",
+                "Asserts offset == current_len. Dynamically reallocs account size and appends chunk slice funded by authority.",
               ],
               [
-                "finalize_config",
-                "Authority",
-                "Computes SHA-256 of uploaded buffer via native sol_sha256 syscall. Asserts hash equality with digest and sets status = 2 (Published).",
+                "03. finalize_config",
+                "1 (Uploading)",
+                "2 (Published)",
+                "Verifies current_len == expected_len. Runs native sol_sha256 syscall over payload and asserts hash equality.",
               ],
             ],
           },
         },
         {
-          id: "anchor-implementation",
-          title: "2. Anchor Implementation Example",
+          id: "anchor-instruction-handlers",
+          title: "4. Complete Anchor Instruction Handlers",
           description:
-            "Smart contract developers implement the publisher instructions using the canonical seeds ['web3mcp', 'config'] and the native SHA-256 verification syscall:",
+            "Implement the three publisher instructions with automatic rent reallocation and native cryptographic hash verification:",
           code: {
             language: "rust",
             code: `#[derive(Accounts)]
+pub struct InitializeConfig<'info> {
+    #[account(
+        init_if_needed,
+        payer = authority,
+        space = 8 + 32 + 1 + 32 + 4 + 4, // 81 bytes base header
+        seeds = [CONFIG_SEED_PREFIX, CONFIG_SEED_SUFFIX],
+        bump
+    )]
+    pub config_account: Account<'info, Web3McpConfig>,
+    #[account(mut)]
+    pub authority: Signer<'info>,
+    pub system_program: Program<'info, System>,
+}
+
+pub fn initialize_config_handler(
+    ctx: Context<InitializeConfig>,
+    expected_len: u32,
+    digest: [u8; 32],
+) -> Result<()> {
+    require!(expected_len as usize <= MAX_PAYLOAD_SIZE, Web3McpError::ExceedsMaxCapacity);
+    let config = &mut ctx.accounts.config_account;
+    
+    // Set or verify authority
+    if config.status == 0 {
+        config.authority = ctx.accounts.authority.key();
+    } else {
+        require_keys_eq!(config.authority, ctx.accounts.authority.key(), Web3McpError::Unauthorized);
+    }
+
+    config.status = 1; // Transition to Uploading (hosts fail closed)
+    config.digest = digest;
+    config.expected_len = expected_len;
+    config.payload.clear();
+    Ok(())
+}
+
+#[derive(Accounts)]
+#[instruction(offset: u32, chunk: Vec<u8>)]
+pub struct WriteConfigChunk<'info> {
+    #[account(
+        mut,
+        seeds = [CONFIG_SEED_PREFIX, CONFIG_SEED_SUFFIX],
+        bump,
+        has_one = authority @ Web3McpError::Unauthorized,
+        constraint = config_account.status == 1 @ Web3McpError::InvalidStatus,
+        realloc = 8 + 32 + 1 + 32 + 4 + 4 + config_account.payload.len() + chunk.len(),
+        realloc::payer = authority,
+        realloc::zero = false
+    )]
+    pub config_account: Account<'info, Web3McpConfig>,
+    #[account(mut)]
+    pub authority: Signer<'info>,
+    pub system_program: Program<'info, System>,
+}
+
+pub fn write_config_chunk_handler(
+    ctx: Context<WriteConfigChunk>,
+    offset: u32,
+    chunk: Vec<u8>,
+) -> Result<()> {
+    let config = &mut ctx.accounts.config_account;
+    require!(offset as usize == config.payload.len(), Web3McpError::OffsetMismatch);
+    require!(
+        config.payload.len() + chunk.len() <= config.expected_len as usize,
+        Web3McpError::LengthMismatch
+    );
+
+    config.payload.extend_from_slice(&chunk);
+    Ok(())
+}
+
+#[derive(Accounts)]
 pub struct FinalizeConfig<'info> {
     #[account(
         mut,
-        seeds = [b"web3mcp", b"config"],
+        seeds = [CONFIG_SEED_PREFIX, CONFIG_SEED_SUFFIX],
         bump,
-        has_one = authority,
+        has_one = authority @ Web3McpError::Unauthorized,
         constraint = config_account.status == 1 @ Web3McpError::InvalidStatus
     )]
     pub config_account: Account<'info, Web3McpConfig>,
@@ -273,34 +412,144 @@ pub struct FinalizeConfig<'info> {
 pub fn finalize_config_handler(ctx: Context<FinalizeConfig>) -> Result<()> {
     let config = &mut ctx.accounts.config_account;
     require!(
-        config.config.len() as u32 == config.expected_len,
+        config.payload.len() as u32 == config.expected_len,
         Web3McpError::LengthMismatch
     );
-    
-    // Native Solana SHA-256 syscall verification (sol_sha256)
-    let computed_hash = solana_program::hash::hash(&config.config);
+
+    // Cryptographic verification via Solana native syscall (sol_sha256)
+    let computed_hash = solana_program::hash::hash(&config.payload);
     require!(
         computed_hash.to_bytes() == config.digest,
         Web3McpError::DigestMismatch
     );
-    
-    config.status = 2; // Published: consumable by agents
+
+    config.status = 2; // Published: verified and ready for agent consumption
     Ok(())
 }`,
           },
         },
         {
-          id: "publisher-tooling",
-          title: "3. Automated Publisher Script",
+          id: "web3mcp-json-schema",
+          title: "5. Authoring the Tool Manifest (web3mcp.json)",
           description:
-            "Use the automated publisher script to bundle your compiled Anchor IDL with tool definitions and stream chunks to Devnet or Mainnet:",
+            "The payload uploaded to your Config PDA is a canonical JSON document containing your protocol version, embedded IDL subset, and tool descriptors with strict JSON Schema (draft-07) input bindings:",
           code: {
-            language: "bash",
-            code: `# Generate valid Web3MCP JSON envelope from target Anchor IDL
-node programs/reference-vault/scripts/generate-config.js
+            language: "json",
+            code: `{
+  "$schema": "https://web3mcp.org/schemas/v0.1.0/envelope.json",
+  "version": "0.1.0",
+  "programId": "GgVnzvsMhHHKeeGnqQhU9KAjBeCVhYiYmR17174Lyrgv",
+  "idl": {
+    "version": "0.1.0",
+    "name": "reference_vault",
+    "instructions": [
+      {
+        "name": "deposit",
+        "accounts": [
+          { "name": "owner", "isMut": true, "isSigner": true },
+          { "name": "vault", "isMut": true, "isSigner": false },
+          { "name": "systemProgram", "isMut": false, "isSigner": false }
+        ],
+        "args": [{ "name": "amount", "type": "u64" }]
+      }
+    ]
+  },
+  "tools": [
+    {
+      "name": "deposit",
+      "title": "Deposit SOL to Personal Vault",
+      "description": "Transfers native SOL lamports from connected wallet into the segregated vault PDA.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "amount": {
+            "type": "string",
+            "pattern": "^[1-9][0-9]*$",
+            "description": "Lamports to deposit (decimal integer string to prevent float precision loss)"
+          }
+        },
+        "required": ["amount"],
+        "additionalProperties": false
+      },
+      "solana": {
+        "kind": "instruction",
+        "instruction": "deposit",
+        "accounts": {
+          "owner": { "source": "signer" },
+          "vault": { "source": "idl" },
+          "systemProgram": { "source": "program", "address": "11111111111111111111111111111111" }
+        },
+        "effects": {
+          "stateChanging": true,
+          "financial": true,
+          "summary": "Transfers native SOL from user wallet to on-chain vault PDA"
+        }
+      }
+    }
+  ]
+}`,
+          },
+        },
+        {
+          id: "production-publisher-script",
+          title: "6. Production TypeScript Publisher Script",
+          description:
+            "Automate bundling, chunking (900 bytes per chunk to stay safely below MTU), and streaming your configuration to Devnet or Mainnet:",
+          code: {
+            language: "typescript",
+            code: `import * as fs from "fs";
+import * as crypto from "crypto";
+import { Connection, Keypair, PublicKey, Transaction, TransactionInstruction } from "@solana/web3.js";
+import { Program, AnchorProvider, Wallet } from "@coral-xyz/anchor";
 
-# Stream chunked transactions to Solana Devnet and finalize
-node programs/reference-vault/scripts/publish.js --rpc https://api.devnet.solana.com`,
+const CHUNK_SIZE = 900; // Safe byte size fitting inside 1,232-byte MTU
+
+export async function publishTools(
+  connection: Connection,
+  authorityKeypair: Keypair,
+  programId: PublicKey,
+  manifestPath: string
+) {
+  const manifestRaw = fs.readFileSync(manifestPath, "utf-8");
+  const payloadBuffer = Buffer.from(manifestRaw, "utf-8");
+  const expectedLen = payloadBuffer.length;
+  const digest = crypto.createHash("sha256").update(payloadBuffer).digest();
+
+  const [configPda] = PublicKey.findProgramAddressSync(
+    [Buffer.from("web3mcp"), Buffer.from("config")],
+    programId
+  );
+
+  console.log(\`Publishing Web3MCP tools to PDA: \${configPda.toBase58()}\`);
+  console.log(\`Payload size: \${expectedLen} bytes | SHA-256: \${digest.toString("hex")}\`);
+
+  const provider = new AnchorProvider(connection, new Wallet(authorityKeypair), {});
+  // 1. Initialize Config (resets status to 1: Uploading)
+  await program.methods
+    .initializeConfig(expectedLen, Array.from(digest))
+    .accounts({ configAccount: configPda, authority: authorityKeypair.publicKey })
+    .rpc();
+
+  console.log("Status set to 1 (Uploading). Streaming chunks...");
+
+  // 2. Stream Chunks
+  for (let offset = 0; offset < expectedLen; offset += CHUNK_SIZE) {
+    const chunk = payloadBuffer.subarray(offset, Math.min(offset + CHUNK_SIZE, expectedLen));
+    await program.methods
+      .writeConfigChunk(offset, chunk)
+      .accounts({ configAccount: configPda, authority: authorityKeypair.publicKey })
+      .rpc();
+    console.log(\`Wrote chunk offset \${offset}..\${offset + chunk.length} / \${expectedLen}\`);
+  }
+
+  // 3. Finalize on-chain (executes sol_sha256 syscall & sets status to 2: Published)
+  await program.methods
+    .finalizeConfig()
+    .accounts({ configAccount: configPda, authority: authorityKeypair.publicKey })
+    .rpc();
+
+  console.log("Successfully published! Status is now 2 (Published). Tools are live on-chain.");
+}`,
           },
         },
       ],
@@ -380,62 +629,249 @@ node programs/reference-vault/scripts/publish.js --rpc https://api.devnet.solana
     title: "Solana Operational Knowledge",
     badge: "Operational Mental Model",
     summary:
-      "Core domain guidelines, invariants, and operational mental model for AI agents interacting with Solana programs.",
+      "Core domain guidelines, runtime invariants, and operational mental model for AI agents interacting with Solana programs.",
     content: {
       overview:
-        "Web3MCP agents discover tools at runtime from program-owned Config PDAs. To successfully understand, inspect, and invoke these tools, the agent runtime grounds LLMs in the fundamental mechanics and safety invariants of the Solana runtime.",
+        "Web3MCP agents discover tools at runtime from program-owned Config PDAs. To successfully understand, inspect, and invoke these tools without hallucinating invalid transactions, the agent runtime grounds LLMs in the fundamental mechanics, account models, and safety invariants of the Solana runtime.",
       callouts: [
         {
           type: "info",
           title: "Injected Agent Mental Model",
-          text: "Web3MCP injects domain guidelines directly into system prompts across all supported models. This eliminates hallucinated Solana mechanics such as sending decimal numbers to u64 integer fields or attempting state writes without prior balance checks.",
+          text: "Web3MCP injects domain guidelines directly into system prompts across all supported models. This eliminates hallucinated Solana mechanics such as sending decimal numbers to u64 integer fields, attempting state writes without prior balance checks, or signing on behalf of human wallets.",
         },
       ],
       subsections: [
         {
           id: "four-prime-directives",
-          title: "The Four Prime Directives",
+          title: "1. The Four Prime Directives",
           description:
-            "Every Web3MCP agent adheres to four operational prime directives:",
+            "Foundational runtime invariants enforced across all Web3MCP agent prompts to prevent hallucinations and execution reverts:",
           table: {
-            headers: ["Directive", "Rule", "Operational Impact"],
+            headers: ["Directive", "Operational Rule", "Runtime Failure Mode Prevented", "Agent Requirement"],
             rows: [
               [
-                "1. Read-Before-Write",
-                "Always query account state via accountRead tools before proposing writes.",
-                "Prevents proposing deposits or withdrawals when balances or registration states are insufficient.",
+                "01. Read-Before-Write",
+                "Always execute accountRead queries before proposing any state mutation",
+                "Eliminates blind calls on uninitialized accounts or depleted balances",
+                "Query account state first; verify existing lamports and ownership",
               ],
               [
-                "2. Unit & Decimals Rigor",
-                "Solana programs operate exclusively on base integer units (u64).",
-                "1 SOL = 1,000,000,000 lamports (10^9); USDC = 10^6. Floating point numbers like 0.05 are never passed directly to instructions.",
+                "02. Unit & Decimals Rigor",
+                "Solana programs execute exclusively on integer base units (u64)",
+                "Avoids passing floating decimals like 0.05 to integer parameters",
+                "Convert 1 SOL = 1,000,000,000 lamports (10^9); USDC = 10^6 base units",
               ],
               [
-                "3. Fail-Closed on Uncertainty",
-                "If account state is ambiguous or simulation fails, never retry blindly.",
-                "Immediately informs the user of the exact simulation error or unexpected account state and asks for guidance.",
+                "03. Fail-Closed on Ambiguity",
+                "If account state or simulation is indeterminate, abort immediately",
+                "Prevents proposing doomed transactions that waste user priority fees",
+                "Return simulation logs with error code and solicit user clarification",
               ],
               [
-                "4. Respect Wallet Rejections",
-                "Acknowledge human transaction declines immediately without arguing.",
-                "Never re-submits a declined transaction without explicit user instructions.",
+                "04. Human Wallet Exclusivity",
+                "The AI agent never stores private keys or signs transactions",
+                "Eliminates unauthorized asset movement or rogue autonomous execution",
+                "Present full simulated transaction payload to the user's wallet for approval",
               ],
             ],
           },
         },
         {
-          id: "solana-mental-model",
-          title: "The Solana Mental Model for AI",
+          id: "solana-account-model",
+          title: "2. Solana Account Model & Invariants",
           description:
-            "Five core architecture principles every AI agent must understand when interacting with Solana programs:",
+            "Solana strictly separates executable code from data. Programs are stateless; state is persisted entirely in external accounts passed by reference:",
           table: {
-            headers: ["Tenet", "Concept", "AI Agent Implication"],
+            headers: ["Account Primitive", "Mechanic", "Runtime Invariant", "Agent Pre-Flight Rule"],
             rows: [
-              ["1. Stateless Logic", "Programs store code only; state lives in accounts", "Instructions must be provided with all required account keys"],
-              ["2. Typed Accounts", "Accounts have lamport balance, owner, and data buffer", "Only the owning program can deduct lamports or alter data"],
-              ["3. PDAs as Vaults", "Deterministic addresses with no private key", "Derived from seeds; program signs via Cross-Program Invocations (CPI)"],
-              ["4. Atomic Transactions", "All instructions succeed, or entire transaction reverts", "Batched instructions never leave accounts in partial states"],
-              ["5. Wallet Handoff", "Agent holds zero keys; human signs all mutations", "Reasoning is strictly decoupled from on-chain execution"],
+              [
+                "Stateless Programs",
+                "Executable code accounts (executable: true)",
+                "Programs store zero mutable internal state; all state lives in passed accounts",
+                "Verify target program ID exists and is owned by BPFLoaderUpgradeab1e",
+              ],
+              [
+                "Data Account Ownership",
+                "Only the program designated in account.owner can mutate its data buffer",
+                "Foreign programs cannot alter account bytes or deduct lamports",
+                "Verify account.owner === targetProgramId before attempting deserialization",
+              ],
+              [
+                "Lamport Accounting",
+                "Native SOL balances are tracked as 64-bit unsigned integer lamports",
+                "Lamport balance can never underflow or be negative",
+                "Verify payer.lamports >= rent_minimum + transfer_lamports + fee",
+              ],
+              [
+                "Account Allocation",
+                "New accounts must allocate explicit byte capacity (data.length)",
+                "Space cannot be expanded dynamically without runtime reallocation (realloc)",
+                "Inspect account size against expected IDL struct layout before writing",
+              ],
+              [
+                "Account Deallocation",
+                "To close an account, data buffer is zeroed and all lamports drained",
+                "Closed account with 0 lamports is reclaimed by runtime at slot boundary",
+                "Confirm closing destination account is writable and owned by intended recipient",
+              ],
+            ],
+          },
+        },
+        {
+          id: "rent-exemption-rules",
+          title: "3. Rent Exemption & Account Lifecycles",
+          description:
+            "Solana requires accounts to hold a minimum balance in lamports proportional to their byte allocation to remain exempt from storage rent eviction:",
+          table: {
+            headers: ["Parameter", "Formula / Value", "Runtime Rule", "Agent Implication"],
+            rows: [
+              [
+                "Static Base Rent",
+                "890,880 lamports (~0.00089 SOL)",
+                "Minimum base cost required for any 0-byte account metadata overhead",
+                "Any created account must hold at least this base amount",
+              ],
+              [
+                "Byte Rate Cost",
+                "6,960 lamports / byte",
+                "Additional rent per byte of serialized account data buffer",
+                "Compute (128 + data_bytes) * 6,960 lamports for exact rent",
+              ],
+              [
+                "Rent Exemption Threshold",
+                "Minimum 2 years of storage rent",
+                "Transactions that leave an account below rent-exempt threshold will revert",
+                "Always calculate rent-exemption via RPC getMinimumBalanceForRentExemption",
+              ],
+              [
+                "Account Reclamation",
+                "Drain lamports to exactly 0",
+                "Reassigns owner to SystemProgram and reclaims storage",
+                "When destroying a vault PDA, route all rent lamports back to the human owner",
+              ],
+            ],
+          },
+        },
+        {
+          id: "pda-architecture",
+          title: "4. Program Derived Addresses (PDAs) & Seeds",
+          description:
+            "PDAs are deterministic public keys controlled exclusively by programs without corresponding private keys, derived using the 255-to-0 bump search algorithm:",
+          table: {
+            headers: ["PDA Mechanism", "Derivation Formula", "Cryptographic Invariant", "Security / Host Handling"],
+            rows: [
+              [
+                "Off-Curve ed25519",
+                "Hash(seeds, program_id, bump)",
+                "Must NOT lie on the ed25519 elliptic curve; cannot have a private key",
+                "Verify address is strictly off-curve to prevent private key impersonation",
+              ],
+              [
+                "Canonical Bump",
+                "First bump (255 -> 0) producing an off-curve address",
+                "Exactly one canonical bump exists per seed sequence",
+                "Always verify canonical bump; reject non-canonical bumps to prevent spoofing",
+              ],
+              [
+                "User Segregation PDA",
+                "[b\"vault\", owner_pubkey.as_ref()]",
+                "Deterministically maps each user wallet to an isolated, sovereign vault",
+                "Host auto-derives PDA; caller cannot maliciously substitute another user's vault",
+              ],
+              [
+                "Protocol Config PDA",
+                "[b\"web3mcp\", b\"config\"]",
+                "Deterministic root anchor for program metadata and tool discovery",
+                "Single source of truth for on-chain tool definitions and IDL validation",
+              ],
+              [
+                "Program Signing (CPI)",
+                "invoke_signed(&ix, accounts, &[&[seeds, &[bump]]])",
+                "Only the owning program runtime can sign on behalf of its derived PDA",
+                "Agent never simulates signing for PDAs; the program signs autonomously in CPI",
+              ],
+            ],
+          },
+        },
+        {
+          id: "compute-units-and-simulation",
+          title: "5. Compute Units (CUs), Priority Fees & Simulation",
+          description:
+            "Every Solana instruction consumes Compute Units (CUs). Agents must simulate transactions prior to human presentation to verify execution and avoid wasted fees:",
+          table: {
+            headers: ["Resource / Phase", "Default Constraint", "Runtime Limit", "Agent / Host Requirement"],
+            rows: [
+              [
+                "Instruction CUs",
+                "200,000 CUs default allocation per instruction",
+                "Max 1,400,000 CUs per entire transaction bundle",
+                "Profile actual CU usage in simulation; set explicit limit to prevent over-allocation",
+              ],
+              [
+                "Compute Unit Price",
+                "0 micro-lamports / CU (base fee)",
+                "Dynamic priority auction market per computational unit",
+                "Query priority fee percentiles from RPC before proposing during network congestion",
+              ],
+              [
+                "Transaction Size",
+                "1,232 bytes (IPv6 MTU safe limit)",
+                "Exceeding 1,232 bytes causes hard packet rejection",
+                "Keep instruction data compact; batch accounts efficiently",
+              ],
+              [
+                "Pre-flight Simulation",
+                "simulateTransaction with sigVerify: false",
+                "Validates entire instruction stack on bank fork without committing state",
+                "Mandatory before wallet handoff; abort if simulation returns error or logs revert",
+              ],
+              [
+                "Blockhash Window",
+                "~150 slots (~60-90 seconds)",
+                "Expired blockhashes cause immediate transaction drop",
+                "Fetch fresh blockhash immediately prior to wallet signing handoff",
+              ],
+            ],
+          },
+        },
+        {
+          id: "conversational-mental-model",
+          title: "6. Agent Multi-Turn Execution Pipeline",
+          description:
+            "The standardized multi-turn execution pipeline followed by Web3MCP host agents when converting natural language requests into verified on-chain executions:",
+          table: {
+            headers: ["Pipeline Step", "Agent Action", "Underlying RPC / Tool", "Output & Safety Verification"],
+            rows: [
+              [
+                "01. Parse Intent",
+                "Extracts operation, target assets, amounts, and program context",
+                "None (Pure LLM structured reasoning)",
+                "Resolves human prompt into canonical tool candidate (e.g. deposit)",
+              ],
+              [
+                "02. Inspect State",
+                "Executes read-only account query before generating instructions",
+                "accountRead / getAccountInfo",
+                "Confirms account existence, initialization status, and current balances",
+              ],
+              [
+                "03. Denominate Units",
+                "Converts natural human quantities into exact integer base units",
+                "Math conversion (10^9 for SOL)",
+                "Produces strict unsigned integer string (e.g., '500000000')",
+              ],
+              [
+                "04. Simulate & Verify",
+                "Synthesizes instruction, resolves PDAs, and runs dry-run execution",
+                "simulateTransaction",
+                "Verifies execution logs, ensures zero reverts, and estimates exact CU usage",
+              ],
+              [
+                "05. Wallet Presentation",
+                "Renders a clear transaction review card with diffs and fees",
+                "Host Wallet Adapter (Signer UI)",
+                "Displays recipient, lamports transferred, and requires explicit user signature",
+              ],
             ],
           },
         },
@@ -592,16 +1028,34 @@ const [configPda, bump] = PublicKey.findProgramAddressSync(
     title: "On-Chain Wire Format",
     badge: "Binary Layout",
     summary:
-      "Interactive breakdown of the 81-byte Anchor prefix, status transitions, and payload buffer.",
+      "Normative breakdown of the 81-byte Anchor binary header, memory offsets, status transitions, and payload buffer.",
     content: {
       overview:
-        "The Web3MCP Config PDA uses a fixed 81-byte Anchor binary header. Click any segment below to inspect its offset, byte size, data type, and security invariants.",
+        "The Web3MCP Config PDA uses a fixed 81-byte Anchor binary header followed by a 4-byte length prefix and the raw UTF-8 JSON tool manifest buffer. Below is the normative memory layout, byte offsets, data types, and status state machine.",
       subsections: [
         {
-          id: "header-validation",
-          title: "Header Validation & Status Transitions",
+          id: "binary-layout-table",
+          title: "81-Byte Anchor Binary Layout",
           description:
-            "During discovery, hosts read the 81-byte header before parsing the payload. If the status byte is not 2 (Published), hosts fail closed immediately. During updates, the publisher re-initializes status to 1, causing hosts to fail closed until the full configuration has been uploaded and finalized.",
+            "Exact memory offsets, byte widths, data types, and invariants for the on-chain Config PDA:",
+          table: {
+            headers: ["Offset", "Size", "Field Name", "Rust Type", "Description & Invariants"],
+            rows: [
+              ["0 .. 8", "8 bytes", "discriminator", "[u8; 8]", "Anchor account discriminator: sha256('account:Web3McpConfig')[..8]"],
+              ["8 .. 40", "32 bytes", "authority", "Pubkey", "Authorized updater / publisher public key with mutation and upload rights"],
+              ["40 .. 41", "1 byte", "status", "u8", "Upload state machine: 0 = Uninitialized, 1 = Uploading, 2 = Published"],
+              ["41 .. 73", "32 bytes", "digest", "[u8; 32]", "Expected SHA-256 hash of the complete uncompressed UTF-8 payload"],
+              ["73 .. 77", "4 bytes", "expected_len", "u32", "Expected total payload length in bytes (little-endian, capped at 65,536)"],
+              ["77 .. 81", "4 bytes", "payload_len", "u32", "Current uploaded payload byte length prefix (little-endian)"],
+              ["81+", "Dynamic", "config payload", "Vec<u8>", "Raw UTF-8 JSON payload buffer containing tool definitions and IDL"],
+            ],
+          },
+        },
+        {
+          id: "header-validation",
+          title: "Status Transitions & Host Invariants",
+          description:
+            "During discovery, hosts read the 81-byte header before parsing the payload. If the status byte is not 2 (Published), hosts fail closed immediately. During updates, the publisher re-initializes status to 1, causing hosts to fail closed until the full configuration has been uploaded and finalized:",
           table: {
             headers: ["Status Value", "Name", "Host Behavior"],
             rows: [

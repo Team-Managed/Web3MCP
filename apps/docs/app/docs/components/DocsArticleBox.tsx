@@ -3,7 +3,6 @@
 import React, { useState } from "react";
 import { Search, ChevronDown, ExternalLink, Edit2, Copy, Check } from "lucide-react";
 import { DocSection } from "../../data/docsContent";
-import AnchorLayoutInspector from "./AnchorLayoutInspector";
 import DevnetPlayground from "./DevnetPlayground";
 import DocsPagination from "./DocsPagination";
 
@@ -30,6 +29,35 @@ export default function DocsArticleBox({
     navigator.clipboard.writeText(code);
     setCopiedCodeId(id);
     setTimeout(() => setCopiedCodeId(null), 2000);
+  };
+
+  const renderTextWithLinks = (text: string) => {
+    const programId = "GgVnzvsMhHHKeeGnqQhU9KAjBeCVhYiYmR17174Lyrgv";
+    const pdaId = "HfA1ExZS1cgYR5k5GEJmsQfyAcDK2J9NPi7p97dU3WLD";
+
+    const regex = new RegExp(`(${programId}|${pdaId})`, "g");
+    const parts = text.split(regex);
+
+    return parts.map((part, i) => {
+      if (part === programId || part === pdaId) {
+        const isProg = part === programId;
+        const url = `https://explorer.solana.com/address/${part}?cluster=devnet`;
+        return (
+          <a
+            key={i}
+            href={url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="explorer-inline-link"
+            title={`View ${isProg ? "Program ID" : "Config PDA"} on Solana Explorer (Devnet)`}
+          >
+            <code>{part}</code>
+            <ExternalLink size={10} className="explorer-inline-icon" />
+          </a>
+        );
+      }
+      return <React.Fragment key={i}>{part}</React.Fragment>;
+    });
   };
 
   const { content } = section;
@@ -83,9 +111,9 @@ export default function DocsArticleBox({
 
         <div className="title-divider-line" />
 
-        {/* Overview text */}
+        {/* Overview text with interactive links */}
         {content.overview && (
-          <p className="article-overview-p">{content.overview}</p>
+          <p className="article-overview-p">{renderTextWithLinks(content.overview)}</p>
         )}
 
         {/* Callouts if any */}
@@ -160,12 +188,7 @@ export default function DocsArticleBox({
             </div>
           ))}
 
-        {/* Interactive Widgets */}
-        {section.id === "on-chain-wire-format" && (
-          <div id="anchor-layout-inspector">
-            <AnchorLayoutInspector />
-          </div>
-        )}
+        {/* Reference Tool Explorer */}
         {section.id === "playground" && (
           <div id="devnet-playground">
             <DevnetPlayground />
@@ -557,6 +580,42 @@ export default function DocsArticleBox({
           font-size: 13px;
           color: #cbd5e1;
           line-height: 1.5;
+        }
+
+        .explorer-inline-link {
+          display: inline-flex;
+          align-items: center;
+          gap: 4px;
+          color: #38bdf8;
+          text-decoration: none;
+          vertical-align: baseline;
+          transition: color 0.15s ease;
+        }
+
+        .explorer-inline-link:hover {
+          color: #7dd3fc;
+          text-decoration: underline;
+        }
+
+        .explorer-inline-link code {
+          font-family: var(--font-mono);
+          font-size: 11px;
+          background: rgba(56, 189, 248, 0.08);
+          border: 1px solid rgba(56, 189, 248, 0.25);
+          padding: 1px 6px;
+          border-radius: 3px;
+          color: #38bdf8;
+          word-break: break-all;
+        }
+
+        .explorer-inline-link:hover code {
+          background: rgba(56, 189, 248, 0.15);
+          border-color: rgba(56, 189, 248, 0.5);
+        }
+
+        .explorer-inline-icon {
+          color: #38bdf8;
+          flex-shrink: 0;
         }
 
         @media (max-width: 768px) {
