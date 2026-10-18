@@ -18,6 +18,8 @@ Given a program ID, verify the executable program and config PDA, parse the conf
 
 **Status:** Generic RPC discovery, validated tool export, account reads, instruction preparation, simulation, and signed submission now live in `@web3mcp/sdk` under `packages/sdk/`. The single `web3mcp` command in `apps/host/` imports that SDK. The SDK discovered all five tools from the current Devnet config and read an existing vault by owner public key. The v0.2 local-validator suite passed 38 tests, including an SDK-backed signed write. The older Devnet tests still target the superseded program and need updating for the new CLI rehearsal.
 
+**Distribution:** Publish only `@web3mcp/sdk` to npm. Its package includes the protocol validator and schema; `protocol/` stays in the repository for normative rules and conformance tests.
+
 ## 4. Add the LLM and wallet flow (In review)
 
 Choose one tool-calling model for the demo. Add a generic chat interface that exposes only validated on-chain tools to the model. For writes, construct and simulate the transaction, show the exact program, accounts, amount, fee, and uncertainty, then request explicit wallet approval of that exact message. Confirm the signature and report the chain result. Keep model credentials out of the browser bundle and repository.

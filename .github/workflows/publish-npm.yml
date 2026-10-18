@@ -1,0 +1,26 @@
+name: Publish SDK to npm
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  publish:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v6.1.0
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+          registry-url: 'https://registry.npmjs.org'
+          package-manager-cache: false
+      - run: npm ci
+      - run: npm --prefix packages/sdk run build
+      - run: npm --prefix packages/sdk test
+      - name: Publish SDK
+        working-directory: packages/sdk
+        run: npm publish --access public

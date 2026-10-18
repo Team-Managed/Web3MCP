@@ -12,6 +12,8 @@ Web3MCP is a proposed Solana protocol for publishing agent-facing tool definitio
 | [Reference program](reference-programs/reference-vault/README.md) | Publish real tools from a Solana program so the host can prove the protocol end to end. |
 | [Documentation site](apps/docs/README.md) | Present the whitepaper, protocol reference, and guides to program and host authors. |
 
+The [npm release checklist](docs/npm-release.md) covers publishing the Node.js SDK. The protocol remains in this repository; the example Host CLI is not part of the npm release.
+
 The [whitepaper](docs/whitepaper.md) explains the idea. The [current design](docs/superpowers/specs/2026-10-13-web3mcp-project-design.md) and [demo roadmap](docs/roadmap.md) define the next implementation work.
 
 ## First demo

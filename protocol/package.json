@@ -1,8 +1,17 @@
 {
   "name": "@web3mcp/protocol",
+  "private": true,
   "version": "0.1.0",
   "description": "Normative schema, account layout, validation logic, and conformance vectors for Web3MCP v0.1",
   "type": "module",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Team-Managed/Web3MCP.git",
+    "directory": "protocol"
+  },
+  "files": ["bin", "fixtures", "schema", "src", "README.md", "SPEC.md"],
+  "engines": { "node": ">=20" },
   "exports": {
     "./schema": "./schema/config.schema.json",
     "./validator": "./src/validator.js",

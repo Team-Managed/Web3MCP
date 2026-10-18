@@ -1,10 +1,17 @@
 {
   "name": "@web3mcp/sdk",
   "version": "0.1.0",
-  "description": "Generic Node.js runtime for Solana Web3MCP programs",
+  "description": "Node.js SDK for discovering and using Web3MCP tools from Solana programs",
   "type": "module",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Team-Managed/Web3MCP.git",
+    "directory": "packages/sdk"
+  },
+  "publishConfig": { "access": "public" },
   "engines": { "node": ">=20" },
-  "files": ["dist", "README.md"],
+  "files": ["dist", "schema", "README.md"],
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
@@ -20,7 +27,7 @@
   "dependencies": {
     "@coral-xyz/anchor": "^0.32.1",
     "@solana/web3.js": "^1.99.0",
-    "@web3mcp/protocol": "^0.1.0"
+    "ajv": "^8.20.0"
   },
   "devDependencies": {
     "@types/node": "^20.19.43",
