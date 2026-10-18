@@ -119,7 +119,7 @@ For the reference program's local-validator integration suite, install Rust, Sol
 
 [@web3mcp/sdk@0.1.0](https://www.npmjs.com/package/@web3mcp/sdk) is public. The reference vault and v0.2 config are deployed on Devnet; SDK discovery found all five tools, and a fresh public SDK install repeated that discovery. The local-validator integration suite passed, and a basic provider-backed OpenAI chat worked. The protocol remains a candidate while adversarial conformance coverage is reviewed.
 
-Pending: a full provider-backed Devnet CLI read/write rehearsal, a second compatible-program demo, and website deployment. See the [roadmap](docs/roadmap.md) for acceptance criteria.
+Pending: a full provider-backed Devnet CLI read/write rehearsal, a second compatible-program demo, and a verified production website launch. See the [roadmap](docs/roadmap.md) for acceptance criteria.
 
 - [Whitepaper](docs/whitepaper.md)
 - [Protocol specification](protocol/SPEC.md) and [conformance guide](protocol/README.md)
