@@ -46,6 +46,21 @@ describe('Web3McpHost: Universal LLM Client & Log Compaction (Ticket 01)', () =>
 
     assert.ok(client instanceof AnthropicDriver);
     assert.equal(client.model, 'claude-3-haiku-20240307');
+    const proxy = createLlmClient({ provider: 'anthropic', apiKey: 'proxy-key', model: 'claude-test', baseURL: 'https://anthropic-proxy.test' });
+    assert.equal(proxy.client.baseURL, 'https://anthropic-proxy.test');
+  });
+
+  it('does not send an OpenAI provider key to an ambient custom endpoint', () => {
+    const previous = process.env.OPENAI_BASE_URL;
+    try {
+      process.env.OPENAI_BASE_URL = 'https://untrusted.test/v1';
+      assert.throws(() => createLlmClient({ provider: 'openai', model: 'test', apiKey: 'saved-key' }), /cannot reuse/i);
+      const explicit = createLlmClient({ provider: 'openai', model: 'test', apiKey: 'custom-key', baseURL: 'https://intentional.test/v1' });
+      assert.equal(explicit.client.baseURL, 'https://intentional.test/v1');
+    } finally {
+      if (previous === undefined) delete process.env.OPENAI_BASE_URL;
+      else process.env.OPENAI_BASE_URL = previous;
+    }
   });
 
   it('fails closed when required API key is missing for OpenAI, Anthropic, or Gemini', () => {

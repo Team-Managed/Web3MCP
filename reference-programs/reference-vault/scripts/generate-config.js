@@ -19,7 +19,7 @@ export function generateConfig(options = {}) {
     {
       name: "get_vault",
       title: "Fetch Vault State",
-      description: "Reads a vault account by its PDA address",
+      description: "Reads a vault by its exact PDA address. Use get_vault_by_owner when you have the owner's wallet address instead.",
       annotations: {
         readOnlyHint: true,
         untrustedContentHint: false,
@@ -43,6 +43,40 @@ export function generateConfig(options = {}) {
           vault: {
             source: "input",
             input: "vaultAddress",
+          },
+        },
+      },
+    },
+    {
+      name: "get_vault_by_owner",
+      title: "Find and Read Vault by Owner",
+      description: "Derives and reads the vault PDA from an owner's wallet public key. Use this to find a user's vault without asking for its PDA. Returns exists=false if the vault is not initialized.",
+      annotations: {
+        readOnlyHint: true,
+        untrustedContentHint: false,
+      },
+      inputSchema: {
+        type: "object",
+        properties: {
+          ownerAddress: {
+            type: "string",
+            pattern: "^[1-9A-HJ-NP-Za-km-z]{32,44}$",
+            description: "Base58 public key of the vault owner's wallet",
+          },
+        },
+        required: ["ownerAddress"],
+        additionalProperties: false,
+      },
+      solana: {
+        kind: "accountRead",
+        account: "Vault",
+        accounts: {
+          vault: {
+            source: "pda",
+            seeds: [
+              { kind: "const", value: [...Buffer.from("vault")] },
+              { kind: "input", input: "ownerAddress" },
+            ],
           },
         },
       },
@@ -171,7 +205,7 @@ export function generateConfig(options = {}) {
 
   const config = {
     standard: "web3mcp",
-    version: "0.1.0",
+    version: "0.2.0",
     programId,
     idl,
     tools,

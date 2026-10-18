@@ -42,7 +42,7 @@ describe("Ticket 04: End-to-End Publisher & On-Chain Protocol Conformance", () =
     assert.ok(accountInfo, "Config PDA account must exist on-chain");
     assert.equal(accountInfo.owner.toBase58(), programId.toBase58());
 
-    // Protocol v0.1 Conformance Validation
+    // Protocol conformance validation
     const conformance = validateDiscoveredConfig({
       programId: programId.toBase58(),
       programAccount: await connection.getAccountInfo(programId, "confirmed"),
@@ -56,12 +56,12 @@ describe("Ticket 04: End-to-End Publisher & On-Chain Protocol Conformance", () =
 
     const onChainConfig = conformance.config;
     assert.equal(onChainConfig.standard, "web3mcp");
-    assert.equal(onChainConfig.version, "0.1.0");
+    assert.equal(onChainConfig.version, "0.2.0");
     assert.equal(onChainConfig.programId, programId.toBase58());
 
-    // Verify all 4 tools discovered purely from on-chain account data
+    // Verify all 5 tools discovered purely from on-chain account data
     const toolNames = onChainConfig.tools.map((t) => t.name);
-    assert.deepEqual(toolNames.sort(), ["deposit", "get_vault", "initialize", "withdraw"].sort());
+    assert.deepEqual(toolNames.sort(), ["deposit", "get_vault", "get_vault_by_owner", "initialize", "withdraw"].sort());
   });
 
   it("preserves strict host boundary: host packages do not import reference program source or static IDLs (ADR 0007)", () => {

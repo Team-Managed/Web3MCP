@@ -6,10 +6,12 @@ import { Keypair } from '@solana/web3.js';
 import { mkdtempSync, writeFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { ChatScreen, TransactionReview } from '../dist/tui/index.js';
+import { ChatScreen, TransactionReview, safeReviewText } from '../dist/tui/index.js';
 import { discoverWalletPaths } from '../dist/tui/wallet-paths.js';
 
 const tick = () => new Promise(resolve => setTimeout(resolve, 25));
+const chatStream = delta => new Response(`data: ${JSON.stringify({ id: 'test', object: 'chat.completion.chunk', choices: [{ index: 0, delta, finish_reason: null }] })}\n\ndata: [DONE]\n\n`,
+  { headers: { 'content-type': 'text/event-stream' } });
 
 test('startup opens chat and / opens the command menu', async () => {
   const app = render(React.createElement(ChatScreen, { rpcUrl: 'https://api.devnet.solana.com' }));
@@ -76,6 +78,120 @@ test('slash completions support arrow selection and Enter', async () => {
   } finally { app.unmount(); }
 });
 
+test('Enter executes a selected narrowed slash suggestion', async () => {
+  const app = render(React.createElement(ChatScreen, { rpcUrl: 'https://api.devnet.solana.com' }));
+  try {
+    await tick();
+    app.stdin.write('/to');
+    await tick();
+    app.stdin.write('\u001b[B');
+    await tick();
+    assert.match(app.lastFrame(), /❯ \/tools/);
+    app.stdin.write('\r');
+    await tick();
+    assert.match(app.lastFrame(), /No program loaded/);
+  } finally { app.unmount(); }
+});
+
+test('/clear keeps the model conversation for the next prompt', async () => {
+  const previousFetch = globalThis.fetch;
+  const requests = [];
+  globalThis.fetch = async (_url, init) => { requests.push(JSON.parse(init.body)); return chatStream({ content: 'Done.' }); };
+  const sdk = { toOpenAiTools: () => [], getTools: () => [] };
+  const app = render(React.createElement(ChatScreen, { sdk, rpcUrl: 'http://localhost:8899', provider: 'ollama', model: 'test' }));
+  try {
+    await tick();
+    app.stdin.write('first question');
+    await tick();
+    app.stdin.write('\r');
+    await new Promise(resolve => setTimeout(resolve, 100));
+    app.stdin.write('/clear');
+    await tick();
+    app.stdin.write('\r');
+    await tick();
+    assert.match(app.lastFrame(), /model context kept/i);
+    app.stdin.write('second question');
+    await tick();
+    app.stdin.write('\r');
+    await new Promise(resolve => setTimeout(resolve, 100));
+    assert.equal(requests.length, 2);
+    assert.ok(requests[1].messages.some(message => message.role === 'user' && message.content === 'first question'));
+    assert.match(app.lastFrame(), /second question/);
+  } finally { app.unmount(); globalThis.fetch = previousFetch; }
+});
+
+test('preload discovery cannot replace a newer chat discovery', async () => {
+  const previousFetch = globalThis.fetch;
+  const a = Keypair.generate().publicKey.toBase58();
+  const b = Keypair.generate().publicKey.toBase58();
+  let finishA;
+  let calls = 0;
+  globalThis.fetch = async () => ++calls === 1
+    ? chatStream({ tool_calls: [{ index: 0, id: 'discover', function: { name: 'web3mcp_host_discover_program', arguments: JSON.stringify({ reference: b }) } }] })
+    : chatStream({ content: 'Ready.' });
+  const sdk = { discover: id => id === a ? new Promise(resolve => { finishA = resolve; }) : Promise.resolve(),
+    getTools: id => [{ name: id === a ? 'old_tool' : 'new_tool', solana: { kind: 'accountRead' } }],
+    toOpenAiTools: () => [] };
+  const app = render(React.createElement(ChatScreen, { sdk, programId: a, rpcUrl: 'http://localhost:8899', provider: 'openai', model: 'test', apiKey: 'test' }));
+  try {
+    await tick();
+    app.stdin.write(`Use ${b}`);
+    await tick();
+    app.stdin.write('\r');
+    await new Promise(resolve => setTimeout(resolve, 150));
+    assert.match(app.lastFrame(), new RegExp(`Program ${b}`));
+    finishA();
+    await tick();
+    assert.match(app.lastFrame(), new RegExp(`Program ${b}`));
+    assert.match(app.lastFrame(), /Tools 1/);
+  } finally { app.unmount(); globalThis.fetch = previousFetch; }
+});
+
+test('OpenAI-compatible local endpoint can chat without an API key', async () => {
+  const previousFetch = globalThis.fetch;
+  const previousUrl = process.env.OPENAI_BASE_URL;
+  const previousKey = process.env.OPENAI_API_KEY;
+  let requests = 0;
+  process.env.OPENAI_BASE_URL = 'http://127.0.0.1:8080/v1';
+  delete process.env.OPENAI_API_KEY;
+  globalThis.fetch = async () => { requests++; return chatStream({ content: 'Local reply.' }); };
+  const sdk = { toOpenAiTools: () => [], getTools: () => [] };
+  const app = render(React.createElement(ChatScreen, { sdk, rpcUrl: 'http://localhost:8899', provider: 'openai', model: 'local-model' }));
+  try {
+    await tick();
+    app.stdin.write('hi');
+    await tick();
+    app.stdin.write('\r');
+    await new Promise(resolve => setTimeout(resolve, 100));
+    assert.equal(requests, 1);
+    assert.match(app.lastFrame(), /Local reply/);
+  } finally {
+    app.unmount(); globalThis.fetch = previousFetch;
+    if (previousUrl === undefined) delete process.env.OPENAI_BASE_URL; else process.env.OPENAI_BASE_URL = previousUrl;
+    if (previousKey === undefined) delete process.env.OPENAI_API_KEY; else process.env.OPENAI_API_KEY = previousKey;
+  }
+});
+
+test('Ctrl+C aborts an active model request', async () => {
+  const previousFetch = globalThis.fetch;
+  let aborted = false;
+  globalThis.fetch = async (_url, init) => new Promise((_resolve, reject) => init.signal.addEventListener('abort', () => {
+    aborted = true; reject(new Error('aborted'));
+  }, { once: true }));
+  const sdk = { toOpenAiTools: () => [], getTools: () => [] };
+  const app = render(React.createElement(ChatScreen, { sdk, rpcUrl: 'http://localhost:8899', provider: 'ollama', model: 'test' }));
+  try {
+    await tick();
+    app.stdin.write('hi');
+    await tick();
+    app.stdin.write('\r');
+    await tick();
+    app.stdin.write('\u0003');
+    await tick();
+    assert.equal(aborted, true);
+  } finally { app.unmount(); globalThis.fetch = previousFetch; }
+});
+
 test('/model guides provider, existing key, and model selection', async () => {
   const originalFetch = globalThis.fetch;
   globalThis.fetch = async () => new Response(JSON.stringify({ object: 'list', data: [
@@ -114,8 +230,10 @@ test('/model masks a new key and saves it only after model selection', async () 
     { id: 'gpt-6-luna', object: 'model' },
   ] }), { status: 200, headers: { 'content-type': 'application/json' } });
   const saved = [];
+  const preferences = [];
   const credentialStore = { get: async () => '', set: async (provider, key) => { saved.push([provider, key]); } };
-  const app = render(React.createElement(ChatScreen, { rpcUrl: 'https://api.devnet.solana.com', credentialStore }));
+  const app = render(React.createElement(ChatScreen, { rpcUrl: 'https://api.devnet.solana.com', credentialStore,
+    onSettingsChange: settings => preferences.push(settings) }));
   try {
     await tick();
     app.stdin.write('/model');
@@ -137,6 +255,9 @@ test('/model masks a new key and saves it only after model selection', async () 
     app.stdin.write('\r');
     await tick();
     assert.deepEqual(saved, [['openai', 'sk-test-secret']]);
+    assert.equal(preferences.at(-1).model, 'gpt-6-luna');
+    assert.equal(preferences.at(-1).provider, 'openai');
+    assert.equal('apiKey' in preferences.at(-1), false);
   } finally {
     app.unmount();
     globalThis.fetch = originalFetch;
@@ -176,8 +297,10 @@ test('/wallet loads a pasted keypair path and shows only its public address', as
   const directory = mkdtempSync(path.join(tmpdir(), 'web3mcp-tui-'));
   const walletFile = path.join(directory, 'wallet.json');
   const wallet = Keypair.generate();
+  const preferences = [];
   writeFileSync(walletFile, JSON.stringify([...wallet.secretKey]), { mode: 0o600 });
-  const app = render(React.createElement(ChatScreen, { rpcUrl: 'https://api.devnet.solana.com' }));
+  const app = render(React.createElement(ChatScreen, { rpcUrl: 'https://api.devnet.solana.com',
+    onSettingsChange: settings => preferences.push(settings) }));
   try {
     await tick();
     app.stdin.write('/wallet');
@@ -190,6 +313,7 @@ test('/wallet loads a pasted keypair path and shows only its public address', as
     await tick();
     assert.match(app.lastFrame(), new RegExp(wallet.publicKey.toBase58()));
     assert.doesNotMatch(app.lastFrame(), /secretKey/);
+    assert.equal(preferences.at(-1).walletPath, walletFile);
   } finally {
     app.unmount();
     rmSync(directory, { recursive: true, force: true });
@@ -354,4 +478,19 @@ test('transaction review rejects Enter and requires explicit s to sign', async (
   await tick();
   assert.equal(decision, true);
   approved.unmount();
+});
+
+test('transaction review neutralizes publisher control text', async () => {
+  assert.equal(safeReviewText('deposit\u001b[2J\u001b[Hfake\u009b2J'), 'deposit [2J [Hfake 2J');
+  const request = { tool: 'deposit', programId: '11111111111111111111111111111111',
+    arguments: {}, accounts: [{ name: 'vault\u001b[2J', pubkey: '11111111111111111111111111111111' }],
+    effects: { summary: 'Safe\u001b[2JHidden', financial: true }, simulation: { err: null, logs: [] },
+    messageHash: 'abc', instruction: { data: Buffer.from([1]) } };
+  const app = render(React.createElement(TransactionReview, { request, onDecision: () => {} }));
+  try {
+    await tick();
+    assert.match(app.lastFrame(), /Safe \[2JHidden/);
+    assert.match(app.lastFrame(), /vault \[2J/);
+    assert.doesNotMatch(app.lastFrame(), /\u001b\[2J/);
+  } finally { app.unmount(); }
 });

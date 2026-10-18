@@ -45,6 +45,15 @@ export async function readAccount({ connection, programs, toolName, args = {}, o
     if (binding?.source === 'input') rawAddress = args[binding.input];
     else if (binding?.source === 'program') rawAddress = binding.address;
     else if (binding?.source === 'signer') rawAddress = options.signer?.publicKey ?? options.signer;
+    else if (binding?.source === 'pda') {
+      try {
+        const seeds = binding.seeds.map(seed => seed.kind === 'const' ? Buffer.from(seed.value)
+          : new PublicKey(args[seed.input]).toBuffer());
+        rawAddress = PublicKey.findProgramAddressSync(seeds, new PublicKey(targetContext.programId))[0];
+      } catch (err) {
+        throw new ValidationError(`Could not derive PDA for tool '${toolName}': ${err.message}`);
+      }
+    }
     break;
   }
 

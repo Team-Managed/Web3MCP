@@ -1,7 +1,7 @@
 import { validateToolInput } from '@web3mcp/protocol/validator';
 import crypto from 'node:crypto';
 import { PublicKey, Transaction, TransactionInstruction } from '@solana/web3.js';
-import { DiscoveryError, ToolNotFoundError, ValidationError } from '../errors.js';
+import { AccountResolutionError, ValidationError } from '../errors.js';
 import { formatArgForCoder } from '../accounts/coder.js';
 import { resolveInstructionAccounts } from './resolver.js';
 import { resolveToolContext } from '../tools/registry.js';
@@ -64,6 +64,7 @@ export async function prepareAndSimulateInstruction({
       }
     }
   }
+  if (!signerPubkey) throw new AccountResolutionError('A wallet public key is required as transaction fee payer.');
 
   // 4. Resolve Accounts
   const { keys, accountsSummary } = resolveInstructionAccounts({
@@ -100,7 +101,7 @@ export async function prepareAndSimulateInstruction({
 
   // 8. Prepare the transaction once; approval and signing use this same message.
   const transaction = new Transaction().add(instruction);
-  transaction.feePayer = signerPubkey || keys.find((k) => k.isSigner)?.pubkey || keys[0]?.pubkey;
+  transaction.feePayer = signerPubkey;
   const latestBlockhash = await connection.getLatestBlockhash(options.commitment || defaultCommitment);
   transaction.recentBlockhash = latestBlockhash.blockhash;
   const messageHash = crypto.createHash('sha256').update(transaction.serializeMessage()).digest('hex');

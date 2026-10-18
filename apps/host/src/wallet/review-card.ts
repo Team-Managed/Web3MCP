@@ -1,6 +1,10 @@
 import readline from 'node:readline';
 import { c, isColorSupported, padVisible } from '../ui/theme.js';
 
+function safeText(value: unknown, limit = 800): string {
+  return String(value ?? '').replace(/[\x00-\x1f\x7f-\x9f\u200e\u200f\u202a-\u202e\u2066-\u2069]/g, ' ').slice(0, limit);
+}
+
 export interface ReviewCardParams {
   tool: string;
   programId: string;
@@ -69,20 +73,20 @@ export function formatReviewCard({
   lines.push(`${border}├${line}┤${rst}`);
 
   // Core metadata
-  row(`Tool:             ${isColorSupported ? bld + tool + rst : tool}`);
-  row(`Program ID:       ${isColorSupported ? bld + programId + rst : programId}`);
+  row(`Tool:             ${isColorSupported ? bld + safeText(tool) + rst : safeText(tool)}`);
+  row(`Program ID:       ${isColorSupported ? bld + safeText(programId) + rst : safeText(programId)}`);
   if (args && Object.keys(args).length > 0) {
-    row(`Arguments:        ${JSON.stringify(args)}`);
+    row(`Arguments:        ${safeText(JSON.stringify(args))}`);
   }
   if (messageHash) {
-    row(`Message SHA-256:  ${messageHash.slice(0, 32)}`);
-    row(`                 ${messageHash.slice(32)}`);
+    row(`Message SHA-256:  ${safeText(messageHash.slice(0, 32))}`);
+    row(`                 ${safeText(messageHash.slice(32))}`);
   }
 
   if (effects) {
     const financialFlag = effects.financial ? '⚠️ FINANCIAL WRITE' : 'State change';
     const styledFinancial = isColorSupported && effects.financial ? `${red}${bld}${financialFlag}${rst}` : financialFlag;
-    row(`Effects:          ${effects.summary || 'None'} (${styledFinancial})`);
+    row(`Effects:          ${safeText(effects.summary || 'None')} (${styledFinancial})`);
   }
 
   row(fee == null ? 'Estimated Fee:    unavailable' : `Estimated Fee:    ~${(fee / 1e9).toFixed(6)} SOL (${fee} lamports)`);
@@ -96,11 +100,6 @@ export function formatReviewCard({
       .filter(Boolean)
       .join(', ');
 
-    const maxAddrLen = Math.max(20, contentWidth - 34);
-    const displayAddr = acc.pubkey.length > maxAddrLen
-      ? acc.pubkey.slice(0, Math.floor(maxAddrLen / 2) - 2) + '...' + acc.pubkey.slice(-Math.floor(maxAddrLen / 2) + 2)
-      : acc.pubkey;
-
     let styledPrivs = privs;
     if (isColorSupported) {
       styledPrivs = [
@@ -112,10 +111,11 @@ export function formatReviewCard({
     }
 
     if (isColorSupported) {
-      row(`  • ${bld}${acc.name.padEnd(14)}${rst}: ${displayAddr} (${styledPrivs})`);
+      row(`  • ${bld}${safeText(acc.name, 40)}${rst} (${styledPrivs})`);
     } else {
-      row(`  • ${acc.name.padEnd(14)}: ${displayAddr} (${privs})`);
+      row(`  • ${safeText(acc.name, 40)} (${privs})`);
     }
+    row(`    ${safeText(acc.pubkey, 80)}`);
   }
 
   // Divider
@@ -123,7 +123,7 @@ export function formatReviewCard({
 
   // Simulation status
   const statusStr = simulation?.err ? '❌ FAILED' : '✅ SUCCESS';
-  const cus = simulation?.unitsConsumed ? `${simulation.unitsConsumed} CUs consumed` : '0 CUs';
+  const cus = simulation?.unitsConsumed ? `${safeText(simulation.unitsConsumed)} CUs consumed` : '0 CUs';
   const styledStatus = isColorSupported ? (simulation?.err ? `${red}${statusStr}${rst}` : `${grn}${statusStr}${rst}`) : statusStr;
   row(`Simulation Status: ${styledStatus} (${cus})`);
 
@@ -134,7 +134,8 @@ export function formatReviewCard({
       .slice(0, 3);
     for (const log of relevantLogs) {
       const maxLogLen = contentWidth - 6;
-      const truncated = log.length > maxLogLen ? log.slice(0, maxLogLen - 3) + '...' : log;
+      const cleanLog = safeText(log);
+      const truncated = cleanLog.length > maxLogLen ? cleanLog.slice(0, maxLogLen - 3) + '...' : cleanLog;
       row(`  ${gry}> ${truncated}${rst}`);
     }
   }

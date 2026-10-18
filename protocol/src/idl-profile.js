@@ -81,6 +81,7 @@ function validateInstruction(tool, instruction, path, errors) {
         errors.push(`${accountPath}: unsupported or unresolved IDL PDA seed`);
       }
     }
+    if (binding.source === 'pda') errors.push(`${accountPath}: explicit PDA binding is only supported for accountRead`);
   }
 
   const argNames = instruction.args.map((arg) => arg?.name);
@@ -108,7 +109,7 @@ function validateInstruction(tool, instruction, path, errors) {
   }
 }
 
-function validateRead(tool, idl, account, path, errors) {
+function validateRead(tool, idl, account, path, errors, version) {
   if (!isByteArray(account.discriminator, 8)) {
     errors.push(`${path}: IDL account requires an 8-byte discriminator`);
   }
@@ -123,10 +124,21 @@ function validateRead(tool, idl, account, path, errors) {
     errors.push(`${path}: accountRead requires exactly one address binding`);
   }
   for (const [name, binding] of bindings) {
-    validateAddressBinding(binding, tool.inputSchema, `${path}/accounts/${name}`, errors);
-    if (binding.source === 'idl') errors.push(`${path}/accounts/${name}: accountRead has no instruction PDA seeds to resolve`);
+    const bindingPath = `${path}/accounts/${name}`;
+    validateAddressBinding(binding, tool.inputSchema, bindingPath, errors);
+    if (binding.source === 'idl') errors.push(`${bindingPath}: accountRead has no instruction PDA seeds to resolve`);
+    if (binding.source === 'pda') {
+      if (!version.startsWith('0.2.')) errors.push(`${bindingPath}: PDA read binding requires Web3MCP v0.2`);
+      for (const seed of binding.seeds) {
+        if (seed.kind === 'input' && (!isPubkeyProperty(tool.inputSchema.properties[seed.input]) ||
+            !tool.inputSchema.required.includes(seed.input))) {
+          errors.push(`${bindingPath}: PDA seed input '${seed.input}' must be a required publicKey property`);
+        }
+      }
+    }
   }
-  const accountInputs = new Set(bindings.filter(([, binding]) => binding.source === 'input').map(([, binding]) => binding.input));
+  const accountInputs = new Set(bindings.flatMap(([, binding]) => binding.source === 'input' ? [binding.input]
+    : binding.source === 'pda' ? binding.seeds.filter((seed) => seed.kind === 'input').map((seed) => seed.input) : []));
   for (const name of Object.keys(tool.inputSchema.properties)) {
     if (!accountInputs.has(name)) errors.push(`${path}/inputSchema/${name}: input is unused by the account read`);
   }
@@ -164,7 +176,7 @@ export function validateIdlProfile(config) {
       if (!account) {
         errors.push(`${path}: account '${tool.solana.account}' is not defined in IDL`);
       } else {
-        validateRead(tool, idl, account, path, errors);
+        validateRead(tool, idl, account, path, errors, config.version);
       }
     }
   }

@@ -1,11 +1,15 @@
-import { Connection, Commitment, Transaction } from '@solana/web3.js';
+import { Connection, Commitment, SendTransactionError, Transaction } from '@solana/web3.js';
+import { PublicKey } from '@solana/web3.js';
+import { utils } from '@coral-xyz/anchor';
+import { validateToolInput } from '@web3mcp/protocol/validator';
 import crypto from 'node:crypto';
 import { Web3McpHostError, ValidationError, TransactionConfirmationUnknownError } from './errors.js';
 import { discoverProgram } from './discovery/index.js';
-import { queryTools, findTool } from './tools/registry.js';
+import { queryTools, findTool, resolveToolContext } from './tools/registry.js';
 import { formatOpenAiTools } from './tools/schema.js';
 import { readAccount } from './accounts/reader.js';
 import { prepareAndSimulateInstruction } from './instructions/simulator.js';
+import { resolveInstructionAccounts } from './instructions/resolver.js';
 import type { AccountReadResult, DiscoveredProgram, InstructionOptions, PreparedInstruction, ReadOptions, Web3McpTool } from './types.js';
 
 export interface Web3McpHostOptions {
@@ -88,6 +92,24 @@ export class Web3McpSdk {
     return formatOpenAiTools(tools);
   }
 
+  /** Resolve the accounts of a published instruction tool without RPC, simulation, or signing. */
+  resolveToolAccounts(toolName: string, args: Record<string, unknown> = {}, options: InstructionOptions = {}): PreparedInstruction['accounts'] {
+    const { context, tool } = resolveToolContext(this.programs, toolName, options.programId);
+    if (tool.solana.kind !== 'instruction') throw new ValidationError(`Tool '${toolName}' is not an instruction tool.`);
+    const input = validateToolInput(tool, args);
+    if (!input.valid) throw new ValidationError(`Invalid arguments for tool '${toolName}': ${input.errors.join('; ')}`);
+    const instruction = context.idl.instructions.find((item: any) => item.name === tool.solana.instruction);
+    if (!instruction) throw new ValidationError(`Instruction '${tool.solana.instruction}' is not defined in program IDL.`);
+    const rawSigner = options.signer ?? options.wallet;
+    let signerPubkey: PublicKey | null = null;
+    if (rawSigner) {
+      try { signerPubkey = new PublicKey('publicKey' in Object(rawSigner) ? (rawSigner as { publicKey: PublicKey }).publicKey : rawSigner as PublicKey | string); }
+      catch (error) { throw new ValidationError(`Invalid signer public key: ${error instanceof Error ? error.message : String(error)}`); }
+    }
+    return resolveInstructionAccounts({ idlInstruction: instruction, toolAccounts: tool.solana.accounts || {},
+      programId: context.programId, args, signerPubkey }).accountsSummary;
+  }
+
   /**
    * Executes an accountRead tool by querying live Solana RPC, verifying account ownership
    * and 8-byte Anchor discriminator, and decoding data via runtime Borsh coders.
@@ -149,10 +171,16 @@ export class Web3McpSdk {
     if (await this.connection.getBlockHeight(this.commitment) > prepared.lastValidBlockHeight) {
       throw new Web3McpHostError('Prepared transaction blockhash expired; prepare and review again.');
     }
-    const signature = await this.connection.sendRawTransaction(signedTransaction.serialize(), {
-      skipPreflight: false,
-      preflightCommitment: this.commitment,
-    });
+    let signature;
+    try {
+      signature = await this.connection.sendRawTransaction(signedTransaction.serialize(), {
+        skipPreflight: false,
+        preflightCommitment: this.commitment,
+      });
+    } catch (error) {
+      if (error instanceof SendTransactionError) throw error;
+      throw new TransactionConfirmationUnknownError(utils.bytes.bs58.encode(signedTransaction.signature!), error);
+    }
     let result;
     try {
       result = await this.connection.confirmTransaction({

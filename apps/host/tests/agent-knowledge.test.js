@@ -93,7 +93,7 @@ describe('Web3MCP Agent: Solana Modular Domain Knowledge', () => {
     assert.ok(!prompt.includes('Solana Domain Operational Knowledge'));
     assert.ok(!prompt.includes('Constant Product Invariant'));
     assert.ok(!prompt.includes('web3mcp_host_discover_program'));
-    assert.ok(createSystemPrompt({ canDiscoverPrograms: true, includeKnowledge: false }).includes('web3mcp_host_discover_program'));
+    assert.ok(createSystemPrompt({ canDiscoverPrograms: true, includeKnowledge: false }).includes('host discovery tool'));
   });
 
   it('does not elevate published tool descriptions into the system prompt', () => {

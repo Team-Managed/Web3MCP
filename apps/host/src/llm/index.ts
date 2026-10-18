@@ -3,18 +3,6 @@ import { compactToolResult } from './compactor.js';
 import { OpenAiCompatibleDriver } from './drivers/openai.js';
 import { AnthropicDriver } from './drivers/anthropic.js';
 
-let envLoaded = false;
-function ensureEnvLoaded() {
-  if (!envLoaded) {
-    envLoaded = true;
-    if (typeof process.loadEnvFile === 'function') {
-      try {
-        process.loadEnvFile();
-      } catch {}
-    }
-  }
-}
-
 export interface CreateLlmClientOptions {
   provider?: 'gemini' | 'openai' | 'anthropic' | 'groq' | 'ollama';
   model?: string;
@@ -26,8 +14,6 @@ export interface CreateLlmClientOptions {
  * Factory function creating an appropriate LlmClient instance based on parameters and environment variables.
  */
 export function createLlmClient(options: CreateLlmClientOptions = {}): OpenAiCompatibleDriver | AnthropicDriver {
-  ensureEnvLoaded();
-
   const provider =
     options.provider ||
     (process.env.GEMINI_API_KEY ? 'gemini' : null) ||
@@ -75,6 +61,7 @@ export function createLlmClient(options: CreateLlmClientOptions = {}): OpenAiCom
     return new AnthropicDriver({
       apiKey,
       model,
+      baseURL: options.baseURL,
     });
   }
 
@@ -100,6 +87,10 @@ export function createLlmClient(options: CreateLlmClientOptions = {}): OpenAiCom
 
   // Default: OpenAI / generic OpenAI-compatible
   const apiKey = options.apiKey || process.env.OPENAI_API_KEY;
+  if (!options.baseURL && process.env.OPENAI_BASE_URL &&
+      new URL(process.env.OPENAI_BASE_URL).origin !== 'https://api.openai.com' && apiKey) {
+    throw new LlmError('A custom OpenAI endpoint cannot reuse an OpenAI provider key. Pass baseURL and its own key explicitly to an SDK caller.');
+  }
   if (!apiKey && !options.baseURL && !process.env.OPENAI_BASE_URL) {
     throw new LlmError(
       'OpenAI provider requested but OPENAI_API_KEY is not set. Provide an API key or use Ollama/Groq.'

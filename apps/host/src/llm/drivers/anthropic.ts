@@ -8,17 +8,18 @@ export class AnthropicDriver {
   client: Anthropic;
   model: string;
 
-  constructor({ apiKey, model }: { apiKey?: string; model?: string }) {
+  constructor({ apiKey, model, baseURL }: { apiKey?: string; model?: string; baseURL?: string }) {
     if (!model) {
       throw new LlmError('A model name must be explicitly specified (e.g. via options.model, --model, or LLM_MODEL).');
     }
     this.client = new Anthropic({
       apiKey: apiKey || process.env.ANTHROPIC_API_KEY,
+      baseURL,
     });
     this.model = model;
   }
 
-  async chat({ messages, tools = [], onToken, temperature = 0.2, maxTokens = 1024 }) {
+  async chat({ messages, tools = [], onToken, temperature = 0.2, maxTokens = 1024, signal }) {
     try {
       // Extract system messages into Anthropic system parameter
       let systemPrompt = '';
@@ -78,7 +79,7 @@ export class AnthropicDriver {
         temperature,
         max_tokens: maxTokens,
         stream: true,
-      });
+      }, { signal });
 
       let content = '';
       const toolCalls = [];

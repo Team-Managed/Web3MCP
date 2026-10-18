@@ -12,6 +12,7 @@ export default defineConfig({
     'tui/program-ref': 'src/tui/program-ref.ts',
     'tui/settings': 'src/tui/settings.tsx',
     'tui/credentials': 'src/tui/credentials.ts',
+    'tui/preferences': 'src/tui/preferences.ts',
     'tui/wallet-paths': 'src/tui/wallet-paths.ts',
   },
   format: ['esm'],

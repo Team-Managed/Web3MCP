@@ -54,6 +54,42 @@ test('agent signs and submits only after approval through SDK handoff', async ()
   assert.equal(getSubmissions(), 1);
 });
 
+test('agent never executes tools proposed on its final allowed turn', async () => {
+  const signer = Keypair.generate();
+  const { host, getSubmissions } = hostFixture(signer);
+  const messages = [];
+  const result = await executeAgentTurn({ messages, llmClient: model('deposit'), host, signer,
+    onApprovalRequest: async () => true, maxTurns: 1 });
+  assert.match(result, /final requested tools were not executed/i);
+  assert.equal(getSubmissions(), 0);
+  assert.match(messages.find(message => message.role === 'tool').content, /before tool execution/i);
+});
+
+test('confirmed writes use genesis hash for Explorer links on custom RPC endpoints', async () => {
+  const signer = Keypair.generate();
+  const { host } = hostFixture(signer);
+  host.connection = { rpcEndpoint: 'https://paid-rpc.example/v1', getGenesisHash: async () => 'EtWTRABZaYq6iMfeYKouRu166VU2xqa1wcaWoxPkrZBG' };
+  const events = [];
+  await executeAgentTurn({ messages: [], llmClient: model('deposit'), host, signer,
+    onApprovalRequest: async () => true, onProgress: event => events.push(event) });
+  assert.equal(events.find(event => event.type === 'broadcast_confirmed').explorerUrl,
+    'https://explorer.solana.com/tx/confirmed-signature?cluster=devnet');
+});
+
+test('host discovery names do not collide with a published program tool', async () => {
+  const programId = Keypair.generate().publicKey.toBase58();
+  let seen;
+  await executeAgentTurn({ messages: [], programId,
+    host: { toOpenAiTools: () => [{ type: 'function', function: { name: 'web3mcp_host_discover_program' } }] },
+    onDiscoverProgram: async () => ({ programId, toolNames: ['web3mcp_host_discover_program'] }),
+    llmClient: { chat: async ({ tools }) => {
+      seen = tools.map(tool => tool.function.name);
+      return { content: 'Ready.' };
+    } },
+  });
+  assert.deepEqual(seen, ['web3mcp_host_discover_program_1', 'web3mcp_host_discover_program']);
+});
+
 test('agent preserves a submitted signature when RPC confirmation is uncertain', async () => {
   const signer = Keypair.generate();
   const { host } = hostFixture(signer);
@@ -134,6 +170,68 @@ test('agent supplies the selected wallet address to signer-sourced account reads
       : { content: 'Done.' } },
   });
   assert.equal(options.signer.toBase58(), signer.publicKey.toBase58());
+});
+
+test('agent resolves a PDA from a published instruction before reading it', async () => {
+  const signer = Keypair.generate();
+  const programId = Keypair.generate().publicKey.toBase58();
+  const vaultAddress = Keypair.generate().publicKey.toBase58();
+  const calls = [];
+  let turn = 0;
+  const answer = await executeAgentTurn({ signer, programId, messages: [],
+    host: {
+      toOpenAiTools: () => [{ type: 'function', function: { name: 'get_vault' } }],
+      resolveToolAccounts: (name, args, options) => {
+        calls.push({ name, args, options });
+        return [{ name: 'vault', pubkey: vaultAddress, isSigner: false, isWritable: true }];
+      },
+      getTool: () => ({ solana: { kind: 'accountRead' } }),
+      executeRead: async (_name, args) => { assert.equal(args.vaultAddress, vaultAddress); return { exists: false, address: vaultAddress }; },
+    },
+    llmClient: { chat: async ({ tools }) => {
+      turn++;
+      assert.ok(tools.some(tool => tool.function.name === 'web3mcp_host_resolve_accounts'));
+      if (turn === 1) return { content: '', toolCalls: [{ id: 'resolve', name: 'web3mcp_host_resolve_accounts', arguments: { tool: 'initialize', arguments: {} } }] };
+      if (turn === 2) return { content: '', toolCalls: [{ id: 'read', name: 'get_vault', arguments: { vaultAddress } }] };
+      return { content: 'Your vault does not exist yet.' };
+    } },
+  });
+  assert.equal(answer, 'Your vault does not exist yet.');
+  assert.equal(calls[0].options.signer.toBase58(), signer.publicKey.toBase58());
+});
+
+test('agent stops repeated identical read validation failures with the actual error', async () => {
+  let turns = 0;
+  const answer = await executeAgentTurn({ messages: [],
+    host: {
+      toOpenAiTools: () => [{ type: 'function', function: { name: 'get_vault' } }],
+      getTool: () => ({ solana: { kind: 'accountRead' } }),
+      executeRead: async () => { throw new Error('vaultAddress is not a 32-byte public key'); },
+    },
+    llmClient: { chat: async () => { turns++; return { content: '', toolCalls: [
+      { id: `read-${turns}`, name: 'get_vault', arguments: { vaultAddress: 'wallet' } },
+    ] }; } },
+  });
+  assert.match(answer, /vaultAddress is not a 32-byte public key/);
+  assert.doesNotMatch(answer, /maximum conversation turn limit/);
+  assert.equal(turns, 2);
+});
+
+test('repeated read failure answers all calls in the pending model batch', async () => {
+  let turns = 0;
+  const messages = [];
+  await executeAgentTurn({ messages,
+    host: {
+      toOpenAiTools: () => [{ type: 'function', function: { name: 'get_vault' } }],
+      getTool: () => ({ solana: { kind: 'accountRead' } }),
+      executeRead: async () => { throw new Error('bad vault address'); },
+    },
+    llmClient: { chat: async () => ({ content: '', toolCalls: ++turns === 1
+      ? [{ id: 'first', name: 'get_vault', arguments: {} }]
+      : [{ id: 'second', name: 'get_vault', arguments: {} }, { id: 'third', name: 'get_vault', arguments: {} }] }) },
+  });
+  assert.deepEqual(messages.filter(message => message.role === 'tool').map(message => message.tool_call_id), ['first', 'second', 'third']);
+  assert.match(messages.at(-1).content, /Skipped after a repeated read failure/);
 });
 
 test('newly discovered tools cannot run before the model receives their definitions', async () => {

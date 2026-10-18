@@ -27,11 +27,11 @@ const fixtureIdl = {
 };
 
 describe("Ticket 03: Web3MCP Config Generator & Packaging", () => {
-  it("generates a normative Web3MCP v0.1 config that passes protocol validation", () => {
+  it("generates a Web3MCP v0.2 config that passes protocol validation", () => {
     const config = generateConfig({ idl: fixtureIdl });
 
     assert.equal(config.standard, "web3mcp");
-    assert.equal(config.version, "0.1.0");
+    assert.equal(config.version, "0.2.0");
     assert.ok(config.programId, "programId must be defined");
     assert.ok(config.idl, "IDL must be embedded");
     assert.equal(Array.isArray(config.tools), true);
@@ -49,6 +49,7 @@ describe("Ticket 03: Web3MCP Config Generator & Packaging", () => {
     const toolNames = config.tools.map((t) => t.name);
 
     assert.ok(toolNames.includes("get_vault"), "Must contain get_vault");
+    assert.ok(toolNames.includes("get_vault_by_owner"), "Must contain get_vault_by_owner");
     assert.ok(toolNames.includes("initialize"), "Must contain initialize");
     assert.ok(toolNames.includes("deposit"), "Must contain deposit");
     assert.ok(toolNames.includes("withdraw"), "Must contain withdraw");
@@ -58,6 +59,12 @@ describe("Ticket 03: Web3MCP Config Generator & Packaging", () => {
     assert.equal(getVault.solana.account, "Vault");
     assert.equal(getVault.effects, undefined, "accountRead must not declare effects");
     assert.equal(getVault.solana.accounts.vault.input, "vaultAddress");
+    const byOwner = config.tools.find((t) => t.name === "get_vault_by_owner");
+    assert.equal(byOwner.solana.accounts.vault.source, "pda");
+    assert.deepEqual(byOwner.solana.accounts.vault.seeds, [
+      { kind: "const", value: [...Buffer.from("vault")] },
+      { kind: "input", input: "ownerAddress" },
+    ]);
 
     const deposit = config.tools.find((t) => t.name === "deposit");
     assert.equal(deposit.solana.kind, "instruction");

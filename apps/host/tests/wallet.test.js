@@ -10,6 +10,7 @@ import {
   generateKeypairToFile,
   formatReviewCard,
   promptApproval,
+  requestDevnetAirdrop,
   WalletError,
 } from '../dist/wallet/index.js';
 
@@ -39,6 +40,31 @@ describe('Web3McpHost: Terminal Wallet Signer & Review Card', () => {
         return true;
       }
     );
+  });
+
+  it('expands a home-relative keypair path', () => {
+    const previousHome = process.env.HOME;
+    const home = fs.mkdtempSync(path.join(os.tmpdir(), 'web3mcp-home-'));
+    const wallet = Keypair.generate();
+    try {
+      process.env.HOME = home;
+      fs.writeFileSync(path.join(home, 'id.json'), JSON.stringify([...wallet.secretKey]));
+      assert.equal(loadKeypair('~/id.json').publicKey.toBase58(), wallet.publicKey.toBase58());
+    } finally {
+      if (previousHome === undefined) delete process.env.HOME;
+      else process.env.HOME = previousHome;
+      fs.rmSync(home, { recursive: true, force: true });
+    }
+  });
+
+  it('rejects an airdrop whose confirmation contains an on-chain error', async () => {
+    const connection = {
+      requestAirdrop: async () => 'signature',
+      getLatestBlockhash: async () => ({ blockhash: 'hash', lastValidBlockHeight: 1 }),
+      confirmTransaction: async () => ({ value: { err: { InstructionError: [0, 'failed'] } } }),
+      getBalance: async () => { throw new Error('balance must not be read after failed confirmation'); },
+    };
+    await assert.rejects(requestDevnetAirdrop(connection, Keypair.generate().publicKey), WalletError);
   });
 
   it('formats a high-contrast terminal review card with accounts, privileges, and effects', () => {
@@ -80,6 +106,19 @@ describe('Web3McpHost: Terminal Wallet Signer & Review Card', () => {
   it('does not invent a network fee when the estimate is unavailable', () => {
     const card = formatReviewCard({ tool: 'deposit', programId: Keypair.generate().publicKey.toBase58() });
     assert.match(card, /Estimated Fee:.*unavailable/);
+  });
+
+  it('shows complete account addresses and strips terminal controls from review data', () => {
+    const address = Keypair.generate().publicKey.toBase58();
+    const card = formatReviewCard({
+      tool: 'deposit\x1b[2J', programId: Keypair.generate().publicKey.toBase58(),
+      accounts: [{ name: 'vault\u202e', pubkey: address, isWritable: true }],
+      effects: { summary: 'Transfer\x1b[H approved' },
+      simulation: { logs: ['Program success\x1b[2J'] },
+    });
+    assert.ok(card.includes(address));
+    assert.doesNotMatch(card, /\x1b|\u202e/);
+    assert.match(card, /vault.*WRITABLE/);
   });
 
   it('promptApproval resolves true when user inputs "y" or "yes"', async () => {

@@ -1,4 +1,4 @@
-# Web3MCP Protocol Specification v0.1.0
+# Web3MCP Protocol Specification v0.1.0 with v0.2 read extension
 
 **Status**: Candidate under review (v0.1.0)
 **Standard**: `web3mcp`
@@ -72,7 +72,7 @@ The Config PDA account data begins with an 81-byte header followed by the UTF-8 
 
 ## 3. Configuration Envelope & Schema
 
-The UTF-8 config payload must be valid JSON conforming strictly to `https://web3mcp.org/schema/v0.1/config.schema.json`.
+The UTF-8 config payload must be valid JSON conforming strictly to `protocol/schema/config.schema.json`. The current validator accepts v0.1.x and v0.2.x; §8 defines the v0.2 extension.
 Object member names must be unique after JSON escape decoding at every depth; hosts reject duplicates before exposing tools.
 
 ```json
@@ -87,7 +87,7 @@ Object member names must be unique after JSON escape decoding at every depth; ho
 
 ### 3.1 Field Normative Rules
 - `standard`: Must be literal string `"web3mcp"`.
-- `version`: Semver string matching `^0\.1\.[0-9]+$`. Hosts must reject any major ≠ 0 or minor ≠ 1.
+- `version`: Semver string matching `^0\.[12]\.[0-9]+$`. Hosts must reject other versions.
 - `programId`: Base58 public key matching the account owner.
 - `idl`: Complete Anchor IDL JSON object in the Anchor IDL 0.1.0 format described in §3.2. Its `address` must equal `programId`.
 - `tools`: Array of Tool Descriptors.
@@ -171,7 +171,7 @@ A compliant host or validator must reject configurations under the following con
 | Binary | Payload is not valid UTF-8 JSON | Reject immediately |
 | Envelope | Duplicate decoded JSON member name | Reject immediately |
 | Envelope | `standard` ≠ `"web3mcp"` | Reject immediately |
-| Envelope | `version` does not match `^0\.1\.[0-9]+$` | Reject immediately |
+| Envelope | `version` does not match `^0\.[12]\.[0-9]+$` | Reject immediately |
 | Envelope | Unknown top-level fields | Reject immediately |
 | Schema | Duplicate tool names in `tools` | Reject immediately |
 | Schema | Tool name violates `^[a-z][a-z0-9_]{0,63}$` | Reject immediately |
@@ -199,3 +199,13 @@ The following capabilities are explicitly deferred and must not be assumed:
 - **Dynamic Account Resolution**: Address Lookup Tables (ALTs) and executable off-chain resolvers.
 - **Autonomous Signing**: Delegated signer keys or agent autonomous execution.
 - **View Instructions**: Simulating instruction execution to read state.
+
+## 8. v0.2 Account Read PDA Extension
+
+v0.2 adds one account-address source for `accountRead` tools only. The on-chain account layout, tool envelope, and instruction bindings remain as in v0.1. A v0.1 config using this source is invalid.
+
+```json
+{"source":"pda","seeds":[{"kind":"const","value":[118,97,117,108,116]},{"kind":"input","input":"ownerAddress"}]}
+```
+
+The host derives the read address with `findProgramAddressSync(seeds, programId)`, where `programId` is the discovered target program. `const` seeds are byte arrays of 1–32 bytes; `input` seeds reference required public-key inputs and use their decoded 32-byte values. A PDA binding has 1–15 seeds. The read still verifies account owner and IDL discriminator before decoding. An absent account returns `exists: false` with the derived address.

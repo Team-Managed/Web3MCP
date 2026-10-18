@@ -18,11 +18,8 @@ import { WalletError } from './errors.js';
  */
 export function loadKeypair(customPath?: string): Keypair {
   const defaultPath = path.join(os.homedir(), '.config/solana/id.json');
-  const targetPath = customPath
-    ? path.resolve(customPath)
-    : process.env.SOLANA_KEYPAIR_PATH
-    ? path.resolve(process.env.SOLANA_KEYPAIR_PATH)
-    : defaultPath;
+  const selectedPath = customPath || process.env.SOLANA_KEYPAIR_PATH || defaultPath;
+  const targetPath = path.resolve(selectedPath.startsWith('~/') ? path.join(os.homedir(), selectedPath.slice(2)) : selectedPath);
 
   if (!fs.existsSync(targetPath)) {
     throw new WalletError(
@@ -105,7 +102,7 @@ export async function requestDevnetAirdrop(
     const lamports = sol * LAMPORTS_PER_SOL;
     const signature = await connection.requestAirdrop(pubkey, lamports);
     const latestBlockhash = await connection.getLatestBlockhash('confirmed');
-    await connection.confirmTransaction(
+    const confirmation = await connection.confirmTransaction(
       {
         signature,
         blockhash: latestBlockhash.blockhash,
@@ -113,6 +110,7 @@ export async function requestDevnetAirdrop(
       },
       'confirmed'
     );
+    if (confirmation.value.err) throw new WalletError(`Airdrop transaction ${signature} failed: ${JSON.stringify(confirmation.value.err)}`);
     return connection.getBalance(pubkey, 'confirmed');
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : String(err);

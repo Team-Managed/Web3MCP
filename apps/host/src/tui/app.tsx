@@ -12,6 +12,7 @@ import type { ApprovalRequest, AgentProgressEvent } from '../agent/loop.js';
 import { extractProgramReference, resolveProgramReference } from './program-ref.js';
 import { SettingsPanel, type Provider, type Settings } from './settings.js';
 import type { CredentialStore } from './credentials.js';
+import type { Preferences } from './preferences.js';
 import { discoverWalletPaths } from './wallet-paths.js';
 
 type Line = { id: number; role: 'you' | 'agent' | 'system'; text: string };
@@ -22,11 +23,16 @@ const COMMANDS = [
   ['/rpc', 'Set Solana RPC URL'],
   ['/tools', 'Show discovered program tools'],
   ['/balance', 'Show wallet balance'],
-  ['/clear', 'Clear model conversation'],
+  ['/clear', 'Clear visible chat; keep model context'],
   ['/help', 'Show commands'],
   ['/back', 'Return to chat'],
   ['/exit', 'Exit'],
 ] as const;
+
+export function safeReviewText(value: unknown, limit = 240): string {
+  const clean = String(value ?? '').replace(/[\x00-\x1f\x7f-\x9f\u202a-\u202e\u2066-\u2069]/g, ' ');
+  return clean.length > limit ? `${clean.slice(0, limit)}… [truncated]` : clean;
+}
 
 export function TransactionReview({ request, walletAddress, onDecision }: { request: ApprovalRequest; walletAddress?: string; onDecision: (approved: boolean) => void }) {
   const logs = Array.isArray(request.simulation?.logs) ? request.simulation.logs : [];
@@ -36,15 +42,15 @@ export function TransactionReview({ request, walletAddress, onDecision }: { requ
   });
   return <Box marginTop={1} flexDirection="column" borderStyle="round" borderColor="yellow" paddingX={1}>
     <Text bold color="yellow">Transaction approval required</Text>
-    {walletAddress && <Text>Signing wallet {walletAddress}</Text>}
-    <Text>Tool {request.tool}  ·  Program {request.programId}</Text>
-    <Text wrap="wrap">Arguments {JSON.stringify(request.arguments)}</Text>
-    <Text wrap="wrap">Claimed effects {request.effects?.summary || 'State change'}{request.effects?.financial ? ' (financial)' : ''}</Text>
+    {walletAddress && <Text>Signing wallet {safeReviewText(walletAddress)}</Text>}
+    <Text>Tool {safeReviewText(request.tool)}  ·  Program {safeReviewText(request.programId)}</Text>
+    <Text wrap="wrap">Arguments {safeReviewText(JSON.stringify(request.arguments), 800)}</Text>
+    <Text wrap="wrap">Claimed effects {safeReviewText(request.effects?.summary || 'State change')}{request.effects?.financial ? ' (financial)' : ''}</Text>
     <Text wrap="wrap">Instruction data {request.instruction?.data?.toString('hex') || 'none'}</Text>
-    {request.accounts.map((account, index) => <Text key={index} wrap="wrap">{account.name}: {account.pubkey} {account.isSigner ? 'signer ' : ''}{account.isWritable ? 'writable' : 'read only'}</Text>)}
+    {request.accounts.map((account, index) => <Text key={index} wrap="wrap">{safeReviewText(account.name)}: {safeReviewText(account.pubkey)} {account.isSigner ? 'signer ' : ''}{account.isWritable ? 'writable' : 'read only'}</Text>)}
     <Text>Simulation {request.simulation?.err ? 'FAILED' : 'passed'}  ·  {request.simulation?.unitsConsumed ?? '?'} compute units</Text>
     <Text>Validator logs ({Math.min(logs.length, 8)} of {logs.length})</Text>
-    {logs.slice(0, 8).map((log: string, index: number) => <Text key={index} wrap="wrap">  {log.replace(/[\x00-\x1f\x7f]/g, ' ').slice(0, 240)}</Text>)}
+    {logs.slice(0, 8).map((log: string, index: number) => <Text key={index} wrap="wrap">  {safeReviewText(log)}</Text>)}
     <Text>Estimated fee {request.estimatedFeeLamports == null ? 'unavailable' : `${request.estimatedFeeLamports} lamports`}</Text>
     <Text wrap="wrap">Message SHA-256 {request.messageHash}</Text>
     <Text bold>Press s to sign this transaction with the selected keypair; n or Enter rejects.</Text>
@@ -62,13 +68,18 @@ export interface ChatOptions {
   walletPath?: string;
   walletPaths?: string[];
   signer?: Keypair | null;
+  onSettingsChange?: (settings: Preferences) => void;
 }
 
-export function ChatScreen({ sdk: initialSdk, programId, rpcUrl, model = '', provider = 'openai', apiKey = '', credentialStore, walletPath = '', walletPaths, signer: initialSigner = null }: ChatOptions) {
+export function ChatScreen({ sdk: initialSdk, programId, rpcUrl, model = '', provider = 'openai', apiKey = '', credentialStore, walletPath = '', walletPaths, signer: initialSigner = null, onSettingsChange }: ChatOptions) {
   const { exit } = useApp();
   const [settings, setSettings] = useState<Settings>({ provider, model, apiKey, walletPath, rpcUrl });
+  const settingsLoaded = useRef(false);
   const [runtimeSdk, setRuntimeSdk] = useState(() => initialSdk || new Web3McpSdk({ connection: new Connection(rpcUrl, 'confirmed') }));
   const sdkRef = useRef(runtimeSdk);
+  const activationRef = useRef(0);
+  const abortRef = useRef<AbortController | null>(null);
+  const broadcastingRef = useRef(false);
   const [signer, setSigner] = useState<Keypair | null>(initialSigner);
   const [detectedWallets, setDetectedWallets] = useState(() => walletPaths || discoverWalletPaths());
   const [view, setView] = useState<'settings' | 'chat' | 'commands' | 'models' | 'model-provider' | 'model-key' | 'model-manual'>('chat');
@@ -100,10 +111,18 @@ export function ChatScreen({ sdk: initialSdk, programId, rpcUrl, model = '', pro
     setLines(previous => [...previous, { id: previous.length, role, text }]);
   };
 
+  useEffect(() => {
+    if (!settingsLoaded.current) { settingsLoaded.current = true; return; }
+    try { onSettingsChange?.({ provider: settings.provider, model: settings.model,
+      walletPath: settings.walletPath, rpcUrl: settings.rpcUrl }); }
+    catch (error) { addLine('system', `Could not save settings: ${error instanceof Error ? error.message : String(error)}`); }
+  }, [settings.provider, settings.model, settings.walletPath, settings.rpcUrl]);
+
   async function activateProgram(nextProgram: string, targetSdk = runtimeSdk): Promise<{ programId: string; toolNames: string[] }> {
+    const activation = ++activationRef.current;
     setStatus('Discovering program tools');
     await targetSdk.discover(nextProgram);
-    if (targetSdk !== sdkRef.current) throw new Error('RPC changed during discovery; retry on the current endpoint.');
+    if (targetSdk !== sdkRef.current || activation !== activationRef.current) throw new Error('Program discovery was superseded; retry on the current endpoint.');
     const tools = targetSdk.getTools(nextProgram);
     setActiveProgram(nextProgram);
     setToolCount(tools.length);
@@ -114,13 +133,24 @@ export function ChatScreen({ sdk: initialSdk, programId, rpcUrl, model = '', pro
 
   useEffect(() => {
     const startSdk = runtimeSdk;
+    const startActivation = activationRef.current + 1;
     if (programId) void activateProgram(programId, startSdk).catch(error => {
-      if (startSdk !== sdkRef.current) return;
+      if (startSdk !== sdkRef.current || startActivation !== activationRef.current) return;
       setStatus('Discovery failed');
       addLine('system', error instanceof Error ? error.message : String(error));
     });
   }, []);
   useEffect(() => () => approval?.resolve(false), [approval]);
+  useEffect(() => () => abortRef.current?.abort(), []);
+
+  function requestExit(interrupted = false) {
+    if (broadcastingRef.current) { addLine('system', 'Transaction submission is in progress. Wait for its signature or failure before exiting.'); return; }
+    activationRef.current++;
+    abortRef.current?.abort();
+    approval?.resolve(false);
+    exit();
+    if (interrupted && process.stdin.isTTY) setTimeout(() => process.exit(130), 1000).unref();
+  }
 
   function finishApproval(approved: boolean) {
     approval?.resolve(approved);
@@ -132,15 +162,16 @@ export function ChatScreen({ sdk: initialSdk, programId, rpcUrl, model = '', pro
     const value = raw.trim();
     try {
       if (field === 'walletPath') {
-        const resolved = value.startsWith('~/') ? path.join(os.homedir(), value.slice(2)) : value;
+        const resolved = value ? path.resolve(value.startsWith('~/') ? path.join(os.homedir(), value.slice(2)) : value) : '';
         const nextSigner = resolved ? loadKeypairFromFile(resolved) : null;
         setSigner(nextSigner);
         setSettings(previous => ({ ...previous, walletPath: resolved }));
-        setAgent(null);
+        agent?.setSigner(nextSigner);
       } else if (field === 'rpcUrl') {
         const endpoint = new URL(value);
         if (!['http:', 'https:'].includes(endpoint.protocol)) throw new Error('RPC URL must use HTTP or HTTPS.');
         const nextSdk = new Web3McpSdk({ connection: new Connection(value, 'confirmed') });
+        activationRef.current++;
         sdkRef.current = nextSdk;
         setRuntimeSdk(nextSdk);
         setSettings(previous => ({ ...previous, rpcUrl: value }));
@@ -158,6 +189,13 @@ export function ChatScreen({ sdk: initialSdk, programId, rpcUrl, model = '', pro
   }
 
   async function chooseProvider(nextProvider: Provider) {
+    if (nextProvider === 'openai' && process.env.OPENAI_BASE_URL &&
+        new URL(process.env.OPENAI_BASE_URL).origin !== 'https://api.openai.com') {
+      const nextDraft = { provider: nextProvider, apiKey: '', newKey: false };
+      setModelDraft(nextDraft);
+      void showModels(nextDraft);
+      return;
+    }
     let storedKey = nextProvider === settings.provider ? settings.apiKey : '';
     try {
       if (!storedKey && credentialStore && nextProvider !== 'ollama') storedKey = await credentialStore.get(nextProvider);
@@ -207,7 +245,7 @@ export function ChatScreen({ sdk: initialSdk, programId, rpcUrl, model = '', pro
     const [name, ...args] = value.split(/\s+/);
     setView('chat');
     if (name === '/back') return;
-    if (name === '/exit' || name === '/quit') { exit(); return; }
+    if (name === '/exit' || name === '/quit') { requestExit(); return; }
     if (name === '/help') { addLine('system', COMMANDS.map(([cmd, label]) => `${cmd}  ${label}`).join('\n') + '\n/model <id>  Enter a model ID manually'); return; }
     if (name === '/model' && args.length) { await finishModel(args.join(' '), { provider: settings.provider, apiKey: settings.apiKey, newKey: false }); return; }
     if (name === '/model') { setSettingsError(''); setView('model-provider'); return; }
@@ -232,13 +270,13 @@ export function ChatScreen({ sdk: initialSdk, programId, rpcUrl, model = '', pro
       } catch (error) { addLine('system', error instanceof Error ? error.message : String(error)); }
       return;
     }
-    if (name === '/clear') { agent?.clearHistory(); addLine('system', 'Model conversation cleared.'); return; }
+    if (name === '/clear') { setLines([]); if (process.stdout.isTTY) process.stdout.write('\u001b[2J\u001b[H'); setStatus('Visible chat cleared; model context kept'); return; }
     addLine('system', `Unknown command ${name}. Type / for the command menu.`);
   }
 
   useInput((input, key) => {
+    if (key.ctrl && input === 'c') { requestExit(true); return; }
     if (approval) return;
-    if (key.ctrl && input === 'c') exit();
     if (busy) return;
     if (view === 'chat' && slashMatches.length && (key.upArrow || key.downArrow)) {
       setSlashSelected(value => (value + (key.downArrow ? 1 : slashMatches.length - 1)) % slashMatches.length);
@@ -269,11 +307,14 @@ export function ChatScreen({ sdk: initialSdk, programId, rpcUrl, model = '', pro
     if (message.startsWith('/')) { await command(message); return; }
     addLine('you', message);
     if (!settings.model) { addLine('system', 'Choose a model with /model before chatting.'); return; }
-    if (settings.provider !== 'ollama' && !settings.apiKey && !process.env[`${settings.provider.toUpperCase()}_API_KEY`]) {
+    if (settings.provider !== 'ollama' && !settings.apiKey && !process.env[`${settings.provider.toUpperCase()}_API_KEY`] &&
+        !(settings.provider === 'openai' && process.env.OPENAI_BASE_URL)) {
       addLine('system', `Set your ${settings.provider} API key with /model before chatting.`);
       return;
     }
     setBusy(true);
+    const controller = new AbortController();
+    abortRef.current = controller;
     setStatus('Thinking');
     setStream('');
     try {
@@ -293,15 +334,18 @@ export function ChatScreen({ sdk: initialSdk, programId, rpcUrl, model = '', pro
         if (event.type === 'discovery_result') setStatus(`Discovered ${event.toolNames.length} tools`);
         if (event.type === 'tool_call') addLine('system', `${event.kind === 'accountRead' ? 'Reading' : 'Preparing'} ${event.tool}`);
         if (event.type === 'simulation_result') addLine('system', `Simulation ${event.success ? 'succeeded' : 'failed'} for ${event.tool}`);
-        if (event.type === 'tool_result' && !event.success) addLine('system', `${event.tool}: ${event.summary || 'failed'}`);
-        if (event.type === 'broadcast_confirmed') addLine('system', `Confirmed ${event.signature}`);
-      });
+        if (event.type === 'broadcasting') broadcastingRef.current = true;
+        if (event.type === 'tool_result' && !event.success) { broadcastingRef.current = false; addLine('system', `${event.tool}: ${event.summary || 'failed'}`); }
+        if (event.type === 'broadcast_confirmed') { broadcastingRef.current = false; addLine('system', `Confirmed ${event.signature}${event.explorerUrl ? `\n${event.explorerUrl}` : ''}`); }
+      }, controller.signal);
       if (result) addLine('agent', result);
       setStatus('Ready');
     } catch (error) {
       setStatus('Error');
       addLine('system', error instanceof Error ? error.message : String(error));
     } finally {
+      if (abortRef.current === controller) abortRef.current = null;
+      broadcastingRef.current = false;
       setBusy(false);
       setStream('');
     }
@@ -367,7 +411,7 @@ export function ChatScreen({ sdk: initialSdk, programId, rpcUrl, model = '', pro
       defaultValue={draft}
       suggestions={draft.length > 1 && selectedCommand ? [selectedCommand, ...slashMatches.map(([name]) => name).filter(name => name !== selectedCommand)] : []}
       onChange={changeDraft}
-      onSubmit={value => { void submit(draft === '/' && slashSelectionActive ? selectedCommand || value : value); }}/></Box>}
+      onSubmit={value => { void submit(slashSelectionActive ? selectedCommand || value : value); }}/></Box>}
     {slashMatches.length > 0 && !busy && !approval && <Box flexDirection="column" marginLeft={3}>
       {slashMatches.map(([name, description], index) => <Text key={name} color={index === slashSelected && slashSelectionActive ? 'cyan' : undefined}
         dimColor={index !== slashSelected || !slashSelectionActive}>{index === slashSelected && slashSelectionActive ? '❯ ' : '  '}{name}  {description}</Text>)}

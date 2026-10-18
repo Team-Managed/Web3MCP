@@ -49,6 +49,31 @@ test('accepts a complete modern Anchor IDL and exact executable bindings', () =>
   assert.equal(validateConfig(config()).valid, true);
 });
 
+test('v0.2 read derives a PDA from a required owner public key', () => {
+  const candidate = config();
+  candidate.version = '0.2.0';
+  candidate.tools.push({
+    name: 'get_vault_by_owner',
+    inputSchema: { type: 'object', properties: { ownerAddress: publicKey }, required: ['ownerAddress'], additionalProperties: false },
+    solana: { kind: 'accountRead', account: 'Vault', accounts: { vault: { source: 'pda', seeds: [
+      { kind: 'const', value: [118, 97, 117, 108, 116] }, { kind: 'input', input: 'ownerAddress' },
+    ] } } },
+  });
+  assert.equal(validateConfig(candidate).valid, true);
+  candidate.version = '0.1.0';
+  assert.equal(validateConfig(candidate).valid, false, 'v0.1 hosts must reject the new binding');
+  candidate.version = '0.2.0';
+  candidate.tools[2].solana.accounts.vault.seeds[1].input = 'missing';
+  assert.equal(validateConfig(candidate).valid, false, 'PDA inputs must be declared and required');
+});
+
+test('v0.2 rejects PDA bindings on instruction tools', () => {
+  const candidate = config();
+  candidate.version = '0.2.0';
+  candidate.tools[0].solana.accounts.vault = { source: 'pda', seeds: [{ kind: 'const', value: [1] }] };
+  assert.equal(validateConfig(candidate).valid, false);
+});
+
 const badCases = [
   ['missing IDL address', (c) => { delete c.idl.address; }],
   ['missing IDL metadata', (c) => { delete c.idl.metadata; }],

@@ -153,6 +153,18 @@ describe('Web3McpAgent: Multi-Turn Loop, Grounding & Slash Commands (Ticket 03)'
     assert.equal(agent.getHistory()[0].role, 'system');
   });
 
+  it('keeps the initialize request when a wallet is selected after a failed write', () => {
+    const host = new Web3McpHost({ connection });
+    const agent = new Web3McpAgent({ host, llmClient: { chat: async () => ({ role: 'assistant', content: '' }) },
+      programId: dummyProgramId });
+    agent.messages.push({ role: 'user', content: 'initialize my vault' });
+    agent.messages.push({ role: 'assistant', content: 'Select a wallet first.' });
+    agent.setSigner(dummySigner);
+    assert.match(agent.getHistory()[0].content, new RegExp(dummySigner.publicKey.toBase58()));
+    assert.equal(agent.getHistory()[1].content, 'initialize my vault');
+    assert.equal(agent.signer, dummySigner);
+  });
+
   it('routes wallet approval rejection back to conversation without throwing unhandled exceptions', async () => {
     const host = new Web3McpHost({ connection });
     // Pre-populate discovered program context with reference vault tools

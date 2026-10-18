@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { Keypair, SystemProgram, Transaction } from '@solana/web3.js';
 import crypto from 'node:crypto';
+import { utils } from '@coral-xyz/anchor';
 import { Web3McpSdk, TransactionConfirmationUnknownError } from '../dist/index.js';
 
 function fixture() {
@@ -24,9 +25,10 @@ test('signed submission rejects changed messages and expired blockhashes before 
   let height = 50;
   let confirmationError = null;
   let confirmationThrows = false;
+  let broadcastThrows = false;
   const connection = {
     getBlockHeight: async () => height,
-    sendRawTransaction: async () => { sends++; return 'sig'; },
+    sendRawTransaction: async () => { sends++; if (broadcastThrows) throw new Error('fetch failed'); return 'sig'; },
     confirmTransaction: async () => {
       if (confirmationThrows) throw new Error('RPC timed out');
       return { value: { err: confirmationError } };
@@ -61,6 +63,12 @@ test('signed submission rejects changed messages and expired blockhashes before 
     assert.ok(error instanceof TransactionConfirmationUnknownError);
     assert.equal(error.signature, 'sig');
     assert.match(error.message, /check its status before retrying/i);
+    return true;
+  });
+  broadcastThrows = true;
+  await assert.rejects(sdk.submitSignedTransaction(prepared, signed), error => {
+    assert.ok(error instanceof TransactionConfirmationUnknownError);
+    assert.equal(error.signature, utils.bytes.bs58.encode(signed.signature));
     return true;
   });
 });

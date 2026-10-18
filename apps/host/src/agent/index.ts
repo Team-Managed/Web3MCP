@@ -98,6 +98,11 @@ export class Web3McpAgent {
     this.initSystemPrompt();
   }
 
+  setSigner(signer: Keypair | null): void {
+    this.signer = signer;
+    this.initSystemPrompt(true);
+  }
+
   /**
    * Returns current conversation messages.
    */
@@ -137,7 +142,8 @@ export class Web3McpAgent {
   async prompt(
     userInput: string,
     onToken?: (token: string) => void,
-    onProgress?: (event: import('./loop.js').AgentProgressEvent) => void
+    onProgress?: (event: import('./loop.js').AgentProgressEvent) => void,
+    signal?: AbortSignal
   ): Promise<string> {
     const cmdResult = await this.handleCommand(userInput);
     if (cmdResult.handled) {
@@ -161,6 +167,7 @@ export class Web3McpAgent {
         return result;
       } : undefined,
       onProgress,
+      signal,
     });
   }
 }

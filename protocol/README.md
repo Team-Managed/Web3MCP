@@ -1,6 +1,6 @@
 # Web3MCP Protocol
 
-Candidate specification, JSON Schema, validation logic, and conformance vectors for Web3MCP v0.1. The supported Anchor IDL 0.1.0 profile and initial semantic binding checks are implemented; adversarial vectors and local-validator publication checks remain under review.
+Candidate specification, JSON Schema, validation logic, and conformance vectors for Web3MCP v0.1 and the v0.2 account-read PDA extension. The supported Anchor IDL 0.1.0 profile and initial semantic binding checks are implemented; adversarial vectors remain under review.
 
 ## Structure
 
@@ -67,6 +67,8 @@ Query operations that read and decode program account state:
 - `account`: Name of target account type defined in the IDL.
 - `accounts`: Exactly one target query address binding (via `input`, `program`, or `signer`).
 - `effects`: **Forbidden** on `accountRead` tools. Schema validation fails closed if present.
+
+In v0.2, the one target binding may instead use `{"source":"pda","seeds":[...]}`. Seeds are literal byte arrays or required public-key inputs; the PDA is derived under the discovered program ID. See [the specification](SPEC.md#8-v02-account-read-pda-extension).
 
 ## On-Chain Account Layout
 

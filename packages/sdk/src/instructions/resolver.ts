@@ -1,5 +1,5 @@
 import { PublicKey } from '@solana/web3.js';
-import { ValidationError } from '../errors.js';
+import { AccountResolutionError } from '../errors.js';
 import { normalizeAccountName } from '../accounts/coder.js';
 
 /**
@@ -38,18 +38,18 @@ export function resolveInstructionAccounts({ idlInstruction, toolAccounts = {}, 
     if (binding) {
       if (binding.source === 'signer') {
         if (!signerPubkey) {
-          throw new ValidationError(`Signer is required for instruction account '${acc.name}'.`);
+          throw new AccountResolutionError(`Signer is required for instruction account '${acc.name}'.`);
         }
         resolvedAccounts.set(acc.name, signerPubkey);
       } else if (binding.source === 'input') {
         const rawVal = args[binding.input];
         if (!rawVal) {
-          throw new ValidationError(`Missing required input argument '${binding.input}' for account '${acc.name}'.`);
+          throw new AccountResolutionError(`Missing required input argument '${binding.input}' for account '${acc.name}'.`);
         }
         try {
           resolvedAccounts.set(acc.name, new PublicKey(rawVal));
         } catch (err) {
-          throw new ValidationError(`Invalid public key for input argument '${binding.input}': ${err.message}`);
+          throw new AccountResolutionError(`Invalid public key for input argument '${binding.input}': ${err.message}`);
         }
       } else if (binding.source === 'program') {
         const addr = binding.address || acc.address || programId;
@@ -70,7 +70,7 @@ export function resolveInstructionAccounts({ idlInstruction, toolAccounts = {}, 
     const isIdlSource = binding && binding.source === 'idl';
     if (isIdlSource || (acc.pda && !resolvedAccounts.has(acc.name))) {
       if (!acc.pda || !Array.isArray(acc.pda.seeds)) {
-        throw new ValidationError(`Account '${acc.name}' declared with source 'idl' has no PDA seeds defined in IDL.`);
+        throw new AccountResolutionError(`Account '${acc.name}' declared with source 'idl' has no PDA seeds defined in IDL.`);
       }
 
       const seedBuffers = [];
@@ -82,7 +82,7 @@ export function resolveInstructionAccounts({ idlInstruction, toolAccounts = {}, 
           } else if (typeof seed.value === 'string') {
             seedBuffers.push(Buffer.from(seed.value, 'utf8'));
           } else {
-            throw new ValidationError(`Unsupported const seed value type at seed index ${i} for account '${acc.name}'.`);
+            throw new AccountResolutionError(`Unsupported const seed value type at seed index ${i} for account '${acc.name}'.`);
           }
         } else if (seed.kind === 'account') {
           const pathName = seed.path;
@@ -97,7 +97,7 @@ export function resolveInstructionAccounts({ idlInstruction, toolAccounts = {}, 
             }
           }
           if (!refPubkey) {
-            throw new ValidationError(
+            throw new AccountResolutionError(
               `Cannot derive PDA for '${acc.name}': referenced account seed '${pathName}' has not been resolved.`
             );
           }
@@ -106,7 +106,7 @@ export function resolveInstructionAccounts({ idlInstruction, toolAccounts = {}, 
           const pathName = seed.path;
           const argVal = args[pathName];
           if (argVal === undefined || argVal === null) {
-            throw new ValidationError(
+            throw new AccountResolutionError(
               `Cannot derive PDA for '${acc.name}': referenced argument seed '${pathName}' is missing.`
             );
           }
@@ -126,7 +126,7 @@ export function resolveInstructionAccounts({ idlInstruction, toolAccounts = {}, 
             seedBuffers.push(Buffer.from(String(argVal), 'utf8'));
           }
         } else {
-          throw new ValidationError(`Unsupported seed kind '${seed.kind}' for account '${acc.name}'.`);
+          throw new AccountResolutionError(`Unsupported seed kind '${seed.kind}' for account '${acc.name}'.`);
         }
       }
 
@@ -156,7 +156,7 @@ export function resolveInstructionAccounts({ idlInstruction, toolAccounts = {}, 
     }
 
     if (!pubkey) {
-      throw new ValidationError(`Account '${acc.name}' could not be resolved for instruction '${idlInstruction.name}'.`);
+      throw new AccountResolutionError(`Account '${acc.name}' could not be resolved for instruction '${idlInstruction.name}'.`);
     }
 
     const binding = findBinding(acc.name);

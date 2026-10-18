@@ -43,6 +43,7 @@ export interface ExecuteTurnParams {
       messages: Array<any>;
       tools?: Array<any>;
       onToken?: (token: string) => void;
+      signal?: AbortSignal;
     }) => Promise<{ role: string; content: string; toolCalls?: Array<AgentToolCall> }>;
   };
   host: Web3McpSdk;
@@ -52,6 +53,7 @@ export interface ExecuteTurnParams {
   onToken?: (token: string) => void;
   onApprovalRequest?: ApprovalHandler;
   onProgress?: AgentProgressHandler;
+  signal?: AbortSignal;
   maxTurns?: number;
 }
 
@@ -73,25 +75,44 @@ export async function executeAgentTurn({
   onToken,
   onApprovalRequest,
   onProgress,
+  signal,
   maxTurns = 5,
 }: ExecuteTurnParams): Promise<string> {
   let activeProgramId = programId;
   let turnsCount = 0;
+  const readFailures = new Set<string>();
 
   while (turnsCount < maxTurns) {
+    signal?.throwIfAborted();
     turnsCount++;
     const tools = onDiscoverProgram && !activeProgramId ? [] : host.toOpenAiTools(activeProgramId);
-    if (onDiscoverProgram) {
-      if (tools.some((tool: any) => tool.function?.name === 'web3mcp_host_discover_program')) {
-        throw new Error('Program tool conflicts with the host discovery tool.');
-      }
+    const advertisedNames = new Set(tools.map((tool: any) => tool.function?.name));
+    const hostName = (base: string) => {
+      let name = base;
+      for (let suffix = 1; advertisedNames.has(name); suffix++) name = `${base}_${suffix}`;
+      advertisedNames.add(name);
+      return name;
+    };
+    const resolverName = tools.length && typeof host.resolveToolAccounts === 'function'
+      ? hostName('web3mcp_host_resolve_accounts') : null;
+    const discoveryName = onDiscoverProgram ? hostName('web3mcp_host_discover_program') : null;
+    if (resolverName) {
       tools.unshift({ type: 'function', function: {
-        name: 'web3mcp_host_discover_program',
+        name: resolverName,
+        description: 'Resolve account addresses, including IDL-defined PDAs, for a published instruction tool using the selected wallet public key. Does not sign, simulate, or submit. Use the returned PDA for accountRead tools that require its address.',
+        parameters: { type: 'object', properties: {
+          tool: { type: 'string', description: 'Published instruction tool name' },
+          arguments: { type: 'object', description: 'Arguments for that instruction tool', additionalProperties: true },
+        }, required: ['tool'], additionalProperties: false },
+      } } as any);
+    }
+    if (discoveryName) {
+      tools.unshift({ type: 'function', function: {
+        name: discoveryName,
         description: 'Resolve a Solana program ID or .sns name, validate its Web3MCP config PDA, and register its published tools for the next turn.',
         parameters: { type: 'object', properties: { reference: { type: 'string', description: 'Solana program ID or .sns name' } }, required: ['reference'], additionalProperties: false },
       } } as any);
     }
-    const advertisedNames = new Set(tools.map((tool: any) => tool.function?.name));
 
     onProgress?.({ type: 'thinking', turn: turnsCount });
 
@@ -99,7 +120,9 @@ export async function executeAgentTurn({
       messages,
       tools,
       onToken,
+      signal,
     });
+    signal?.throwIfAborted();
 
     const assistantMsg: any = {
       role: 'assistant',
@@ -124,13 +147,20 @@ export async function executeAgentTurn({
       return response.content;
     }
 
+    if (turnsCount === maxTurns) {
+      for (const call of response.toolCalls) messages.push({ role: 'tool', tool_call_id: call.id,
+        content: JSON.stringify({ error: 'Conversation turn limit reached before tool execution.' }) });
+      return 'Reached maximum conversation turn limit. The final requested tools were not executed; check the preceding results for any earlier transactions.';
+    }
+
     // Process all proposed tool calls
     let discoveredThisTurn = false;
-    for (const toolCall of response.toolCalls) {
+    for (const [callIndex, toolCall] of response.toolCalls.entries()) {
+      signal?.throwIfAborted();
       const toolName = toolCall.name;
       const toolArgs = toolCall.arguments || {};
 
-      if (toolName === 'web3mcp_host_discover_program' && onDiscoverProgram) {
+      if (toolName === discoveryName && onDiscoverProgram) {
         try {
           if (typeof toolArgs.reference !== 'string' || !toolArgs.reference.trim()) throw new Error('A program ID or .sns name is required.');
           const found = await onDiscoverProgram(toolArgs.reference);
@@ -139,6 +169,7 @@ export async function executeAgentTurn({
           onProgress?.({ type: 'discovery_result', programId: found.programId, toolNames: found.toolNames });
           messages.push({ role: 'tool', tool_call_id: toolCall.id, content: JSON.stringify(found) });
         } catch (err: any) {
+          if (signal?.aborted) throw err;
           messages.push({ role: 'tool', tool_call_id: toolCall.id, content: JSON.stringify({ error: err.message }) });
         }
         continue;
@@ -150,6 +181,22 @@ export async function executeAgentTurn({
       }
       if (onDiscoverProgram && (discoveredThisTurn || !advertisedNames.has(toolName))) {
         messages.push({ role: 'tool', tool_call_id: toolCall.id, content: JSON.stringify({ error: `Tool '${toolName}' was not advertised for this turn. Discover the program first.` }) });
+        continue;
+      }
+
+      if (toolName === resolverName && advertisedNames.has(toolName)) {
+        try {
+          if (typeof toolArgs.tool !== 'string' || !toolArgs.tool.trim()) throw new Error('A published instruction tool name is required.');
+          const args = toolArgs.arguments ?? {};
+          if (!args || typeof args !== 'object' || Array.isArray(args)) throw new Error('Instruction arguments must be an object.');
+          const accounts = host.resolveToolAccounts(toolArgs.tool, args as Record<string, unknown>, {
+            programId: activeProgramId, ...(signer ? { signer: signer.publicKey } : {}),
+          });
+          messages.push({ role: 'tool', tool_call_id: toolCall.id, content: JSON.stringify({ accounts }) });
+        } catch (err: any) {
+          if (signal?.aborted) throw err;
+          messages.push({ role: 'tool', tool_call_id: toolCall.id, content: JSON.stringify({ error: err.message }) });
+        }
         continue;
       }
 
@@ -188,6 +235,13 @@ export async function executeAgentTurn({
             content: JSON.stringify({ error: err.message }),
           });
           onProgress?.({ type: 'tool_result', tool: toolName, success: false, summary: err.message });
+          const failure = `${toolName}: ${err.message}`;
+          if (readFailures.has(failure)) {
+            for (const pending of response.toolCalls.slice(callIndex + 1)) messages.push({ role: 'tool', tool_call_id: pending.id,
+              content: JSON.stringify({ error: 'Skipped after a repeated read failure.' }) });
+            return `I could not complete ${toolName}: ${err.message}. I stopped retrying the same failed read.`;
+          }
+          readFailures.add(failure);
         }
       } else if (toolKind === 'instruction') {
         try {
@@ -197,6 +251,7 @@ export async function executeAgentTurn({
             signer: signer?.publicKey,
             programId: activeProgramId,
           });
+          signal?.throwIfAborted();
 
           onProgress?.({
             type: 'simulation_result',
@@ -238,15 +293,23 @@ export async function executeAgentTurn({
           }
 
           if (approved) {
+            signal?.throwIfAborted();
             if (!signer) {
               throw new Error('Cannot sign transaction: no signer keypair configured on host.');
             }
             onProgress?.({ type: 'broadcasting', tool: toolName });
             prep.transaction.sign(signer);
             const broadcastResult = await host.submitSignedTransaction(prep, prep.transaction);
-            const explorerUrl = host.connection.rpcEndpoint?.includes('devnet')
-              ? `https://explorer.solana.com/tx/${broadcastResult.signature}?cluster=devnet`
-              : undefined;
+            let explorerUrl: string | undefined;
+            try {
+              const genesis = await host.connection.getGenesisHash();
+              const cluster = ({
+                EtWTRABZaYq6iMfeYKouRu166VU2xqa1wcaWoxPkrZBG: 'devnet',
+                '5eykt4UsFv8P8NJdTREpY1vzqKqZKvdpKuc147dw2N9d': 'mainnet-beta',
+                '4uhcVJyU9pJkvQyS88uRDiswHXSCkY3zQawwpjk2NsNY': 'testnet',
+              } as Record<string, string>)[genesis];
+              if (cluster) explorerUrl = `https://explorer.solana.com/tx/${broadcastResult.signature}?cluster=${cluster}`;
+            } catch { /* A confirmed signature remains valid when Explorer network lookup fails. */ }
 
             onProgress?.({
               type: 'broadcast_confirmed',
@@ -280,6 +343,7 @@ export async function executeAgentTurn({
             });
           }
         } catch (err: any) {
+          if (signal?.aborted) throw err;
           const uncertain = err instanceof TransactionConfirmationUnknownError;
           messages.push({
             role: 'tool',

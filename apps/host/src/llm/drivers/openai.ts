@@ -7,6 +7,7 @@ export interface ChatParams {
   onToken?: (token: string) => void;
   temperature?: number;
   maxTokens?: number;
+  signal?: AbortSignal;
 }
 
 type ToolCallDelta = OpenAI.Chat.Completions.ChatCompletionChunk.Choice.Delta.ToolCall & {
@@ -46,8 +47,8 @@ export class OpenAiCompatibleDriver {
       throw new LlmError('A model name must be explicitly specified (e.g. via options.model, --model, or LLM_MODEL).');
     }
     this.client = new OpenAI({
-      apiKey: apiKey || process.env.OPENAI_API_KEY || 'ollama',
-      baseURL: baseURL || process.env.OPENAI_BASE_URL,
+      apiKey: apiKey || 'ollama',
+      baseURL,
       defaultHeaders,
     });
     this.model = model;
@@ -60,6 +61,7 @@ export class OpenAiCompatibleDriver {
     onToken,
     temperature = 0.2,
     maxTokens = 1024,
+    signal,
   }: Partial<ChatParams> = {}) {
     const formattedTools = tools.length > 0 ? (tools as unknown as Array<OpenAI.Chat.Completions.ChatCompletionTool>) : undefined;
     const maxRetries = 3;
@@ -78,7 +80,7 @@ export class OpenAiCompatibleDriver {
           ...(!this.useOpenAiParameters || !/^(?:gpt-[56]|o\d)/i.test(this.model) ? { temperature } : {}),
           ...(this.useOpenAiParameters ? { max_completion_tokens: maxTokens } : { max_tokens: maxTokens }),
           stream: true,
-        });
+        }, { signal });
 
         let content = '';
         const toolCallsMap = new Map<number, ToolCallEntry>();
@@ -142,7 +144,7 @@ export class OpenAiCompatibleDriver {
       } catch (err: any) {
         attempt++;
         const isRateLimit = err?.status === 429 || (err?.message && err.message.includes('429'));
-        if (isRateLimit && attempt <= maxRetries) {
+        if (!signal?.aborted && isRateLimit && attempt <= maxRetries) {
           let delayMs = 15000;
           const match = err.message?.match(/retry in ([0-9.]+)s/i);
           if (match && match[1]) {
