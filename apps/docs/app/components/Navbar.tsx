@@ -20,7 +20,7 @@ export default function Navbar({
           <span className="dock-logo-glyph">W3</span>
         </Link>
 
-        {/* The 3 exact requested links */}
+        {/* Main Nav Links */}
         <div className="dock-links-row">
           <Link href="/docs/latest" className="dock-text-link">
             Docs
@@ -57,8 +57,8 @@ export default function Navbar({
 
       <style jsx>{`
         .navbar-floating-container {
-          position: ${isSticky ? "sticky" : "absolute"};
-          top: ${isSticky ? "16px" : "24px"};
+          position: fixed;
+          top: 20px;
           left: 0;
           right: 0;
           width: 100%;
@@ -68,7 +68,7 @@ export default function Navbar({
           display: flex;
           align-items: center;
           justify-content: space-between;
-          z-index: 50;
+          z-index: 100;
           pointer-events: none;
         }
 

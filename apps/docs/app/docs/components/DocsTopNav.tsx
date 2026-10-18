@@ -18,14 +18,6 @@ export default function DocsTopNav() {
           <Link href="/docs/latest" className="nav-link is-active">
             DOCUMENTATION
           </Link>
-          <a
-            href="https://github.com/Team-Managed/Web3MCP/releases"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="nav-link"
-          >
-            CHANGELOG
-          </a>
 
           <a
             href="https://solscan.io/account/HfA1ExZS1cgYR5k5GEJmsQfyAcDK2J9NPi7p97dU3WLD?cluster=devnet"

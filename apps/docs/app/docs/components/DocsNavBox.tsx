@@ -66,17 +66,6 @@ export default function DocsNavBox({
           );
         })}
 
-        {/* Bottom Changelog entry */}
-        <div className="nav-category-group bottom-group">
-          <a
-            href="https://github.com/Team-Managed/Web3MCP/releases"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="nav-item-btn changelog-btn"
-          >
-            <span className="item-title">Changelog</span>
-          </a>
-        </div>
       </div>
 
       <style jsx>{`
