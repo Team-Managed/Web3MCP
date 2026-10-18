@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { Search, ChevronDown, ExternalLink, Edit2, Copy, Check } from "lucide-react";
+import { Search, ExternalLink, Edit2, Copy, Check } from "lucide-react";
 import { DocSection } from "../../data/docsContent";
 import DevnetPlayground from "./DevnetPlayground";
 import DocsPagination from "./DocsPagination";
@@ -32,8 +32,8 @@ export default function DocsArticleBox({
   };
 
   const renderTextWithLinks = (text: string) => {
-    const programId = "GgVnzvsMhHHKeeGnqQhU9KAjBeCVhYiYmR17174Lyrgv";
-    const pdaId = "HfA1ExZS1cgYR5k5GEJmsQfyAcDK2J9NPi7p97dU3WLD";
+    const programId = "9zJzM4rHDPR4pd3vXHQjQ7whTVmx4zxB3ZH4Gb9iXRwD";
+    const pdaId = "J8Ph37LoQsv4yED6USdupCooCZzsVMqJkgBTm9uSkvCw";
 
     const regex = new RegExp(`(${programId}|${pdaId})`, "g");
     const parts = text.split(regex);
@@ -84,10 +84,7 @@ export default function DocsArticleBox({
           <h1 className="serif-article-title">{section.title}</h1>
 
           <div className="article-header-actions">
-            <button className="version-dropdown-btn">
-              <span>LATEST</span>
-              <ChevronDown size={12} />
-            </button>
+            <span className="version-dropdown-btn">CURRENT</span>
             <a
               href="https://github.com/Team-Managed/Web3MCP/blob/main/protocol/SPEC.md"
               target="_blank"
@@ -98,7 +95,7 @@ export default function DocsArticleBox({
               <ExternalLink size={14} />
             </a>
             <a
-              href="https://github.com/Team-Managed/Web3MCP/edit/main/docs/protocol-spec.md"
+              href="https://github.com/Team-Managed/Web3MCP/edit/staging/apps/docs/app/data/docsContent.ts"
               target="_blank"
               rel="noopener noreferrer"
               className="action-icon-link"

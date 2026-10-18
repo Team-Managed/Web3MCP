@@ -173,7 +173,7 @@ async function createDeck() {
       },
       {
         text: {
-          text: "PROTOCOL SPECIFICATION v0.1.0 · STRICT ON-CHAIN DISCOVERY",
+          text: "CANDIDATE v0.1 · v0.2 READ EXTENSION · ON-CHAIN DISCOVERY",
           options: {
             x: 0.8,
             y: 5.25,
@@ -256,7 +256,7 @@ async function createDeck() {
     margin: 0
   });
 
-  slide1.addText("Open-source specification · reference implementation · frozen v0.1", {
+  slide1.addText("Candidate specification · Devnet reference program · compatible host", {
     x: 1.3,
     y: 4.15,
     w: 7.4,
@@ -344,7 +344,7 @@ async function createDeck() {
   const impactCards = [
     { title: "SILOED ADAPTERS", val: "Bespoke code required per project" },
     { title: "SINGLE POINT OF FAILURE", val: "Server crashes break agent workflows" },
-    { title: "ZERO ON-CHAIN PROOF", val: "No cryptographic verification of tools" }
+    { title: "CUSTOM INTEGRATIONS", val: "Tool descriptions vary by server" }
   ];
 
   impactCards.forEach((c, idx) => {
@@ -465,9 +465,9 @@ async function createDeck() {
 
   // 3 Architectural Highlights
   const highlights = [
-    { title: "ZERO MIDDLEWARE", desc: "No servers, no web scraping, no third-party APIs" },
+    { title: "DIRECT DISCOVERY", desc: "No project-specific MCP server or website required" },
     { title: "PROGRAM OWNED", desc: "Configuration PDA is strictly owned by the program ID" },
-    { title: "STRICT DECOUPLING", desc: "Host never imports program source or IDL (ADR 0007)" }
+    { title: "GENERIC HOST", desc: "Host reads the embedded IDL from the config PDA" }
   ];
 
   highlights.forEach((h, idx) => {
@@ -522,7 +522,7 @@ async function createDeck() {
     line: { color: "331826", width: 1.5 }
   });
 
-  slide4.addText("AGENT / LLM RUNTIME", {
+  slide4.addText("MODEL + HOST RUNTIME", {
     x: 1.1,
     y: 2.15,
     w: 3.3,
@@ -550,7 +550,7 @@ async function createDeck() {
   const leftTags = [
     "✓ Discovers tools via public RPC",
     "✓ Proposes parameters & instructions",
-    "✓ Simulates transaction effects",
+    "✓ Host simulates proposed transaction",
     "⛔ ZERO SIGNING AUTHORITY"
   ];
 
@@ -593,7 +593,7 @@ async function createDeck() {
     line: { color: COLOR_PINK, width: 1.5 }
   });
 
-  slide4.addText("HUMAN WALLET", {
+  slide4.addText("HOST + USER", {
     x: 5.85,
     y: 2.15,
     w: 3.0,
@@ -606,7 +606,7 @@ async function createDeck() {
     margin: 0
   });
 
-  slide4.addText("Sole Signing Authority", {
+  slide4.addText("Local keypair approval", {
     x: 5.85,
     y: 2.45,
     w: 3.0,
@@ -619,10 +619,10 @@ async function createDeck() {
   });
 
   const rightTags = [
-    "✓ Reviews exact accounts & lamports",
-    "✓ Inspects simulation & network fee",
-    "✓ Explicit human cryptographic sign",
-    "⚡ IMMUTABLE CLUSTER BROADCAST"
+    "✓ Reviews program, accounts & arguments",
+    "✓ Inspects simulation & fee estimate",
+    "✓ Presses s to sign with selected keypair",
+    "⚡ HOST SUBMITS SIGNED TRANSACTION"
   ];
 
   rightTags.forEach((t, idx) => {
@@ -647,9 +647,9 @@ async function createDeck() {
 
   // 3 Giant Stats
   const statChips = [
-    { num: "9", label: "CHUNKS STREAMED" },
-    { num: "6.7KB", label: "IDL & TOOL MANIFEST" },
-    { num: "100%", label: "SHA-256 INTEGRITY" }
+    { num: "5", label: "PUBLISHED TOOLS" },
+    { num: "v0.2", label: "READ PDA EXTENSION" },
+    { num: "SHA-256", label: "PAYLOAD DIGEST" }
   ];
 
   statChips.forEach((s, idx) => {
@@ -698,26 +698,26 @@ async function createDeck() {
   });
 
   slide5.addText("PROGRAM ID", { x: 1.1, y: 3.55, w: 2.2, h: 0.25, fontSize: 8.5, fontFace: FONT_SANS, bold: true, color: COLOR_PINK, charSpacing: 1.5, margin: 0 });
-  slide5.addText("GgVnzvsMhHHKeeGnqQhU9KAjBeCVhYiYmR17174Lyrgv", { x: 3.2, y: 3.55, w: 5.7, h: 0.25, fontSize: 10, fontFace: FONT_SANS, color: COLOR_WHITE, margin: 0 });
+  slide5.addText("9zJzM4rHDPR4pd3vXHQjQ7whTVmx4zxB3ZH4Gb9iXRwD", { x: 3.2, y: 3.55, w: 5.7, h: 0.25, fontSize: 10, fontFace: FONT_SANS, color: COLOR_WHITE, margin: 0 });
 
   slide5.addText("CONFIG PDA", { x: 1.1, y: 3.9, w: 2.2, h: 0.25, fontSize: 8.5, fontFace: FONT_SANS, bold: true, color: COLOR_PINK, charSpacing: 1.5, margin: 0 });
-  slide5.addText("HfA1ExZS1cgYR5k5GEJmsQfyAcDK2J9NPi7p97dU3WLD  (seeds: [\"web3mcp\", \"config\"])", { x: 3.2, y: 3.9, w: 5.7, h: 0.25, fontSize: 10, fontFace: FONT_SANS, color: COLOR_WHITE, margin: 0 });
+  slide5.addText("J8Ph37LoQsv4yED6USdupCooCZzsVMqJkgBTm9uSkvCw  (seeds: [\"web3mcp\", \"config\"])", { x: 3.2, y: 3.9, w: 5.7, h: 0.25, fontSize: 10, fontFace: FONT_SANS, color: COLOR_WHITE, margin: 0 });
 
-  slide5.addText("VERIFIED TOOLS", { x: 1.1, y: 4.25, w: 2.2, h: 0.25, fontSize: 8.5, fontFace: FONT_SANS, bold: true, color: COLOR_PINK, charSpacing: 1.5, margin: 0 });
-  slide5.addText("get_vault (read) · initialize, deposit, withdraw (instructions)", { x: 3.2, y: 4.25, w: 5.7, h: 0.25, fontSize: 10, fontFace: FONT_SANS, color: COLOR_GRAY, margin: 0 });
+  slide5.addText("PUBLISHED TOOLS", { x: 1.1, y: 4.25, w: 2.2, h: 0.25, fontSize: 8.5, fontFace: FONT_SANS, bold: true, color: COLOR_PINK, charSpacing: 1.5, margin: 0 });
+  slide5.addText("get_vault, get_vault_by_owner (reads) · initialize, deposit, withdraw", { x: 3.2, y: 4.25, w: 5.7, h: 0.25, fontSize: 9, fontFace: FONT_SANS, color: COLOR_GRAY, margin: 0 });
 
   // -------------------------------------------------------------
   // SLIDE 6: ROADMAP (Visual Stepped Pipeline)
   // -------------------------------------------------------------
   const slide6 = pptx.addSlide({ masterName: "CLEAN_MASTER" });
-  addHeader(slide6, "ROADMAP", "From Protocol Freeze to Production");
+  addHeader(slide6, "ROADMAP", "From Candidate Protocol to Interoperability Demo");
 
   const phases = [
-    { num: "01", name: "SPEC v0.1", tag: "FROZEN", color: COLOR_PINK },
+    { num: "01", name: "SPEC v0.1", tag: "REVIEW", color: COLOR_PINK },
     { num: "02", name: "VAULT", tag: "DEVNET", color: COLOR_PINK },
     { num: "03", name: "HOST", tag: "ACTIVE", color: COLOR_WHITE },
-    { num: "04", name: "WALLET", tag: "NEXT", color: COLOR_GRAY },
-    { num: "05", name: "DEMO", tag: "Q1", color: COLOR_GRAY }
+    { num: "04", name: "WALLET", tag: "ACTIVE", color: COLOR_WHITE },
+    { num: "05", name: "2ND PROG", tag: "PENDING", color: COLOR_GRAY }
   ];
 
   phases.forEach((p, idx) => {
@@ -775,7 +775,7 @@ async function createDeck() {
   // -------------------------------------------------------------
   const slide7 = pptx.addSlide({ masterName: "CLEAN_MASTER" });
 
-  slide7.addText("THE OPEN STANDARD", {
+  slide7.addText("OPEN PROTOCOL CANDIDATE", {
     x: 0.8,
     y: 1.4,
     w: 8.4,

@@ -16,29 +16,29 @@ const FEATURES: FeatureConfig[] = [
     id: "discovery",
     num: "01",
     badge: "DYNAMIC ON-CHAIN DISCOVERY",
-    stageTitle: "web3mcp-host · Discovery (gemini-3.8-flash)",
-    figCaption: "Fig. 01 | On-Chain Tool Manifest Discovery (Zero Build-Time IDLs)",
+    stageTitle: "Illustrative host discovery",
+    figCaption: "Fig. 01 | Published tool discovery without a local program IDL",
   },
   {
     id: "reads",
     num: "02",
     badge: "FEE-FREE ACCOUNT READS",
-    stageTitle: "web3mcp-host · Tool Query (get_vault)",
-    figCaption: "Fig. 02 | Signature-Free State Query & Balance Check (Zero RPC Fees)",
+    stageTitle: "Illustrative account read",
+    figCaption: "Fig. 02 | Account read without a transaction signature",
   },
   {
     id: "schema",
     num: "03",
     badge: "SCALAR INPUT BOUNDS",
-    stageTitle: "web3mcp-host · Conversational Guidance",
+    stageTitle: "Illustrative model guidance",
     figCaption: "Fig. 03 | Strict Schema Scalar Guidance & Conversational Fallback",
   },
   {
     id: "approval",
     num: "04",
     badge: "WALLET APPROVAL BOUNDARY",
-    stageTitle: "web3mcp-host · Terminal Review Card",
-    figCaption: "Fig. 04 | Pre-Flight Transaction Simulation & Wallet Approval Boundary",
+    stageTitle: "Illustrative transaction review",
+    figCaption: "Fig. 04 | Simulation and explicit local keypair approval",
   },
 ];
 
@@ -85,7 +85,7 @@ export default function HomeStoryGrid() {
             How Web3MCP Works
           </h2>
           <p className="section-lead-subtitle">
-            From dynamic on-chain discovery to fee-free account state inspection and wallet-approved transaction execution.
+            From on-chain discovery to signature-free account reads and wallet-approved transactions.
           </p>
         </header>
 
@@ -112,46 +112,51 @@ export default function HomeStoryGrid() {
           <div className="stage-canvas">
             <div key={activeIdx} className="cli-terminal-stream">
               {/* =========================================================
-                  FEATURE 01: AGENT BOOT & TOOL DISCOVERY
-                  Matches exact CLI output upon launching host:agent
+                  FEATURE 01: ILLUSTRATIVE HOST DISCOVERY
                   ========================================================= */}
               {activeIdx === 0 && (
                 <div className="cli-flow-view">
                   <div className="cli-bash-line">
                     <span className="p-dollar">$</span>
-                    <span className="p-cmd">npm run host:agent -- --model gemini-3.8-flash</span>
+                    <span className="p-cmd">npm run host -- --program 9zJzM4rHDPR4pd3vXHQjQ7whTVmx4zxB3ZH4Gb9iXRwD</span>
                   </div>
 
                   <div className="cli-section-block">
                     <div className="cli-bullet-heading">
                       <span className="bullet-sym">•</span>
-                      <span className="heading-text">Web3MCP Agent</span>
+                      <span className="heading-text">Web3MCP Compatible Host</span>
                       <span className="heading-sub">(Solana Devnet)</span>
                     </div>
                     <div className="cli-kv-table">
                       <div className="kv-item">
                         <span className="kv-label">Program</span>
-                        <span className="kv-value">GgVnzvsMhHHKeeGnqQhU9KAjBeCVhYiYmR17174Lyrgv</span>
+                        <span className="kv-value">9zJzM4rHDPR4pd3vXHQjQ7whTVmx4zxB3ZH4Gb9iXRwD</span>
                       </div>
                       <div className="kv-item">
                         <span className="kv-label">Wallet</span>
-                        <span className="kv-value">CniPSdkAUaNTfZZUSKvAKU2VJuWecRjqvGhDmQjGSZEG <span className="text-dim">(Connected)</span></span>
+                        <span className="kv-value">FXmx4ZiVk5hEUbYnJhFoW49DZzhTu51gJgxyHeqYXvGT <span className="text-dim">(example)</span></span>
                       </div>
                       <div className="kv-item">
                         <span className="kv-label">Model</span>
-                        <span className="kv-value">gemini-3.8-flash <span className="text-dim">(via gemini)</span></span>
+                        <span className="kv-value">gpt-6-luna <span className="text-dim">(via OpenAI)</span></span>
                       </div>
                     </div>
                   </div>
 
                   <div className="cli-section-block">
-                    <div className="cli-sub-title">Discovered Tools (4):</div>
+                    <div className="cli-sub-title">Discovered Tools (5):</div>
                     <div className="cli-tools-list">
                       <div className="tool-row">
                         <span className="t-dot">•</span>
                         <span className="t-name">get_vault</span>
                         <span className="t-tag tag-read">[read]</span>
                         <span className="t-desc">Reads on-chain account state for a specified program vault</span>
+                      </div>
+                      <div className="tool-row">
+                        <span className="t-dot">•</span>
+                        <span className="t-name">get_vault_by_owner</span>
+                        <span className="t-tag tag-read">[read]</span>
+                        <span className="t-desc">Derives a vault PDA from its owner wallet address</span>
                       </div>
                       <div className="tool-row">
                         <span className="t-dot">•</span>
@@ -174,9 +179,9 @@ export default function HomeStoryGrid() {
                     </div>
                   </div>
 
-                  <div className="cli-dim-note">Commands: /help, /tools, /balance, /keygen, /clear, /exit</div>
+                  <div className="cli-dim-note">Commands: /model, /wallet, /rpc, /tools, /balance, /clear, /exit</div>
                   <div className="cli-rule">────────────────────────────────────────────────────</div>
-                  <div className="cli-session-meta">gemini-3.8-flash | devnet | GgVnzvsM...4Lyrgv</div>
+                  <div className="cli-session-meta">gpt-6-luna | devnet | 9zJzM4rH...9iXRw</div>
                   <div className="cli-active-cursor">
                     <span className="cli-prompt-chevron">&gt;</span> <span className="cursor-blink">_</span>
                   </div>
@@ -184,41 +189,40 @@ export default function HomeStoryGrid() {
               )}
 
               {/* =========================================================
-                  FEATURE 02: READ-ONLY TOOL CALL (can I withdraw 5 SOL?)
-                  Matches exact CLI turn for get_vault on-chain read
+                  FEATURE 02: ILLUSTRATIVE READ-ONLY TOOL CALL
                   ========================================================= */}
               {activeIdx === 1 && (
                 <div className="cli-flow-view">
-                  <div className="cli-session-meta">gemini-3.8-flash | devnet | GgVnzvsM...4Lyrgv</div>
+                  <div className="cli-session-meta">gpt-6-luna | devnet | 9zJzM4rH...9iXRw</div>
                   <div className="cli-user-command">&gt; can I withdraw 5 SOL?</div>
                   <div className="cli-thinking-state">⠇ Thinking...</div>
 
                   <div className="cli-tool-invocation">
                     <span className="bullet-sym">•</span>
-                    <span>Calling tool <span className="tool-hl">get_vault</span> <span className="t-tag tag-read">[read]</span>(vaultOwner: &quot;CniPSdkAUa...mQjGSZEG&quot;)...</span>
+                    <span>Calling tool <span className="tool-hl">get_vault_by_owner</span> <span className="t-tag tag-read">[read]</span>(ownerAddress: &quot;FXmx4Zi...eqYXvGT&quot;)...</span>
                   </div>
                   <div className="cli-invocation-res">
                     <span className="check-mark">✓</span>
-                    <span>Query resolved successfully</span>
+                    <span>Illustrative account response</span>
                   </div>
 
                   <div className="cli-section-block">
                     <div className="cli-bullet-heading">
                       <span className="bullet-sym">•</span>
-                      <span className="heading-text">Vault Balance Check</span>
+                      <span className="heading-text">Example vault read</span>
                     </div>
                     <div className="cli-kv-table">
                       <div className="kv-item">
                         <span className="kv-label">Vault Address:</span>
-                        <span className="kv-value">7Nm9VsUWReKcBrheRDDjPqv6qB3Ag9UwxCabnd11TwXB</span>
+                        <span className="kv-value">Dw3ak3bJ6aYUgXrDgMAZNwBen4HS4ipTUawVvkNLd6wr</span>
                       </div>
                       <div className="kv-item">
                         <span className="kv-label">Owner:</span>
-                        <span className="kv-value">CniPSdkAUaNTfZZUSKvAKU2VJuWecRjqvGhDmQjGSZEG</span>
+                        <span className="kv-value">FXmx4ZiVk5hEUbYnJhFoW49DZzhTu51gJgxyHeqYXvGT</span>
                       </div>
                       <div className="kv-item">
-                        <span className="kv-label">Current Balance:</span>
-                        <span className="kv-value">35,001,000 lamports (~0.035 SOL)</span>
+                        <span className="kv-label">Example Balance:</span>
+                        <span className="kv-value">Example: 35,001,000 lamports</span>
                       </div>
                     </div>
                   </div>
@@ -228,7 +232,7 @@ export default function HomeStoryGrid() {
                     <div className="cli-body-text">You cannot withdraw 5 SOL right now.</div>
                     <div className="cli-bullet-list">
                       <div>• Requested: 5 SOL (5,000,000,000 lamports)</div>
-                      <div>• Available in Vault: ~0.035001 SOL (35,001,000 lamports)</div>
+                      <div>• Example available: 0.035001 SOL (35,001,000 lamports)</div>
                       <div>• Shortfall: ~4.964999 SOL (4,964,999,000 lamports)</div>
                     </div>
                     <div className="cli-body-text text-dim">
@@ -237,7 +241,7 @@ export default function HomeStoryGrid() {
                   </div>
 
                   <div className="cli-rule">────────────────────────────────────────────────────</div>
-                  <div className="cli-session-meta">gemini-3.8-flash | devnet | GgVnzvsM...4Lyrgv</div>
+                  <div className="cli-session-meta">gpt-6-luna | devnet | 9zJzM4rH...9iXRw</div>
                   <div className="cli-active-cursor">
                     <span className="cli-prompt-chevron">&gt;</span> <span className="cursor-blink">_</span>
                   </div>
@@ -246,11 +250,11 @@ export default function HomeStoryGrid() {
 
               {/* =========================================================
                   FEATURE 03: CONVERSATIONAL GUIDANCE (deposit 10% balance)
-                  Matches exact CLI turn for scalar inputs & wallet guidance
+                  Illustrative scalar input and wallet guidance
                   ========================================================= */}
               {activeIdx === 2 && (
                 <div className="cli-flow-view">
-                  <div className="cli-session-meta">gemini-3.8-flash | devnet | GgVnzvsM...4Lyrgv</div>
+                  <div className="cli-session-meta">gpt-6-luna | devnet | 9zJzM4rH...9iXRw</div>
                   <div className="cli-user-command">&gt; deposit 10% of my remaining wallet balance into the vault</div>
                   <div className="cli-thinking-state">⠇ Thinking...</div>
 
@@ -260,7 +264,7 @@ export default function HomeStoryGrid() {
                       <span className="heading-text">Wallet Balance Required</span>
                     </div>
                     <div className="cli-body-text">
-                      The available on-chain tools allow reading vault PDA state (<span className="tool-hl">get_vault</span>), but do not include a direct query for your external wallet&apos;s native SOL balance.
+                      The published vault tools read vault state. Use <span className="tool-hl">/balance</span> to check your selected wallet&apos;s SOL balance before choosing an amount.
                     </div>
                   </div>
 
@@ -276,7 +280,7 @@ export default function HomeStoryGrid() {
                     <div className="cli-sub-title">Units and Considerations</div>
                     <div className="cli-bullet-list">
                       <div>• 1 SOL = 1,000,000,000 lamports (strict u64 decimal string)</div>
-                      <div>• Always leave a small amount of SOL (at least 0.005 SOL) to cover network fees.</div>
+                      <div>• Leave enough SOL in your wallet for transaction fees.</div>
                     </div>
                     <div className="cli-body-text text-dim">
                       Once you provide the amount, I will prepare the deposit transaction for your wallet review.
@@ -284,7 +288,7 @@ export default function HomeStoryGrid() {
                   </div>
 
                   <div className="cli-rule">────────────────────────────────────────────────────</div>
-                  <div className="cli-session-meta">gemini-3.8-flash | devnet | GgVnzvsM...4Lyrgv</div>
+                  <div className="cli-session-meta">gpt-6-luna | devnet | 9zJzM4rH...9iXRw</div>
                   <div className="cli-active-cursor">
                     <span className="cli-prompt-chevron">&gt;</span> <span className="cursor-blink">_</span>
                   </div>
@@ -292,12 +296,11 @@ export default function HomeStoryGrid() {
               )}
 
               {/* =========================================================
-                  FEATURE 04: TRANSACTION REVIEW CARD & WALLET APPROVAL
-                  Matches exact CLI Terminal Review Card
+                  FEATURE 04: ILLUSTRATIVE TRANSACTION REVIEW
                   ========================================================= */}
               {activeIdx === 3 && (
                 <div className="cli-flow-view">
-                  <div className="cli-session-meta">gemini-3.8-flash | devnet | GgVnzvsM...4Lyrgv</div>
+                  <div className="cli-session-meta">gpt-6-luna | devnet | 9zJzM4rH...9iXRw</div>
                   <div className="cli-user-command">&gt; deposit 0.1 SOL into the vault</div>
                   <div className="cli-thinking-state">⠇ Thinking...</div>
 
@@ -307,7 +310,7 @@ export default function HomeStoryGrid() {
                   </div>
                   <div className="cli-invocation-res">
                     <span className="check-mark">✓</span>
-                    <span>Simulated successfully against Devnet RPC (4,563 CUs)</span>
+                    <span>Example simulation passed against Devnet RPC</span>
                   </div>
 
                   <div className="cli-rule">────────────────────────────────────────────────────</div>
@@ -319,7 +322,7 @@ export default function HomeStoryGrid() {
                   <div className="cli-review-fields">
                     <div className="rf-row">
                       <span className="rf-k">Program:</span>
-                      <span className="rf-v">GgVnzvsMhHHKeeGnqQhU9KAjBeCVhYiYmR17174Lyrgv</span>
+                      <span className="rf-v">9zJzM4rHDPR4pd3vXHQjQ7whTVmx4zxB3ZH4Gb9iXRwD</span>
                     </div>
                     <div className="rf-row">
                       <span className="rf-k">Tool:</span>
@@ -331,29 +334,29 @@ export default function HomeStoryGrid() {
                     </div>
                     <div className="rf-row">
                       <span className="rf-k">Signer:</span>
-                      <span className="rf-v text-dim">CniPSdkAUaNTfZZUSKvAKU2VJuWecRjqvGhDmQjGSZEG</span>
+                      <span className="rf-v text-dim">FXmx4ZiVk5hEUbYnJhFoW49DZzhTu51gJgxyHeqYXvGT</span>
                     </div>
                     <div className="rf-row">
-                      <span className="rf-k">Derived PDA:</span>
-                      <span className="rf-v text-dim">HfA1ExZS1cgYR5k5GEJmsQfyAcDK2J9NPi7p97dU3WLD</span>
+                      <span className="rf-k">Vault PDA:</span>
+                      <span className="rf-v text-dim">Dw3ak3bJ6aYUgXrDgMAZNwBen4HS4ipTUawVvkNLd6wr</span>
                     </div>
                     <div className="rf-row">
                       <span className="rf-k">Compute Units:</span>
-                      <span className="rf-v text-dim">4,563 CUs</span>
+                      <span className="rf-v text-dim">Example: 4,563 CUs</span>
                     </div>
                     <div className="rf-row">
                       <span className="rf-k">Network Fee:</span>
-                      <span className="rf-v text-dim">5,000 lamports</span>
+                      <span className="rf-v text-dim">Estimated fee shown by host</span>
                     </div>
                     <div className="rf-row">
-                      <span className="rf-k">Effects:</span>
+                      <span className="rf-k">Claimed effects:</span>
                       <span className="rf-v">Transfers native SOL to on-chain vault</span>
                     </div>
                   </div>
 
                   <div className="cli-rule">────────────────────────────────────────────────────</div>
                   <div className="cli-wallet-prompt">
-                    <span className="prompt-q-text">? Approve and broadcast transaction to Devnet? [y/N] › </span>
+                    <span className="prompt-q-text">Press s to sign with selected keypair; n or Enter rejects › </span>
                     <span className="cursor-blink">_</span>
                   </div>
                 </div>
@@ -378,10 +381,10 @@ export default function HomeStoryGrid() {
               Smart contracts publish typed tool declarations directly into canonical on-chain Config PDAs derived from seeds <code>[&quot;web3mcp&quot;, &quot;config&quot;]</code>.
             </p>
             <p>
-              When an agent host starts up, it queries the target Program ID over standard Solana RPC. It discovers available tools dynamically (<code>get_vault</code>, <code>initialize</code>, <code>deposit</code>, <code>withdraw</code>) and JIT-compiles dynamic Borsh encoders with zero build-time IDL imports.
+              When asked about a program ID, the host queries Solana RPC and validates its config PDA. The current reference program advertises five tools, including <code>get_vault_by_owner</code>. The host uses the published IDL without importing a local one.
             </p>
             <p>
-              If a program upgrades and adds or modifies instructions on-chain, every connected agent across the network automatically discovers the changes without code redeployments or package updates.
+              Compatible hosts can discover updated tools when they fetch and revalidate the published config.
             </p>
           </div>
 
@@ -400,7 +403,7 @@ export default function HomeStoryGrid() {
               Read-only tools (<code>accountRead</code>) execute via standard Solana RPC <code>getAccountInfo</code>. The host verifies program ownership and the Anchor 8-byte discriminator, deserializes binary PDA data into structured JSON, and returns it directly to the model loop.
             </p>
             <p>
-              Point-in-time state inspection requires <strong>0 network transaction fees</strong>, <strong>0 wallet signatures</strong>, and executes with sub-second RPC latency.
+              Account reads require <strong>no Solana transaction fee</strong> and <strong>no wallet signature</strong>. RPC providers may have their own usage limits or charges.
             </p>
           </div>
 
@@ -416,10 +419,10 @@ export default function HomeStoryGrid() {
               Protocol inputs are strictly restricted to three scalar primitives: <code>u64</code> (decimal strings), <code>boolean</code>, and <code>publicKey</code> (Base58 strings). This eliminates numeric precision loss, IEEE-754 floating-point ambiguity, and schema hallucinations.
             </p>
             <p>
-              When a user prompt involves relative or missing values (such as &quot;deposit 10% of my wallet balance&quot;), the agent host fails safe. Because external native SOL balances require wallet context, the model informs the user and conversationally requests exact lamports or SOL amounts.
+              When a request lacks a usable amount, the model can ask for one. The <code>/balance</code> command shows the selected wallet&apos;s SOL balance.
             </p>
             <p>
-              Agents never guess or hallucinate parameters; every argument is validated against normative JSON Schema with <code>additionalProperties: false</code>.
+              Models can still propose bad parameters. The host validates each tool argument before any read or transaction.
             </p>
           </div>
 
@@ -438,7 +441,7 @@ export default function HomeStoryGrid() {
               State-changing tools (<code>instruction</code>) halt execution immediately. The host resolves accounts across 4 declarative tiers, simulates the transaction on live Solana RPC (<code>simulateTransaction</code>), and displays the high-contrast Terminal Review Card.
             </p>
             <p>
-              Signing occurs exclusively after explicit human keystroke confirmation (<code>[y/N]</code>). If aborted or denied, the transaction is discarded without on-chain side effects or key exposure.
+              The CLI signs with the selected local keypair only after you press <code>s</code>. Press <code>n</code> or Enter to reject.
             </p>
             <div className="docs-action">
               <Link href="/docs/latest" className="story-cta-box">

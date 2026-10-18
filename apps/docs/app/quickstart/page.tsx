@@ -8,14 +8,17 @@ import {
   Terminal,
   Shield,
   Zap,
-  CheckCircle2,
   ArrowRight,
   ChevronRight,
-  ExternalLink,
 } from "lucide-react";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 import PixelCanvas from "../components/PixelCanvas";
+
+const PROGRAM_ID = "9zJzM4rHDPR4pd3vXHQjQ7whTVmx4zxB3ZH4Gb9iXRwD";
+const launchCommand = ["npm ci", "npm --prefix packages/sdk run build", "npm --prefix apps/host run build", "npm run host"].join("\n");
+const readPrompt = "Read my vault using program ID " + PROGRAM_ID;
+const depositPrompt = "Deposit 0.05 SOL into my vault using program ID " + PROGRAM_ID;
 
 export default function QuickstartPage() {
   const [copiedId, setCopiedId] = useState<string | null>(null);
@@ -37,423 +40,191 @@ export default function QuickstartPage() {
       <Navbar isSticky maxWidth="1200px" />
 
       <main className="quickstart-main-container">
-        {/* Header Breadcrumb & Eyebrow */}
         <header className="qs-header">
           <div className="qs-breadcrumb">
             <Link href="/" className="crumb-link">Home</Link>
             <ChevronRight size={12} className="crumb-sep" />
             <span className="crumb-current">Quickstart</span>
           </div>
-
           <div className="qs-badge-row">
-            <span className="qs-badge">GET STARTED IN 60 SECONDS</span>
+            <span className="qs-badge">RUN FROM THIS REPOSITORY</span>
             <span className="qs-tag">SOLANA DEVNET</span>
           </div>
-
-          <h1 className="qs-title">Protocol Quickstart</h1>
-
+          <h1 className="qs-title">Use the Web3MCP Compatible Host</h1>
           <p className="qs-subtitle">
-            Discover on-chain program capabilities over standard Solana RPC, execute signature-free account reads,
-            simulate instruction executions, and launch an autonomous conversational agent with wallet approval.
+            Build the local host, discover a program from its on-chain config, read your vault,
+            and review a simulated transaction before signing.
           </p>
         </header>
 
-        {/* Top 3 Product Capabilities Bar */}
         <div className="highlights-grid">
           <div className="highlight-card">
             <Zap size={16} className="text-cyan" />
             <div className="hl-text">
-              <span className="hl-title">01 · On-Chain Tool Discovery</span>
-              <span className="hl-desc">Discover tools directly from program Config PDAs with zero Docker daemons</span>
+              <span className="hl-title">01 · Discover</span>
+              <span className="hl-desc">Load five published tools from the program-owned config PDA.</span>
             </div>
           </div>
           <div className="highlight-card">
             <Terminal size={16} className="text-purple" />
             <div className="hl-text">
-              <span className="hl-title">02 · Signature-Free Account Reads</span>
-              <span className="hl-desc">Inspect live Anchor state over RPC with zero wallet signatures or fees</span>
+              <span className="hl-title">02 · Read</span>
+              <span className="hl-desc">Read a vault by its owner wallet address without signing.</span>
             </div>
           </div>
           <div className="highlight-card">
             <Shield size={16} className="text-emerald" />
             <div className="hl-text">
-              <span className="hl-title">03 · Air-Gapped Wallet Safety Seam</span>
-              <span className="hl-desc">LLM proposes instructions; host simulates deltas; only your wallet signs</span>
+              <span className="hl-title">03 · Review</span>
+              <span className="hl-desc">Sign a write only after the host shows its simulated transaction.</span>
             </div>
           </div>
         </div>
 
-        {/* ================= STEP 1: PREREQUISITES ================= */}
         <section className="qs-step-card" id="step-prerequisites">
           <div className="step-num-pill">[ 01 ]</div>
-          <h2 className="step-heading">Prerequisites & Environment Setup</h2>
+          <h2 className="step-heading">Prepare your local environment</h2>
           <p className="step-body-p">
-            Ensure your local terminal has Node.js and the Solana CLI configured for Devnet. No special API keys
-            are required for inspection and reads; an LLM API key is only needed for the conversational agent.
+            Use Node.js 22 or later. A model API key is needed for hosted model chat.
+            Reads can run without a wallet; writes need a local keypair and Devnet SOL.
+            The default RPC endpoint is Solana Devnet.
           </p>
-
           <div className="prereq-grid">
             <div className="prereq-box">
-              <span className="prereq-name">1. Node.js & npm</span>
-              <span className="prereq-ver">v18.0.0 or higher</span>
+              <span className="prereq-name">Node.js</span>
+              <span className="prereq-ver">22 or later</span>
               <code className="prereq-cmd">node --version</code>
             </div>
             <div className="prereq-box">
-              <span className="prereq-name">2. Solana CLI Wallet</span>
-              <span className="prereq-ver">Devnet Keypair (~/.config/solana/id.json)</span>
-              <code className="prereq-cmd">solana address</code>
+              <span className="prereq-name">Source</span>
+              <span className="prereq-ver">Team-Managed/Web3MCP</span>
+              <code className="prereq-cmd">git clone git@github.com:Team-Managed/Web3MCP.git</code>
             </div>
             <div className="prereq-box">
-              <span className="prereq-name">3. Solana Devnet RPC</span>
-              <span className="prereq-ver">api.devnet.solana.com</span>
-              <code className="prereq-cmd">solana config get</code>
+              <span className="prereq-name">Wallet for writes</span>
+              <span className="prereq-ver">Local Solana keypair JSON</span>
+              <code className="prereq-cmd">Use /wallet inside the host</code>
             </div>
           </div>
-
           <div className="tip-box">
             <div className="tip-icon">💡</div>
             <div className="tip-content">
-              <strong>Need testnet SOL?</strong> Request devnet lamports with{" "}
-              <code>solana airdrop 1 --url devnet</code> or run the agent CLI with <code>/balance</code> to view current funds.
+              <strong>Devnet SOL:</strong> Fund your selected wallet through a Devnet faucet
+              or use <code>solana airdrop 1 --url devnet</code> if you have Solana CLI configured.
             </div>
           </div>
         </section>
 
-        {/* ================= STEP 2: INSTANT DISCOVERY ================= */}
-        <section className="qs-step-card" id="step-discovery">
+        <section className="qs-step-card" id="step-launch">
           <div className="step-num-pill">[ 02 ]</div>
-          <h2 className="step-heading">Discover On-Chain Tools in 10 Seconds</h2>
+          <h2 className="step-heading">Build and start the host</h2>
           <p className="step-body-p">
-            Run discovery directly against the deployed Reference Vault program on Solana Devnet. The host inspects
-            the program ID, resolves the canonical Config PDA, validates the SHA-256 digest on-chain, and extracts
-            all published tools from the embedded Anchor IDL.
+            Run these commands from the repository root. The CLI opens directly in chat.
+            The SDK and Host CLI are workspace packages; npm publication is pending.
           </p>
-
           <div className="code-card">
             <div className="code-header">
               <span className="code-title">Terminal</span>
-              <button
-                onClick={() =>
-                  handleCopy("cmd-discover", "npx @web3mcp discover GgVnzvsMhHHKeeGnqQhU9KAjBeCVhYiYmR17174Lyrgv")
-                }
-                className="code-copy-btn"
-              >
-                {copiedId === "cmd-discover" ? <Check size={12} /> : <Copy size={12} />}
-                <span>{copiedId === "cmd-discover" ? "Copied" : "Copy"}</span>
+              <button onClick={() => handleCopy("launch", launchCommand)} className="code-copy-btn">
+                {copiedId === "launch" ? <Check size={12} /> : <Copy size={12} />}
+                <span>{copiedId === "launch" ? "Copied" : "Copy"}</span>
               </button>
             </div>
-            <pre className="code-block">
-              <code>npx @web3mcp discover GgVnzvsMhHHKeeGnqQhU9KAjBeCVhYiYmR17174Lyrgv</code>
-            </pre>
-          </div>
-
-          <div className="output-card">
-            <div className="output-header">
-              <span className="output-title">Host Inspection Output</span>
-            </div>
-            <pre className="output-block">
-              <code>{`✔ Canonical Config PDA resolved: HfA1ExZS1cgYR5k5GEJmsQfyAcDK2J9NPi7p97dU3WLD
-✔ Account discriminator valid: 0x991dc793e1358b35
-✔ Account status: 2 (Published)
-✔ On-chain SHA-256 digest verified
-✔ Discovered 4 tools from embedded Anchor IDL:
-  • get_vault      [read]        Reads on-chain account state for a specified program vault
-  • initialize     [instruction] Initializes a personal vault PDA for depositing SOL
-  • deposit        [instruction] Transfers SOL from connected wallet into program vault
-  • withdraw       [instruction] Withdraws SOL from program vault back to connected wallet`}</code>
-            </pre>
+            <pre className="code-block"><code>{launchCommand}</code></pre>
           </div>
         </section>
 
-        {/* ================= STEP 3: SIGNATURE-FREE READ ================= */}
-        <section className="qs-step-card" id="step-read">
+        <section className="qs-step-card" id="step-setup">
           <div className="step-num-pill">[ 03 ]</div>
-          <h2 className="step-heading">Execute Signature-Free Account Reads</h2>
+          <h2 className="step-heading">Set up model and wallet in chat</h2>
           <p className="step-body-p">
-            Read-only queries (<code>accountRead</code>) execute via standard RPC <code>getAccountInfo</code>.
-            Web3MCP dynamically resolves the target PDA from IDL seeds, enforces program ownership, verifies the
-            Anchor 8-byte discriminator (<code>0xd0e83b384dcdd105</code>), and deserializes state into JSON. Zero wallet
-            signatures and zero transaction fees.
+            Type <code>/model</code> to choose a provider, enter or reuse its masked API key,
+            and select a model. Type <code>/wallet</code> to choose a detected keypair or enter
+            its path. Type <code>/rpc</code> to change the endpoint. Slash commands appear as you type;
+            use Up, Down, and Enter to select them.
           </p>
-
-          <div className="code-card">
-            <div className="code-header">
-              <span className="code-title">Terminal</span>
-              <button
-                onClick={() =>
-                  handleCopy(
-                    "cmd-read",
-                    `npx @web3mcp read get_vault '{"vaultOwner":"CniPSdkAUaNTfZZUSKvAKU2VJuWecRjqvGhDmQjGSZEG"}' --program GgVnzvsMhHHKeeGnqQhU9KAjBeCVhYiYmR17174Lyrgv`
-                  )
-                }
-                className="code-copy-btn"
-              >
-                {copiedId === "cmd-read" ? <Check size={12} /> : <Copy size={12} />}
-                <span>{copiedId === "cmd-read" ? "Copied" : "Copy"}</span>
-              </button>
+          <div className="tip-box">
+            <div className="tip-icon">🔐</div>
+            <div className="tip-content">
+              API keys are saved in the operating system credential store when available.
+              The wallet path, provider, model, and RPC URL persist in a local settings file.
             </div>
-            <pre className="code-block">
-              <code>{`npx @web3mcp read get_vault '{"vaultOwner":"CniPSdkAUaNTfZZUSKvAKU2VJuWecRjqvGhDmQjGSZEG"}' --program GgVnzvsMhHHKeeGnqQhU9KAjBeCVhYiYmR17174Lyrgv`}</code>
-            </pre>
-          </div>
-
-          <div className="output-card">
-            <div className="output-header">
-              <span className="output-title">Decoded Account JSON</span>
-            </div>
-            <pre className="output-block">
-              <code>{`{
-  "owner": "CniPSdkAUaNTfZZUSKvAKU2VJuWecRjqvGhDmQjGSZEG",
-  "balance": "35001000",
-  "bump": 255
-}`}</code>
-            </pre>
           </div>
         </section>
 
-        {/* ================= STEP 4: PRE-SIMULATION ================= */}
-        <section className="qs-step-card" id="step-simulation">
+        <section className="qs-step-card" id="step-discovery">
           <div className="step-num-pill">[ 04 ]</div>
-          <h2 className="step-heading">Pre-Simulate State-Changing Instructions</h2>
+          <h2 className="step-heading">Discover and read the reference vault</h2>
           <p className="step-body-p">
-            Before any transaction is presented for wallet approval, the host executes a 6-stage preparation pipeline:
-            it validates arguments against strict scalar schemas, resolves accounts across 4 tiers (signer, input, program,
-            and IDL PDA seeds), serializes Anchor binary data, and runs a pre-flight simulation against live Solana RPC.
+            Ask about the current Devnet program. The host validates its config PDA
+            and offers the five published tools to the model on the next turn.
+            If you have no selected wallet, include the owner's public address in your read request.
           </p>
-
           <div className="code-card">
             <div className="code-header">
-              <span className="code-title">Terminal</span>
-              <button
-                onClick={() =>
-                  handleCopy(
-                    "cmd-prep",
-                    `npx @web3mcp prepare deposit '{"amount":"50000000"}' --signer CniPSdkAUaNTfZZUSKvAKU2VJuWecRjqvGhDmQjGSZEG --program GgVnzvsMhHHKeeGnqQhU9KAjBeCVhYiYmR17174Lyrgv`
-                  )
-                }
-                className="code-copy-btn"
-              >
-                {copiedId === "cmd-prep" ? <Check size={12} /> : <Copy size={12} />}
-                <span>{copiedId === "cmd-prep" ? "Copied" : "Copy"}</span>
+              <span className="code-title">Chat prompt</span>
+              <button onClick={() => handleCopy("read", readPrompt)} className="code-copy-btn">
+                {copiedId === "read" ? <Check size={12} /> : <Copy size={12} />}
+                <span>{copiedId === "read" ? "Copied" : "Copy"}</span>
               </button>
             </div>
-            <pre className="code-block">
-              <code>{`npx @web3mcp prepare deposit '{"amount":"50000000"}' --signer CniPSdkAUaNTfZZUSKvAKU2VJuWecRjqvGhDmQjGSZEG --program GgVnzvsMhHHKeeGnqQhU9KAjBeCVhYiYmR17174Lyrgv`}</code>
-            </pre>
+            <pre className="code-block"><code>{readPrompt}</code></pre>
           </div>
-
-          <div className="output-card">
-            <div className="output-header">
-              <span className="output-title">Simulation Report</span>
-            </div>
-            <pre className="output-block">
-              <code>{`✔ Instruction compiled: Program GgVnzvsMhHHKeeGnqQhU9KAjBeCVhYiYmR17174Lyrgv
-  Accounts Resolved:
-    • owner (signer, writable)    : CniPSdkAUaNTfZZUSKvAKU2VJuWecRjqvGhDmQjGSZEG
-    • vault (writable, PDA)       : 7Nm9VsUWReKcBrheRDDjPqv6qB3Ag9UwXCabnd11TwXB
-    • system_program (readonly)   : 11111111111111111111111111111111
-✔ RPC Simulation Passed: 4,563 CUs consumed
-✔ Financial effects verified: Transfers 50,000,000 lamports from user to vault`}</code>
-            </pre>
-          </div>
+          <p className="step-body-p">
+            <code>get_vault_by_owner(ownerAddress)</code> derives the vault PDA and reads it.
+            <code> get_vault(vaultAddress)</code> reads an exact PDA. An uninitialized vault is
+            reported as absent; a read does not ask for a signature.
+          </p>
         </section>
 
-        {/* ================= STEP 5: INTERACTIVE AGENT SESSION ================= */}
-        <section className="qs-step-card" id="step-agent">
+        <section className="qs-step-card" id="step-approval">
           <div className="step-num-pill">[ 05 ]</div>
-          <h2 className="step-heading">Launch Conversational Agent with Wallet Approval</h2>
+          <h2 className="step-heading">Review a proposed deposit</h2>
           <p className="step-body-p">
-            Launch the interactive AI agent runner. Connect to your model of choice (Google Gemini, Anthropic Claude,
-            OpenAI GPT, Groq, or local Ollama). Discovered tools are injected natively as JSON Schema. The model reasons
-            and proposes actions; the host simulates every instruction and presents a terminal review card requiring
-            explicit keystroke confirmation (<code>[y/N]</code>) before signing.
+            With a funded wallet selected, ask the agent to deposit an amount you choose.
+            It prepares and simulates the instruction, then shows the target program,
+            accounts, arguments, claimed effects, logs, fee estimate, and message hash.
+            Press <code>s</code> to sign with your selected keypair or <code>n</code> or Enter to reject.
           </p>
-
           <div className="code-card">
             <div className="code-header">
-              <span className="code-title">Terminal Launch Command</span>
-              <button
-                onClick={() =>
-                  handleCopy(
-                    "cmd-agent",
-                    "npx @web3mcp agent GgVnzvsMhHHKeeGnqQhU9KAjBeCVhYiYmR17174Lyrgv --model gemini-3.8-flash"
-                  )
-                }
-                className="code-copy-btn"
-              >
-                {copiedId === "cmd-agent" ? <Check size={12} /> : <Copy size={12} />}
-                <span>{copiedId === "cmd-agent" ? "Copied" : "Copy"}</span>
+              <span className="code-title">Example chat prompt</span>
+              <button onClick={() => handleCopy("deposit", depositPrompt)} className="code-copy-btn">
+                {copiedId === "deposit" ? <Check size={12} /> : <Copy size={12} />}
+                <span>{copiedId === "deposit" ? "Copied" : "Copy"}</span>
               </button>
             </div>
-            <pre className="code-block">
-              <code>npx @web3mcp agent GgVnzvsMhHHKeeGnqQhU9KAjBeCVhYiYmR17174Lyrgv --model gemini-3.8-flash</code>
-            </pre>
+            <pre className="code-block"><code>{depositPrompt}</code></pre>
           </div>
-
-          {/* Terminal CLI UI Box matching HomeStoryGrid review card */}
-          <div className="terminal-window">
-            <div className="terminal-header-bar">
-              <div className="terminal-dots">
-                <span className="term-dot" />
-                <span className="term-dot" />
-                <span className="term-dot" />
-              </div>
-              <span className="terminal-bar-title">web3mcp-host · Terminal Review Card</span>
-            </div>
-
-            <div className="terminal-cli-canvas">
-              <div className="cli-flow-view">
-                <div className="cli-session-meta">gemini-3.8-flash | devnet | GgVnzvsM...4Lyrgv</div>
-                <div className="cli-user-command">&gt; deposit 0.1 SOL into the vault</div>
-                <div className="cli-thinking-state">⠇ Thinking...</div>
-
-                <div className="cli-tool-invocation">
-                  <span className="bullet-sym">•</span>
-                  <span>Calling tool <span className="tool-hl">deposit</span> <span className="tag-write">[write]</span>(amount: &quot;100000000&quot;)...</span>
-                </div>
-                <div className="cli-invocation-res">
-                  <span className="check-mark">✓</span>
-                  <span>Simulated successfully against Devnet RPC (4,563 CUs)</span>
-                </div>
-
-                <div className="cli-rule">────────────────────────────────────────────────────</div>
-                <div className="cli-review-title-row">
-                  <span className="r-title">TRANSACTION REVIEW</span>
-                </div>
-                <div className="cli-rule">────────────────────────────────────────────────────</div>
-
-                <div className="cli-review-fields">
-                  <div className="rf-row">
-                    <span className="rf-k">Program:</span>
-                    <span className="rf-v">GgVnzvsMhHHKeeGnqQhU9KAjBeCVhYiYmR17174Lyrgv</span>
-                  </div>
-                  <div className="rf-row">
-                    <span className="rf-k">Tool:</span>
-                    <span className="rf-v tool-hl font-bold">deposit</span>
-                  </div>
-                  <div className="rf-row">
-                    <span className="rf-k">Amount:</span>
-                    <span className="rf-v font-semibold">100,000,000 lamports (0.1 SOL)</span>
-                  </div>
-                  <div className="rf-row">
-                    <span className="rf-k">Signer:</span>
-                    <span className="rf-v text-dim">CniPSdkAUaNTfZZUSKvAKU2VJuWecRjqvGhDmQjGSZEG</span>
-                  </div>
-                  <div className="rf-row">
-                    <span className="rf-k">Derived PDA:</span>
-                    <span className="rf-v text-dim">HfA1ExZS1cgYR5k5GEJmsQfyAcDK2J9NPi7p97dU3WLD</span>
-                  </div>
-                  <div className="rf-row">
-                    <span className="rf-k">Compute Units:</span>
-                    <span className="rf-v text-dim">4,563 CUs</span>
-                  </div>
-                  <div className="rf-row">
-                    <span className="rf-k">Network Fee:</span>
-                    <span className="rf-v text-dim">5,000 lamports</span>
-                  </div>
-                  <div className="rf-row">
-                    <span className="rf-k">Effects:</span>
-                    <span className="rf-v">Transfers native SOL to on-chain vault</span>
-                  </div>
-                </div>
-
-                <div className="cli-rule">────────────────────────────────────────────────────</div>
-                <div className="cli-wallet-prompt">
-                  <span className="prompt-q-text">? Approve and broadcast transaction to Devnet? [y/N] › </span>
-                  <span className="cursor-blink">_</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* ================= STEP 6: SLASH COMMANDS ================= */}
-        <section className="qs-step-card" id="step-commands">
-          <div className="step-num-pill">[ 06 ]</div>
-          <h2 className="step-heading">Interactive Slash Commands</h2>
           <p className="step-body-p">
-            During an agent session, use built-in slash commands to inspect chain state and manage tools instantly
-            without invoking model reasoning tokens:
+            The config's effect summary is a publisher claim. Review the actual transaction details
+            before approving. The SDK rejects a signed message that differs from the one prepared.
           </p>
-
-          <div className="commands-table-wrapper">
-            <table className="qs-table">
-              <thead>
-                <tr>
-                  <th>Command</th>
-                  <th>Function</th>
-                  <th>Behavior</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td><code>/tools</code></td>
-                  <td>List Discovered Tools</td>
-                  <td>Prints formatted table of on-chain tools with parameter schemas and privileges</td>
-                </tr>
-                <tr>
-                  <td><code>/balance</code></td>
-                  <td>Check SOL & Vault Balances</td>
-                  <td>Queries wallet balance and active program vault state via RPC</td>
-                </tr>
-                <tr>
-                  <td><code>/keygen</code></td>
-                  <td>Generate Test Keypair</td>
-                  <td>Generates a dedicated local Solana Devnet keypair if none is present</td>
-                </tr>
-                <tr>
-                  <td><code>/clear</code></td>
-                  <td>Clear Terminal</td>
-                  <td>Clears terminal view while preserving conversational context and tool registry</td>
-                </tr>
-                <tr>
-                  <td><code>/help</code></td>
-                  <td>Show Keyboard Shortcuts</td>
-                  <td>Lists supported options, model provider flags, and session shortcuts</td>
-                </tr>
-                <tr>
-                  <td><code>/exit</code></td>
-                  <td>Exit Agent</td>
-                  <td>Safely terminates session and closes active RPC socket connections</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
         </section>
 
-        {/* ================= NEXT STEPS ================= */}
         <section className="qs-next-steps">
-          <h2 className="next-steps-title">Next Steps</h2>
+          <h2 className="next-steps-title">Continue</h2>
           <p className="next-steps-desc">
-            Explore the protocol wire format, publish tools for your own Solana program, or build with the TypeScript SDK:
+            Read the candidate protocol profile, the publisher guide, or the Node.js SDK API.
           </p>
-
           <div className="next-grid">
+            <Link href="/docs/latest#protocol-spec" className="next-card">
+              <span className="next-tag">PROTOCOL</span>
+              <h3 className="next-card-title">Current profile</h3>
+              <p className="next-card-desc">Review the v0.1 candidate and v0.2 account-read extension.</p>
+              <span className="next-arrow">Read spec <ArrowRight size={13} /></span>
+            </Link>
             <Link href="/docs/latest#publisher-guide" className="next-card">
               <span className="next-tag">PROGRAM PUBLISHER</span>
-              <h3 className="next-card-title">Publish Your Program Tools</h3>
-              <p className="next-card-desc">
-                Learn how to embed Anchor IDLs and tool manifests on-chain using chunked uploads and on-chain SHA-256 verification.
-              </p>
-              <span className="next-arrow">Read Guide <ArrowRight size={13} /></span>
+              <h3 className="next-card-title">Publish tools</h3>
+              <p className="next-card-desc">See how a program owns and publishes its config PDA.</p>
+              <span className="next-arrow">Read guide <ArrowRight size={13} /></span>
             </Link>
-
-            <Link href="/docs/latest#protocol-spec" className="next-card">
-              <span className="next-tag">WIRE SPECIFICATION</span>
-              <h3 className="next-card-title">Protocol Wire Specification</h3>
-              <p className="next-card-desc">
-                Inspect the 81-byte Anchor binary header, canonical PDA seeds, 3 supported scalars, and fail-closed error catalog.
-              </p>
-              <span className="next-arrow">View Spec <ArrowRight size={13} /></span>
-            </Link>
-
             <Link href="/docs/latest#typescript-sdk" className="next-card">
-              <span className="next-tag">TYPESCRIPT SDK</span>
-              <h3 className="next-card-title">TypeScript SDK (@web3mcp)</h3>
-              <p className="next-card-desc">
-                Programmatically discover tools, resolve PDAs, simulate instructions, and bind on-chain Solana programs to Anthropic Claude or OpenAI agents.
-              </p>
-              <span className="next-arrow">SDK Reference <ArrowRight size={13} /></span>
+              <span className="next-tag">NODE.JS SDK</span>
+              <h3 className="next-card-title">@web3mcp/sdk</h3>
+              <p className="next-card-desc">Use generic discovery, reads, and transaction preparation in a host.</p>
+              <span className="next-arrow">Read SDK guide <ArrowRight size={13} /></span>
             </Link>
           </div>
         </section>

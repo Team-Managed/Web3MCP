@@ -8,32 +8,32 @@ export default function WhatWeDidntBuild() {
     {
       icon: <Server size={20} className="card-icon" />,
       title: "No Off-Chain Central Directory",
-      body: "Tool manifests live in canonical on-chain PDAs owned by target programs. Zero centralized APIs, SaaS registries, or proprietary discovery servers to maintain, trust, or pay for.",
+      body: "Target programs own their config PDAs. Compatible hosts discover them through Solana RPC without a project-specific registry or MCP server.",
     },
     {
       icon: <Lock size={20} className="card-icon" />,
-      title: "No Agent Private Key Custody",
-      body: "Web3MCP strictly forbids autonomous agent signing. The model proposes arguments; the host simulates execution; only the user's wallet approves and broadcasts transactions.",
+      title: "No Model Access to Keys",
+      body: "The model proposes arguments. The host simulates the transaction and asks a person to approve signing with the selected local keypair.",
     },
     {
       icon: <Code2 size={20} className="card-icon" />,
       title: "No Static Target Code Imports",
-      body: "The host never imports the target program's source or compiled IDL. Dynamic Borsh coders compile directly from on-chain accounts at runtime.",
+      body: "The host reads the embedded IDL from the validated on-chain config. It does not import the target program's source or local generated IDL.",
     },
     {
       icon: <Eye size={20} className="card-icon" />,
       title: "No View Instruction Hacks",
-      body: "State inspection uses standard RPC getAccountInfo with Anchor 8-byte discriminator validation. Point-in-time reads are instantaneous, signature-free, and fee-free.",
+      body: "Account reads use standard Solana RPC and verify owner and discriminator. They need no wallet signature or Solana transaction fee.",
     },
     {
       icon: <Cpu size={20} className="card-icon" />,
       title: "No Framework Lock-In",
-      body: "No heavy LangChain or LangGraph dependencies inside the core. Discovered on-chain tools export directly as standard JSON Schema, consumed natively by OpenAI, Anthropic, Gemini, Groq, or local Ollama with zero intermediate shims.",
+      body: "The SDK has no model dependency. The example Host CLI adds provider adapters for OpenAI, Anthropic, Gemini, Groq, and Ollama.",
     },
     {
       icon: <ShieldAlert size={20} className="card-icon" />,
       title: "No Blind Transaction Broadcasts",
-      body: "Every instruction is simulated against Solana RPC before reaching the user. High-contrast terminal cards display exact compute units, accounts, and financial effects.",
+      body: "The host simulates writes before approval. Its review card shows accounts, arguments, instruction data, logs, fee estimate, and publisher-claimed effects.",
     },
   ];
 
@@ -43,7 +43,7 @@ export default function WhatWeDidntBuild() {
         <header className="not-built-header">
           <h2 id="notBuiltTitle" className="not-built-title">What we didn&apos;t build</h2>
           <p className="not-built-desc">
-            Web3MCP is aggressively minimal so it doesn&apos;t dictate your agent architecture. Capabilities that other frameworks bake into proprietary off-chain servers are kept on-chain or left to standard Solana RPC.
+            Web3MCP defines on-chain discovery and execution bindings. Hosts choose their own model, UI, and wallet integration.
           </p>
         </header>
 

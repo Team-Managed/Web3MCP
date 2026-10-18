@@ -4,7 +4,7 @@ import "./globals.css";
 export const metadata: Metadata = {
   title: "Web3MCP — The Open Tool Protocol for Solana AI Agents",
   description:
-    "An open, on-chain tool discovery protocol for Solana programs. AI agents discover and execute verified tools directly from program-owned PDAs with strict host decoupling and human wallet signing.",
+    "A proposed on-chain tool discovery protocol for Solana programs. Compatible hosts validate program-owned config PDAs, prepare transactions, and request human approval before signing.",
   keywords: [
     "Web3MCP",
     "Solana",
@@ -18,7 +18,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: "Web3MCP — On-Chain Tool Discovery for Solana AI Agents",
     description:
-      "Publish agent capabilities directly into program-owned Solana PDAs. Zero off-chain servers. Cryptographically verified. Wallet-approved execution.",
+      "Publish tool definitions in a program-owned Solana PDA. Compatible hosts discover them through RPC and require human approval for signed transactions.",
     type: "website",
   },
 };

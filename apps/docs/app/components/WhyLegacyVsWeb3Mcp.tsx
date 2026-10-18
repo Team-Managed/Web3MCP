@@ -221,7 +221,7 @@ function DiscoverySvg() {
 
 /* ========================================================
    SVG 2: SCHEMA INTEGRITY (LEAN MINIMAL MONOCHROME VECTOR)
-   Atomic sol_sha256 Syscall & Borsh JIT Codec.
+   Published payload digest and runtime decoding.
    ======================================================== */
 function SchemaIntegritySvg() {
   return (
@@ -230,7 +230,7 @@ function SchemaIntegritySvg() {
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
       className="feature-vector-svg"
-      aria-label="Atomic syscall sol_sha256 parity verification compiling dynamic Borsh coders"
+      aria-label="Host validates the published config digest before decoding its tool definitions"
     >
       <defs>
         <linearGradient id="streamGrad1" x1="0%" y1="0%" x2="100%" y2="0%">
@@ -284,7 +284,7 @@ function SchemaIntegritySvg() {
         <circle cx="140" cy="14" r="2.5" fill="#ffffff" />
       </g>
 
-      {/* --- CENTER: ATOMIC CRYPTOGRAPHIC HASHER (sol_sha256 SYSCALL) --- */}
+      {/* --- CENTER: PUBLISHED PAYLOAD DIGEST CHECK --- */}
       <g transform="translate(240, 120)">
         <circle cx="0" cy="0" r="54" fill="url(#hasherGlow)" stroke="#262626" strokeWidth="1" />
         <circle cx="0" cy="0" r="45" stroke="#404040" strokeWidth="1.2" strokeDasharray="3 3" />
@@ -360,7 +360,7 @@ function SchemaIntegritySvg() {
 
 /* ========================================================
    SVG 3: EXECUTION SEAM (LEAN MINIMAL MONOCHROME VECTOR)
-   Air-gapped seam: Agent proposal vs Phantom wallet approval.
+   Agent proposal, host review, and local keypair approval.
    ======================================================== */
 function ExecutionSeamSvg() {
   return (
@@ -369,7 +369,7 @@ function ExecutionSeamSvg() {
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
       className="feature-vector-svg"
-      aria-label="The Web3MCP air-gapped execution seam separating untrusted agent from signing wallet"
+      aria-label="The host validates and simulates an agent proposal before a person approves local keypair signing"
     >
       <defs>
         <radialGradient id="scannerGlow" cx="50%" cy="50%" r="50%">
@@ -504,7 +504,7 @@ function ExecutionSeamSvg() {
 
         {/* Balance Delta Readout */}
         <text x="0" y="3" fill="#ffffff" fontFamily="var(--font-mono)" fontSize="6.5" fontWeight="700" textAnchor="middle">
-          Δ SOL: 0.00
+          REVIEW
         </text>
         <text x="0" y="12" fill="#737373" fontFamily="var(--font-mono)" fontSize="5.5" textAnchor="middle">
           SIMULATED
@@ -512,26 +512,21 @@ function ExecutionSeamSvg() {
       </g>
 
       {/* ===================================================
-          RIGHT: SOVEREIGN PHANTOM WALLET APPROVAL & VAULT
+          RIGHT: LOCAL KEYPAIR APPROVAL & VAULT
           =================================================== */}
       <line x1="246" y1="154" x2="284" y2="154" stroke="#ffffff" strokeWidth="2" />
       <polygon points="282,150 290,154 282,158" fill="#ffffff" />
 
-      {/* OFFICIAL PHANTOM WALLET APPROVAL GATE */}
+      {/* LOCAL KEYPAIR APPROVAL GATE */}
       <g transform="translate(294, 126)">
         <rect x="0" y="0" width="80" height="56" rx="5" fill="#0d0d0d" stroke="#ffffff" strokeWidth="1.5" />
 
-        {/* Official Phantom Ghost Vector Logo */}
-        <g transform="translate(8, 8) scale(0.9)" fill="#ffffff">
-          <path d="M 12 3 C 6.5 3, 2.5 7.2, 2.5 12.8 C 2.5 18, 2.5 22.5, 2.5 22.5 C 4.5 20.8, 6.8 20.8, 8.8 22.5 C 10.8 20.8, 13.2 20.8, 15.2 22.5 C 17.2 20.8, 19.5 20.8, 21.5 22.5 C 21.5 22.5, 21.5 18, 21.5 12.8 C 21.5 7.2, 17.5 3, 12 3 Z" />
-          {/* Phantom Eyes */}
-          <circle cx="8.5" cy="11.5" r="1.4" fill="#0d0d0d" />
-          <circle cx="15.5" cy="11.5" r="1.4" fill="#0d0d0d" />
-        </g>
+        <circle cx="18" cy="18" r="6" fill="none" stroke="#ffffff" strokeWidth="1.4" />
+        <path d="M24 18h12m-5 0v4m4-4v4" stroke="#ffffff" strokeWidth="1.4" />
 
-        {/* Phantom Wallet Title */}
+        {/* Local keypair title */}
         <text x="34" y="20" fill="#ffffff" fontFamily="var(--font-mono)" fontSize="7.5" fontWeight="700" letterSpacing="0.05em">
-          PHANTOM
+          KEYPAIR
         </text>
         <text x="34" y="29" fill="#737373" fontFamily="var(--font-mono)" fontSize="6">
           SIGNER
@@ -541,7 +536,7 @@ function ExecutionSeamSvg() {
         <g transform="translate(8, 36)">
           <rect x="0" y="0" width="64" height="14" rx="2" fill="#141414" stroke="#404040" />
           <text x="32" y="9.5" fill="#ffffff" fontFamily="var(--font-mono)" fontSize="6.5" fontWeight="600" textAnchor="middle">
-            APPROVE ✓
+            PRESS S
           </text>
         </g>
       </g>
@@ -822,10 +817,10 @@ export default function WhyLegacyVsWeb3Mcp() {
         {/* Section Header */}
         <header className="section-header">
           <h2 id="whySectionTitle" className="section-main-title">
-            Why traditional MCP breaks on Solana
+            Why publish tools on-chain
           </h2>
           <p className="section-lead-subtitle">
-            Off-chain servers break, schemas drift, and hot keys drain vaults. Web3MCP moves tool discovery, schema validation, and simulation directly on-chain.
+            A program-owned config PDA lets compatible hosts discover tools through Solana RPC. Hosts validate the config, simulate writes, and ask people to approve signing.
           </p>
         </header>
 
@@ -844,7 +839,7 @@ export default function WhyLegacyVsWeb3Mcp() {
               </div>
               <h3 className="feature-title">The Off-Chain Daemon Trap</h3>
               <p className="feature-desc">
-                Standard MCP relies on external Node or Docker containers that crash, timeout, and require hosting fees. Web3MCP anchors tool manifests directly into program-owned Config PDAs discovered over standard Solana RPC.
+                A project-specific MCP integration needs a separately maintained service. Web3MCP lets the program publish its tool manifest in a program-owned Config PDA that any compatible host can read through Solana RPC.
               </p>
               <div className="comparison-points">
                 <div className="point-item point-legacy">
@@ -860,7 +855,7 @@ export default function WhyLegacyVsWeb3Mcp() {
                     <Check size={12} />
                   </div>
                   <div className="point-text">
-                    <strong>Canonical PDAs:</strong> Direct RPC discovery. Zero servers, zero hosting costs, 100% uptime.
+                    <strong>Canonical PDA:</strong> No project-specific MCP server is required. The host still needs working Solana RPC access.
                   </div>
                 </div>
               </div>
@@ -884,7 +879,7 @@ export default function WhyLegacyVsWeb3Mcp() {
               </div>
               <h3 className="feature-title">Silent Schema Drift</h3>
               <p className="feature-desc">
-                When smart contracts upgrade, external servers continue serving stale IDLs, triggering <code>0x1771</code> constraint reverts and burning SOL. Web3MCP validates manifests on-chain via the native <code>sol_sha256</code> syscall, compiling dynamic Borsh codecs at runtime.
+                A hard-coded integration can lag behind a program update. The Web3MCP host fetches the current published manifest, checks its account owner and SHA-256 digest, and validates the embedded IDL before exposing tools.
               </p>
               <div className="comparison-points">
                 <div className="point-item point-legacy">
@@ -892,7 +887,7 @@ export default function WhyLegacyVsWeb3Mcp() {
                     <X size={12} />
                   </div>
                   <div className="point-text">
-                    <strong>Outdated IDLs:</strong> Stale interfaces cause silent transaction reverts and costly retry loops.
+                    <strong>Outdated IDLs:</strong> A stale wrapper can construct invalid transactions until its maintainer updates it.
                   </div>
                 </div>
                 <div className="point-item point-web3mcp">
@@ -900,7 +895,7 @@ export default function WhyLegacyVsWeb3Mcp() {
                     <Check size={12} />
                   </div>
                   <div className="point-text">
-                    <strong>Syscall Parity:</strong> <code>sol_sha256</code> verification guarantees exact runtime bytecode alignment.
+                    <strong>Validated config:</strong> The digest checks payload integrity. It does not prove that a publisher description or program behavior is safe.
                   </div>
                 </div>
               </div>
@@ -924,7 +919,7 @@ export default function WhyLegacyVsWeb3Mcp() {
               </div>
               <h3 className="feature-title">Prompt Injections &amp; Hot Keys</h3>
               <p className="feature-desc">
-                Giving autonomous agents private keys allows prompt injection attacks to drain treasury vaults with irreversible finality. Web3MCP air-gaps execution: the model proposes parameters, the host simulates balance deltas, and only the user&apos;s wallet signs.
+                The model proposes tool arguments but never receives the private key. The host validates and simulates the transaction, shows its details, and waits for the person to approve signing with the selected local keypair.
               </p>
               <div className="comparison-points">
                 <div className="point-item point-legacy">
@@ -940,7 +935,7 @@ export default function WhyLegacyVsWeb3Mcp() {
                     <Check size={12} />
                   </div>
                   <div className="point-text">
-                    <strong>Wallet Air-Gap:</strong> Model proposes, host simulates, user approves. Agents never hold keys.
+                    <strong>Approval boundary:</strong> Model proposes, host simulates, and a person presses s before the CLI signs.
                   </div>
                 </div>
               </div>
@@ -964,7 +959,7 @@ export default function WhyLegacyVsWeb3Mcp() {
               </div>
               <h3 className="feature-title">Context Bloat &amp; View Hacks</h3>
               <p className="feature-desc">
-                Legacy MCP exhausts LLM context windows with verbose schemas and relies on heavy stdio pipes or synthetic view instructions. Web3MCP resolves accounts deterministically across 4 declarative tiers using signature-free Solana RPC reads.
+                Tool bindings declare how the host resolves instruction accounts: signer, required input, fixed program, or supported IDL PDA seeds. Account reads use RPC without a transaction signature.
               </p>
               <div className="comparison-points">
                 <div className="point-item point-legacy">
@@ -980,7 +975,7 @@ export default function WhyLegacyVsWeb3Mcp() {
                     <Check size={12} />
                   </div>
                   <div className="point-text">
-                    <strong>4-Tier Resolution:</strong> Deterministic account derivation with fee-free RPC reads.
+                    <strong>Account resolution:</strong> The host derives supported accounts and verifies ownership before decoding a read.
                   </div>
                 </div>
               </div>

@@ -1,12 +1,14 @@
 # Documentation site
 
-This directory contains the public Web3MCP website and documentation application: protocol specification, interactive exploration, and pitch materials. The site explains the protocol and is not involved in discovering or executing a target program's tools.
+This directory contains the Web3MCP landing page, quickstart, documentation reference, and pitch materials. Its Devnet tool table is a static reference; use the Host CLI or SDK for a fresh on-chain discovery. The site does not execute target-program tools and has not been deployed.
 
 ## Development
 
-Run the development server from repo root:
+Install the root and site dependencies, then run the development server from the repository root (Node.js 22 or later):
 
 ```bash
+npm ci
+npm ci --prefix apps/docs
 npm run dev:docs
 ```
 

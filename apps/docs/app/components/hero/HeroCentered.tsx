@@ -8,8 +8,8 @@ export default function HeroCentered() {
     <div className="hero-centered-container">
       {/* Main Headline */}
       <h1 className="hero-heading">
-        Turn Any Solana Program<br />
-        Into an AI Tool with Web3MCP.
+        Give Solana Programs<br />
+        Discoverable Tools with Web3MCP.
       </h1>
 
       {/* Tight, Punchy Sub-Hero Pitch */}

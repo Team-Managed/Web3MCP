@@ -24,25 +24,25 @@ function IconGithub({ size = 16, className = "" }: { size?: number; className?: 
 }
 
 export default function GetInvolved() {
-  type TabKey = "npm" | "bash" | "ps";
-  const [activeTab, setActiveTab] = useState<TabKey>("npm");
+  type TabKey = "clone" | "build" | "run";
+  const [activeTab, setActiveTab] = useState<TabKey>("clone");
   const [copied, setCopied] = useState<boolean>(false);
 
   const PROTOCOL_COMMANDS: Record<TabKey, { label: string; symbol: string; cmd: string }> = {
-    npm: {
-      label: "npm",
+    clone: {
+      label: "clone",
       symbol: "$",
-      cmd: "npm i -g @web3mcp",
+      cmd: "git clone https://github.com/Team-Managed/Web3MCP.git",
     },
-    bash: {
-      label: "bash (macOS / Linux)",
+    build: {
+      label: "build",
       symbol: "$",
-      cmd: "curl -fsSL https://web3mcp.org/install.sh | bash",
+      cmd: "cd Web3MCP && npm ci && npm --prefix packages/sdk run build && npm --prefix apps/host run build",
     },
-    ps: {
-      label: "ps (Windows)",
-      symbol: "PS>",
-      cmd: "irm https://web3mcp.org/install.ps1 | iex",
+    run: {
+      label: "run",
+      symbol: "$",
+      cmd: "npm run host",
     },
   };
 
@@ -62,13 +62,13 @@ export default function GetInvolved() {
               Get involved with Web3MCP
             </h2>
             <p className="section-desc">
-              Install the reference host CLI to run agent tools directly via Solana RPC, or contribute to the open protocol on GitHub.
+              Build the compatible host from this repository to use on-chain tools through Solana RPC. npm publication is pending.
             </p>
 
             {/* CLI Runner / Installation Switcher matching card dark aesthetic */}
             <div className="cli-switcher">
               <div className="cli-tabs" role="tablist">
-                {(["npm", "bash", "ps"] as const).map((tab) => (
+                {(["clone", "build", "run"] as const).map((tab) => (
                   <button
                     key={tab}
                     className={`cli-tab ${activeTab === tab ? "is-active" : ""}`}

@@ -6,33 +6,39 @@ import { ExternalLink, Copy, Check, Terminal } from "lucide-react";
 export default function DevnetPlayground() {
   const [copied, setCopied] = useState<string | null>(null);
 
-  const PROGRAM_ID = "GgVnzvsMhHHKeeGnqQhU9KAjBeCVhYiYmR17174Lyrgv";
-  const CONFIG_PDA = "HfA1ExZS1cgYR5k5GEJmsQfyAcDK2J9NPi7p97dU3WLD";
+  const PROGRAM_ID = "9zJzM4rHDPR4pd3vXHQjQ7whTVmx4zxB3ZH4Gb9iXRwD";
+  const CONFIG_PDA = "J8Ph37LoQsv4yED6USdupCooCZzsVMqJkgBTm9uSkvCw";
 
   const TOOLS = [
     {
       name: "get_vault",
       kind: "accountRead",
-      operation: "Point-in-time state query for Vault account",
-      effects: "Zero effects (free, signature-free read)",
+      operation: "Read a Vault account by its exact PDA",
+      effects: "No transaction or signature",
+    },
+    {
+      name: "get_vault_by_owner",
+      kind: "accountRead",
+      operation: "Derive and read a vault from its owner's wallet address",
+      effects: "No transaction or signature",
     },
     {
       name: "initialize",
       kind: "instruction",
       operation: "Allocates rent-exempt segregated vault PDA",
-      effects: "State-changing: creates vault PDA account",
+      effects: "Creates a rent-funded vault account",
     },
     {
       name: "deposit",
       kind: "instruction",
       operation: "Transfers SOL lamports from signer to vault PDA",
-      effects: "Financial: transfers SOL from user to vault",
+      effects: "Transfers SOL from wallet to vault",
     },
     {
       name: "withdraw",
       kind: "instruction",
       operation: "Transfers SOL lamports from vault back to signer",
-      effects: "Financial: transfers SOL from vault to user",
+      effects: "Transfers SOL from vault to wallet",
     },
   ];
 
@@ -128,14 +134,14 @@ export default function DevnetPlayground() {
         <div className="cli-prompt-row">
           <Terminal size={12} className="cli-icon" />
           <code className="cli-cmd-text">
-            npx @web3mcp discover {PROGRAM_ID} --rpc https://api.devnet.solana.com
+            npm run host -- --program {PROGRAM_ID}
           </code>
         </div>
         <button
           onClick={() =>
             handleCopy(
               "cli",
-              `npx @web3mcp discover ${PROGRAM_ID} --rpc https://api.devnet.solana.com`
+              `npm run host -- --program ${PROGRAM_ID}`
             )
           }
           className="cli-copy-btn"

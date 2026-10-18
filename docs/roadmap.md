@@ -28,6 +28,8 @@ Choose one tool-calling model for the demo. Add a generic chat interface that ex
 
 Build a static documentation site from the whitepaper, protocol reference, publisher guide, and host guide. Run the full read → deposit → read → withdraw flow on a local validator, followed by a devnet rehearsal when deployment is authorized. Load a second small compatible program without changing host code to test the program-agnostic claim. Show one rejected unsafe or malformed tool call.
 
+**Status:** The landing page, quickstart, and documentation reference are implemented locally in `apps/docs/`. The site uses static examples and links to the current Devnet reference vault; it has not been deployed. The full provider-backed Devnet rehearsal and second-program demo remain pending.
+
 ## Demo acceptance
 
 - The host starts from only a program ID, RPC connection, model connection, and wallet.
