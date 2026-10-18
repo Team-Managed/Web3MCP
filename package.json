@@ -5,14 +5,19 @@
   "private": true,
   "type": "module",
   "workspaces": [
-    "protocol"
+    "protocol",
+    "packages/sdk",
+    "apps/host"
   ],
   "scripts": {
-    "test": "npm --prefix protocol test && node --test tests/generate-config.test.js tests/git-guardrails.test.js tests/publish-transaction.test.js",
+    "test": "npm --prefix protocol test && npm --prefix packages/sdk run build && npm --prefix packages/sdk test && npm --prefix apps/host run build && npm --prefix apps/host test && node --test tests/generate-config.test.js tests/git-guardrails.test.js tests/publish-transaction.test.js",
+    "test:sdk": "npm --prefix packages/sdk run build && npm --prefix packages/sdk test",
     "test:protocol": "npm --prefix protocol test",
-    "test:integration": "node --test --test-concurrency=1 tests/*.test.js",
-    "generate:config": "node programs/reference-vault/scripts/generate-config.js",
-    "publish:vault": "node programs/reference-vault/scripts/publish.js"
+    "test:host": "npm --prefix packages/sdk run build && npm --prefix apps/host run build && npm --prefix apps/host test",
+    "test:integration": "npm --prefix packages/sdk run build && npm --prefix apps/host run build && node --test --test-concurrency=1 tests/*.test.js",
+    "generate:config": "node reference-programs/reference-vault/scripts/generate-config.js",
+    "publish:vault": "node reference-programs/reference-vault/scripts/publish.js",
+    "host": "node apps/host/bin/web3mcp.js"
   },
   "repository": {
     "type": "git",

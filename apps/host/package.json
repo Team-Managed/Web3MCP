@@ -1,0 +1,71 @@
+{
+  "name": "@web3mcp/host",
+  "version": "0.1.0",
+  "description": "Web3MCP Compatible Host CLI: terminal agent chat built on @web3mcp/sdk",
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "files": [
+    "bin/web3mcp.js",
+    "dist",
+    "knowledge",
+    "README.md"
+  ],
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./errors": {
+      "types": "./dist/errors.d.ts",
+      "import": "./dist/errors.js"
+    },
+    "./llm": {
+      "types": "./dist/llm/index.d.ts",
+      "import": "./dist/llm/index.js"
+    },
+    "./wallet": {
+      "types": "./dist/wallet/index.d.ts",
+      "import": "./dist/wallet/index.js"
+    },
+    "./agent": {
+      "types": "./dist/agent/index.d.ts",
+      "import": "./dist/agent/index.js"
+    },
+    "./ui": {
+      "types": "./dist/ui/index.d.ts",
+      "import": "./dist/ui/index.js"
+    }
+  },
+  "bin": {
+    "web3mcp": "./bin/web3mcp.js"
+  },
+  "scripts": {
+    "build": "tsup",
+    "test": "node --import tsx --test tests/agent-knowledge.test.js tests/llm.test.js tests/wallet.test.js tests/local-boundaries.test.js tests/cli.test.js tests/tui.test.js tests/sdk-agent.test.js tests/commands.test.js tests/program-ref.test.js",
+    "prepack": "npm --prefix ../../packages/sdk run build && npm run build",
+    "test:legacy-devnet": "node --import tsx --test tests/agent-devnet-e2e.test.js tests/discovery.test.js tests/account-read.test.js tests/instruction-prepare.test.js tests/tools.test.js"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.135.0",
+    "@bonfida/spl-name-service": "^4.0.1",
+    "@inkjs/ui": "^2.0.0",
+    "@napi-rs/keyring": "^2.1.1",
+    "@solana/web3.js": "^1.99.0",
+    "@web3mcp/sdk": "^0.1.0",
+    "ink": "^8.0.0",
+    "openai": "^7.35.0",
+    "react": "^19.3.1"
+  },
+  "devDependencies": {
+    "@types/node": "^20.19.43",
+    "@types/react": "^19.3.0",
+    "ink-testing-library": "^4.0.0",
+    "tsup": "^8.5.1",
+    "tsx": "^4.23.15",
+    "typescript": "^5.9.3"
+  }
+}

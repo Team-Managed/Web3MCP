@@ -2,7 +2,7 @@
 
 ## Project
 
-Web3MCP lets an agent host discover Solana program tools from a program-owned config PDA, then read accounts or prepare wallet-approved instructions using generic Solana capabilities. The project has two main tracks: the protocol and a Web3MCP host. A reference program proves interoperability.
+Web3MCP lets an agent host discover Solana program tools from a program-owned config PDA, then read accounts or prepare wallet-approved instructions using generic Solana capabilities. The project has a protocol, a reusable Node.js SDK, and one example Host CLI. A reference program proves interoperability.
 
 ## Source of truth
 
@@ -12,15 +12,15 @@ Web3MCP lets an agent host discover Solana program tools from a program-owned co
 
 ## Boundaries
 
-- The target program owns the config PDA. The host must discover tools from the deployed program ID and on-chain config; it must not import the reference program's source, generated IDL, or hard-coded tool list.
-- Web3MCP v0.1 does not require an MCP server, MCP client, target-program website, or program-specific API. The host may have its own UI and model connection.
-- The LLM proposes a tool and arguments. The host validates untrusted config and inputs, constructs and simulates instructions, and asks the wallet to approve the exact transaction. The LLM never signs.
-- Start discovery from a program ID. SNS names and other name systems are deferred.
+- The target program owns the config PDA. `@web3mcp/sdk` discovers tools from the deployed program ID and on-chain config; neither SDK nor Host CLI may import the reference program's source, generated IDL, or hard-coded tool list.
+- Web3MCP v0.1 uses no MCP server, MCP client, or adapter. It needs no target-program website or program-specific API. The Host CLI has its own terminal UI and model connection.
+- The LLM proposes a tool and arguments. The SDK validates untrusted config and inputs, constructs and simulates instructions, and checks the signed message before submission. The Host CLI handles human review and wallet signing. The LLM never signs.
+- Protocol and SDK discovery start from a program ID. The Host CLI may resolve a current `.sns` name to that ID before discovery; other name systems remain deferred.
 - Do not commit wallet files, private keys, API keys, or environment secrets. Keep examples on local validator or devnet until a deployment is explicitly requested.
 
 ## Working here
 
-- This first commit is a project baseline, not a runnable protocol or host. Add build commands only when their implementation exists.
+- Keep exactly one end-user CLI command, `web3mcp`. Other Node.js hosts should import `@web3mcp/sdk` without installing the Host CLI.
 - Keep protocol fixtures and conformance tests independent of the reference program. A generic host should work with a second compatible program without code changes.
 - Update the design and roadmap when a protocol or product boundary changes.
 

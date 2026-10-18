@@ -5,11 +5,14 @@ anchor_version = "0.32.1"
 resolution = true
 skip-lint = false
 
+[workspace]
+members = ["reference-programs/*"]
+
 [programs.localnet]
-reference_vault = "GgVnzvsMhHHKeeGnqQhU9KAjBeCVhYiYmR17174Lyrgv"
+reference_vault = "9zJzM4rHDPR4pd3vXHQjQ7whTVmx4zxB3ZH4Gb9iXRwD"
 
 [programs.devnet]
-reference_vault = "GgVnzvsMhHHKeeGnqQhU9KAjBeCVhYiYmR17174Lyrgv"
+reference_vault = "9zJzM4rHDPR4pd3vXHQjQ7whTVmx4zxB3ZH4Gb9iXRwD"
 
 [registry]
 url = "https://api.apr.dev"
@@ -18,5 +21,8 @@ url = "https://api.apr.dev"
 cluster = "localnet"
 wallet = "~/.config/solana/id.json"
 
+[test]
+upgradeable = true
+
 [scripts]
-test = "node --test --test-concurrency=1 tests/*.test.js"
+test = "npm --prefix packages/sdk run build && npm --prefix apps/host run build && node --test --test-concurrency=1 tests/*.test.js"

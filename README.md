@@ -7,18 +7,19 @@ Web3MCP is a proposed Solana protocol for publishing agent-facing tool definitio
 | Track | Purpose |
 | --- | --- |
 | [Protocol](protocol/README.md) | Define the config format, discovery and execution rules, examples, and conformance checks. |
-| [Web3MCP host](apps/host/README.md) | Load program tools dynamically, run an LLM tool loop, and coordinate RPC and wallet approval. |
-| [Reference program](programs/reference-vault/README.md) | Publish real tools from a Solana program so the host can prove the protocol end to end. |
+| [Node.js SDK](packages/sdk/README.md) | Reusable discovery, reads, transaction preparation, and signed submission. |
+| [Web3MCP Compatible Host CLI](apps/host/README.md) | One terminal chat app that imports the SDK, runs a model loop, and requests wallet approval. |
+| [Reference program](reference-programs/reference-vault/README.md) | Publish real tools from a Solana program so the host can prove the protocol end to end. |
 | [Documentation site](apps/docs/README.md) | Present the whitepaper, protocol reference, and guides to program and host authors. |
 
 The [whitepaper](docs/whitepaper.md) explains the idea. The [current design](docs/superpowers/specs/2026-10-13-web3mcp-project-design.md) and [demo roadmap](docs/roadmap.md) define the next implementation work.
 
 ## First demo
 
-The user supplies a program ID to the host. The host verifies the executable program and its program-owned config PDA, loads the published IDL and tools, and makes those tools available to an LLM. The LLM can request an account read or propose an instruction; the host validates inputs, simulates the exact transaction, and asks the user's wallet for approval before submitting it. A second compatible program should load without changing the host.
+The host offers the LLM a generic discovery tool. The user can mention a program ID or `.sns` name in chat; the model asks the host to discover it, and the host verifies the executable program and its program-owned config PDA. Validated IDL tools are added to the model's next turn. The model can then request a read or propose an instruction; the host validates inputs, simulates the exact transaction, and waits for the user's explicit **Sign** action before signing with the selected keypair and submitting it. A second compatible program should load without changing the host.
 
-Program-ID discovery is the first release. SNS name resolution, MCP adapters, swaps, and mainnet deployment come later.
+Program-ID discovery is the protocol entry point. The Host CLI can optionally resolve a `.sns` name before discovery; `.sol` name resolution, MCP adapters, swaps, and mainnet deployment come later.
 
 ## Status
 
-The protocol validator and reference vault are implemented and under merge review. The generic host and documentation site are still planned. The v0.1 Anchor IDL profile and local-validator integration evidence remain open before the protocol can be called frozen. The older October 9 spec and plan under `docs/superpowers/` remain as research history and are marked as superseded.
+The protocol validator, reference vault, Node.js SDK, and single Host CLI are implemented locally. The current reference vault and Web3MCP v0.2 config are deployed on Devnet at program `9zJzM4rHDPR4pd3vXHQjQ7whTVmx4zxB3ZH4Gb9iXRwD`; the extracted SDK discovered its five tools there. The v0.2 local-validator integration suite passed all 38 tests, including an SDK-backed signed write. A basic provider-backed OpenAI chat succeeded, and packed SDK and Host CLI installs worked outside the monorepo. A full provider-backed Devnet read/write rehearsal, npm publication, the documentation site, and the second-program interoperability demo remain pending.

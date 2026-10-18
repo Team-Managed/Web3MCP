@@ -1,0 +1,116 @@
+import { LlmError } from './errors.js';
+import { compactToolResult } from './compactor.js';
+import { OpenAiCompatibleDriver } from './drivers/openai.js';
+import { AnthropicDriver } from './drivers/anthropic.js';
+
+export interface CreateLlmClientOptions {
+  provider?: 'gemini' | 'openai' | 'anthropic' | 'groq' | 'ollama';
+  model?: string;
+  apiKey?: string;
+  baseURL?: string;
+}
+
+/**
+ * Factory function creating an appropriate LlmClient instance based on parameters and environment variables.
+ */
+export function createLlmClient(options: CreateLlmClientOptions = {}): OpenAiCompatibleDriver | AnthropicDriver {
+  const provider =
+    options.provider ||
+    (process.env.GEMINI_API_KEY ? 'gemini' : null) ||
+    (process.env.ANTHROPIC_API_KEY ? 'anthropic' : null) ||
+    (process.env.GROQ_API_KEY ? 'groq' : null) ||
+    'openai';
+
+  const model =
+    options.model ||
+    process.env.LLM_MODEL ||
+    process.env.MODEL ||
+    (provider === 'gemini' ? process.env.GEMINI_MODEL : null) ||
+    (provider === 'anthropic' ? process.env.ANTHROPIC_MODEL : null) ||
+    (provider === 'groq' ? process.env.GROQ_MODEL : null) ||
+    (provider === 'ollama' ? process.env.OLLAMA_MODEL : null) ||
+    (provider === 'openai' ? process.env.OPENAI_MODEL : null);
+
+  if (!model) {
+    throw new LlmError(
+      `No model specified for provider '${provider}'. Provide a model via options.model, --model, or the LLM_MODEL (or ${provider.toUpperCase()}_MODEL) environment variable.`
+    );
+  }
+
+  if (provider === 'gemini') {
+    const apiKey = options.apiKey || process.env.GEMINI_API_KEY;
+    if (!apiKey) {
+      throw new LlmError(
+        'Gemini provider requested but GEMINI_API_KEY is not set in environment or options.'
+      );
+    }
+    return new OpenAiCompatibleDriver({
+      apiKey,
+      baseURL: options.baseURL || 'https://generativelanguage.googleapis.com/v1beta/openai/',
+      model,
+    });
+  }
+
+  if (provider === 'anthropic') {
+    const apiKey = options.apiKey || process.env.ANTHROPIC_API_KEY;
+    if (!apiKey) {
+      throw new LlmError(
+        'Anthropic provider requested but ANTHROPIC_API_KEY is not set in environment or options.'
+      );
+    }
+    return new AnthropicDriver({
+      apiKey,
+      model,
+      baseURL: options.baseURL,
+    });
+  }
+
+  if (provider === 'groq') {
+    const apiKey = options.apiKey || process.env.GROQ_API_KEY;
+    if (!apiKey) {
+      throw new LlmError('Groq provider requested but GROQ_API_KEY is not set in environment or options.');
+    }
+    return new OpenAiCompatibleDriver({
+      apiKey,
+      baseURL: options.baseURL || 'https://api.groq.com/openai/v1',
+      model,
+    });
+  }
+
+  if (provider === 'ollama') {
+    return new OpenAiCompatibleDriver({
+      apiKey: options.apiKey || 'ollama',
+      baseURL: options.baseURL || process.env.OLLAMA_BASE_URL || 'http://localhost:11434/v1',
+      model,
+    });
+  }
+
+  // Default: OpenAI / generic OpenAI-compatible
+  const baseURL = options.baseURL || process.env.OPENAI_BASE_URL;
+  const customEndpoint = baseURL && new URL(baseURL).origin !== 'https://api.openai.com';
+  const apiKey = options.apiKey || (customEndpoint ? process.env.OPENAI_COMPAT_API_KEY : process.env.OPENAI_API_KEY);
+  if (!options.baseURL && customEndpoint && options.apiKey) {
+    throw new LlmError('A custom OpenAI endpoint cannot reuse an OpenAI provider key. Pass baseURL and its own key explicitly to an SDK caller.');
+  }
+  if (!apiKey && !baseURL) {
+    throw new LlmError(
+      'OpenAI provider requested but OPENAI_API_KEY is not set. Provide an API key or use Ollama/Groq.'
+    );
+  }
+
+  return new OpenAiCompatibleDriver({
+    apiKey,
+    baseURL,
+    model,
+    useOpenAiParameters: true,
+  });
+}
+
+/** Return model IDs advertised to this provider key; execution may still reject an incompatible model. */
+export async function listAvailableModels(options: CreateLlmClientOptions): Promise<string[]> {
+  const driver = createLlmClient({ ...options, model: options.model || 'model-list' });
+  const page = await driver.client.models.list();
+  return [...new Set(page.data.map(model => model.id))].sort((a, b) => a.localeCompare(b));
+}
+
+export { compactToolResult, OpenAiCompatibleDriver, AnthropicDriver, LlmError };

@@ -47,7 +47,7 @@ Build `reference-vault`, an Anchor-based SOL vault program that owns a canonical
   - Account struct: `Vault { owner: Pubkey, balance: u64, bump: u8 }`.
   - `withdraw` enforces that remaining lamports on the vault account meet the rent-exempt minimum (`minimum_balance(space)`), throwing a custom error if violated.
 - **Publisher Tooling**:
-  - Kept strictly in `programs/reference-vault/scripts/`.
+  - Kept strictly in `reference-programs/reference-vault/scripts/`.
   - Script loads compiled Anchor IDL, packages WebMCP tool descriptors for `get_vault`, `initialize`, `deposit`, and `withdraw`, validates the JSON envelope against `@web3mcp/protocol`, chunks the serialized JSON into ~800-byte pieces, and streams transactions to devnet.
 - **Fail-Closed Guarantees**:
   - The Config PDA is unreadable / invalid to hosts while in status `1`.
@@ -57,7 +57,7 @@ Build `reference-vault`, an Anchor-based SOL vault program that owns a canonical
 
 - **Testing Principles**: Only test external on-chain behavior and RPC outputs. No tests should couple to private internal helper functions.
 - **Primary Seam**: Local-validator integration test suites in `tests/`:
-  1. Deploys `reference_vault` to a local validator using the program ID `GgVnzvsMhHHKeeGnqQhU9KAjBeCVhYiYmR17174Lyrgv`.
+  1. Deploys `reference_vault` to a local validator using the program ID configured in `Anchor.toml`.
   2. Tests vault user actions: `initialize`, `deposit`, `withdraw`, balance checks, rent-reserve enforcement.
   3. Tests publication lifecycle: unauthorized rejection, chunk upload, digest verification, finalization.
   4. Reads the Config PDA via standard RPC `getAccountInfo` and executes `@web3mcp/protocol`'s `validateConfig` to guarantee full protocol conformance.
@@ -73,5 +73,5 @@ Build `reference-vault`, an Anchor-based SOL vault program that owns a canonical
 
 ## Further Notes
 
-- The reference vault program ID and artifacts remain strictly within `programs/reference-vault/` and `tests/`.
+- The reference vault program ID and artifacts remain strictly within `reference-programs/reference-vault/` and `tests/`.
 - The Web3MCP host must discover this program purely via its public key and RPC `getAccountInfo`.

@@ -9,7 +9,7 @@ pub use errors::*;
 pub use instructions::*;
 pub use state::*;
 
-declare_id!("GgVnzvsMhHHKeeGnqQhU9KAjBeCVhYiYmR17174Lyrgv");
+declare_id!("9zJzM4rHDPR4pd3vXHQjQ7whTVmx4zxB3ZH4Gb9iXRwD");
 
 #[program]
 pub mod reference_vault {

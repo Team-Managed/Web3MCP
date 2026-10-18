@@ -1,0 +1,30 @@
+{
+  "name": "@web3mcp/sdk",
+  "version": "0.1.0",
+  "description": "Generic Node.js runtime for Solana Web3MCP programs",
+  "type": "module",
+  "engines": { "node": ">=20" },
+  "files": ["dist", "README.md"],
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": { "types": "./dist/index.d.ts", "import": "./dist/index.js" },
+    "./errors": { "types": "./dist/errors.d.ts", "import": "./dist/errors.js" }
+  },
+  "scripts": {
+    "build": "tsup",
+    "test": "npm run test:types && node --test tests/*.test.js",
+    "test:types": "tsc --noEmit --strict --skipLibCheck --module NodeNext --moduleResolution NodeNext --target ES2022 tests/consumer.ts",
+    "prepack": "npm run build"
+  },
+  "dependencies": {
+    "@coral-xyz/anchor": "^0.32.1",
+    "@solana/web3.js": "^1.99.0",
+    "@web3mcp/protocol": "^0.1.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.19.43",
+    "tsup": "^8.5.1",
+    "typescript": "^5.9.3"
+  }
+}
