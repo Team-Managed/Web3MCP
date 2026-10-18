@@ -6,21 +6,24 @@ import Navbar from "./components/Navbar";
 import HeroCentered from "./components/hero/HeroCentered";
 import HomeStoryGrid from "./components/HomeStoryGrid";
 import WhatWeDidntBuild from "./components/WhatWeDidntBuild";
+import WhyLegacyVsWeb3Mcp from "./components/WhyLegacyVsWeb3Mcp";
 import GetInvolved from "./components/GetInvolved";
 import Footer from "./components/Footer";
 
 export default function Home() {
   return (
     <main className="landing-page-root">
-      {/* Hero Section Container: PixelCanvas extends to the very top, Navbar floats over it */}
+      <Navbar />
+
+      {/* Hero Section Container: PixelCanvas extends to the very top */}
       <section className="hero-section-wrapper">
         <PixelCanvas />
-        <Navbar />
         <HeroCentered />
       </section>
 
-      {/* Subsequent Sections: Pure Solid Black, Zero Pixels */}
+      {/* Subsequent Sections: Pure Solid Black */}
       <div className="content-sections">
+        <WhyLegacyVsWeb3Mcp />
         <HomeStoryGrid />
         <WhatWeDidntBuild />
         <GetInvolved />
