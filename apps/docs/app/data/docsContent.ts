@@ -121,6 +121,206 @@ export const DOCS_SECTIONS: DocSection[] = [
     },
   },
   {
+    id: "typescript-sdk",
+    category: "Get Started",
+    title: "TypeScript SDK (@web3mcp)",
+    badge: "SDK Reference",
+    summary:
+      "Official unified TypeScript/JavaScript SDK for on-chain tool discovery, PDA derivation, Anchor binary unpacking, and AI agent integration.",
+    content: {
+      overview:
+        "The official `@web3mcp` npm package bundles both host runtime execution and protocol validation into a single, zero-overhead SDK for AI agent hosts, wallets, and Solana developers. It enables discovering on-chain tools dynamically, cryptographically verifying manifest integrity, resolving Anchor accounts, and formatting tool declarations for LLM providers (Anthropic Claude, OpenAI, and LangChain) without any off-chain proxy servers.",
+      callouts: [
+        {
+          type: "info",
+          title: "Zero Off-Chain Server Dependency",
+          text: "Unlike traditional MCP bridges that require running local Docker daemons or stdio process wrappers, the Web3MCP TypeScript SDK connects directly to any Solana JSON-RPC endpoint. Discovery and reads are 100% signature-free, and instructions are pre-simulated before reaching user wallets.",
+        },
+        {
+          type: "security",
+          title: "Fail-Closed Cryptographic Verification",
+          text: "The SDK automatically validates the 8-byte Anchor discriminator ('account:Web3McpConfig'), confirms the publication status equals Published (2), and computes the SHA-256 hash of the UTF-8 payload to guarantee bit-for-bit parity with the on-chain digest before presenting tools to any model.",
+        },
+      ],
+      codeBlocks: [
+        {
+          title: "1. Installation",
+          language: "bash",
+          code: `# Install the unified @web3mcp package via npm, yarn, or pnpm
+npm install @web3mcp @solana/web3.js
+
+# Or with pnpm
+pnpm add @web3mcp @solana/web3.js`,
+        },
+        {
+          title: "2. Complete End-to-End Discovery & Verification Example",
+          language: "typescript",
+          code: `import { Connection, PublicKey } from "@solana/web3.js";
+import {
+  deriveConfigPda,
+  parseConfigAccount,
+  validateConfig,
+  PublicationStatus,
+} from "@web3mcp";
+
+async function discoverProgramTools(programIdStr: string) {
+  // 1. Initialize standard Solana connection
+  const connection = new Connection("https://api.devnet.solana.com", "confirmed");
+
+  // 2. Derive canonical Web3MCP Config PDA: seeds = ["web3mcp", "config"]
+  const { pda, bump } = deriveConfigPda(programIdStr);
+  console.log(\`Derived Config PDA: \${pda} (bump \${bump})\`);
+
+  // 3. Fetch on-chain account data (Zero off-chain middleman)
+  const accountInfo = await connection.getAccountInfo(new PublicKey(pda));
+  if (!accountInfo) {
+    throw new Error(\`No Web3MCP configuration found for program \${programIdStr}\`);
+  }
+
+  // 4. Parse Anchor binary layout & verify SHA-256 integrity hash
+  const parsed = parseConfigAccount(accountInfo.data);
+  
+  if (parsed.status !== PublicationStatus.Published) {
+    throw new Error("Configuration is still uploading or uninitialized");
+  }
+
+  console.log(\`Verified Publisher Authority: \${parsed.authority}\`);
+  console.log(\`SHA-256 Digest Match: \${parsed.digest}\`);
+
+  // 5. Validate normative Web3MCP JSON Schema
+  const validation = validateConfig(parsed.config);
+  if (!validation.valid) {
+    throw new Error(\`Schema validation failed: \${JSON.stringify(validation.errors)}\`);
+  }
+
+  // 6. Discover tools dynamically
+  console.log(\`Successfully discovered \${parsed.config.tools.length} on-chain tools!\`);
+  for (const tool of parsed.config.tools) {
+    console.log(\`  - \${tool.name} (\${tool.solana.kind}): \${tool.description}\`);
+  }
+
+  return parsed.config;
+}`,
+        },
+        {
+          title: "3. Format Discovered Tools for Anthropic Claude & OpenAI Agents",
+          language: "typescript",
+          code: `// Convert on-chain Web3MCP tools directly into Anthropic Claude tool format
+export function toAnthropicTools(web3mcpTools: any[]) {
+  return web3mcpTools.map((tool) => ({
+    name: tool.name,
+    description: \`[Web3MCP \${tool.solana.kind.toUpperCase()}] \${tool.description}\`,
+    input_schema: {
+      type: "object",
+      properties: tool.inputSchema?.properties || {},
+      required: tool.inputSchema?.required || [],
+    },
+  }));
+}
+
+// Convert into OpenAI / LangChain Function Calling format
+export function toOpenAITools(web3mcpTools: any[]) {
+  return web3mcpTools.map((tool) => ({
+    type: "function",
+    function: {
+      name: tool.name,
+      description: tool.description,
+      parameters: {
+        type: "object",
+        properties: tool.inputSchema?.properties || {},
+        required: tool.inputSchema?.required || [],
+      },
+    },
+  }));
+}`,
+        },
+      ],
+      tables: [
+        {
+          headers: ["Exported Member", "Signature / Type", "Description"],
+          rows: [
+            ["deriveConfigPda", "(programId: string) => { pda: string, bump: number }", "Derives the canonical Config PDA address and bump seed for any target program ID."],
+            ["CONFIG_PDA_SEEDS", "Buffer[]", "Normative seed buffers [Buffer.from('web3mcp'), Buffer.from('config')]."],
+            ["parseConfigAccount", "(data: Buffer | Uint8Array) => ParsedAccount", "Deserializes Anchor binary layout, verifies 8-byte discriminator, and verifies SHA-256 digest."],
+            ["serializeConfigAccount", "(params: SerializeParams) => Buffer", "Serializes authority, status, and JSON payload into 81-byte header + data for publishing."],
+            ["PublicationStatus", "enum { Uninitialized: 0, Uploading: 1, Published: 2 }", "Publication state machine on-chain status code."],
+            ["CONFIG_ACCOUNT_DISCRIMINATOR", "Buffer (8 bytes)", "8-byte Anchor discriminator buffer sha256('account:Web3McpConfig')[0..8]."],
+            ["validateConfig", "(configObj: object) => ValidationResult", "Validates parsed configuration against normative Web3MCP v0.1 JSON Schema."],
+            ["validateConfigSchema", "(jsonStr: string) => ValidationResult", "Validates raw JSON string with Ajv compiler in fail-closed mode."],
+          ],
+        },
+      ],
+      subsections: [
+        {
+          id: "pda-derivation-api",
+          title: "PDA Derivation API",
+          description:
+            "Every Web3MCP program publishes its configuration to a deterministic PDA derived using normative seeds: ['web3mcp', 'config']. The SDK ensures exact seed byte alignment across runtimes.",
+          code: {
+            language: "typescript",
+            code: `import { deriveConfigPda } from "@web3mcp";
+
+// Derives PDA synchronously from any Base58 Program ID
+const { pda, bump } = deriveConfigPda("GgVnzvsM32h953kU2k1v5GjA1j6kS2f54Lyrgv");
+// Returns: { pda: "9WzDXwBbmKg8ZTbNMqUxvQRAyrZzDsGYdLVL9zYtAWWM", bump: 254 }`,
+          },
+        },
+        {
+          id: "account-parsing-api",
+          title: "Anchor Deserializer & Integrity Verification",
+          description:
+            "The deserializer checks the 8-byte Anchor discriminator (0x991dc793e1358b35), unpacks the 32-byte publisher authority, publication status, declared length, and computes SHA-256 of the payload bytes.",
+          code: {
+            language: "typescript",
+            code: `import { parseConfigAccount, ConfigAccountError } from "@web3mcp";
+
+try {
+  const result = parseConfigAccount(rawAccountBuffer);
+  console.log("Authority:", result.authority);
+  console.log("Status:", result.status); // 2 = Published
+  console.log("Embedded IDL Name:", result.config.idl.name);
+  console.log("Tool Manifests:", result.config.tools);
+} catch (err) {
+  if (err instanceof ConfigAccountError) {
+    console.error("Tampered or invalid Web3MCP account:", err.message);
+  }
+}`,
+          },
+        },
+        {
+          id: "live-rpc-simulation-seam",
+          title: "Live RPC Pre-Simulation & Wallet Approval",
+          description:
+            "The golden rule of Web3MCP is that the LLM proposes arguments, but never signs. The host constructs the exact VersionedTransaction or TransactionInstruction and simulates it against live RPC before presenting to the user's wallet.",
+          code: {
+            language: "typescript",
+            code: `import { Connection, Transaction, TransactionInstruction, PublicKey } from "@solana/web3.js";
+
+// Construct instruction from discovered Web3MCP tool manifest
+const instruction = new TransactionInstruction({
+  programId: new PublicKey(config.programId),
+  keys: resolvedAccounts,
+  data: encodedBorshBuffer,
+});
+
+const tx = new Transaction().add(instruction);
+tx.feePayer = userWalletPublicKey;
+tx.recentBlockhash = (await connection.getLatestBlockhash()).blockhash;
+
+// Pre-simulate on Solana RPC (Never broadcast uninspected agent proposals)
+const simulation = await connection.simulateTransaction(tx);
+if (simulation.value.err) {
+  throw new Error(\`Simulation failed: \${JSON.stringify(simulation.value.err)}\`);
+}
+
+console.log(\`Simulation succeeded! Consumed \${simulation.value.unitsConsumed} compute units.\`);
+// Present exact balance delta and instruction details to Phantom / Solflare wallet for human approval`,
+          },
+        },
+      ],
+    },
+  },
+  {
     id: "cli",
     category: "Guides",
     title: "Host CLI & Agent Runner",

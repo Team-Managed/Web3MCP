@@ -128,14 +128,14 @@ export default function DevnetPlayground() {
         <div className="cli-prompt-row">
           <Terminal size={12} className="cli-icon" />
           <code className="cli-cmd-text">
-            npx @web3mcp/host discover {PROGRAM_ID} --rpc https://api.devnet.solana.com
+            npx @web3mcp discover {PROGRAM_ID} --rpc https://api.devnet.solana.com
           </code>
         </div>
         <button
           onClick={() =>
             handleCopy(
               "cli",
-              `npx @web3mcp/host discover ${PROGRAM_ID} --rpc https://api.devnet.solana.com`
+              `npx @web3mcp discover ${PROGRAM_ID} --rpc https://api.devnet.solana.com`
             )
           }
           className="cli-copy-btn"
