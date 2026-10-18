@@ -58,27 +58,27 @@ export default function QuickstartPage() {
           </p>
         </header>
 
-        {/* Quick Highlights Bar */}
+        {/* Top 3 Product Capabilities Bar */}
         <div className="highlights-grid">
           <div className="highlight-card">
             <Zap size={16} className="text-cyan" />
             <div className="hl-text">
-              <span className="hl-title">Pure Solana RPC</span>
-              <span className="hl-desc">Zero off-chain servers or custom SDKs required</span>
-            </div>
-          </div>
-          <div className="highlight-card">
-            <Shield size={16} className="text-emerald" />
-            <div className="hl-text">
-              <span className="hl-title">Human-in-the-Loop</span>
-              <span className="hl-desc">LLM proposes tool calls; only your wallet signs</span>
+              <span className="hl-title">01 · On-Chain Tool Discovery</span>
+              <span className="hl-desc">Discover tools directly from program Config PDAs with zero Docker daemons</span>
             </div>
           </div>
           <div className="highlight-card">
             <Terminal size={16} className="text-purple" />
             <div className="hl-text">
-              <span className="hl-title">Self-Sovereign Tools</span>
-              <span className="hl-desc">Programs own tool declarations in canonical PDAs</span>
+              <span className="hl-title">02 · Signature-Free Account Reads</span>
+              <span className="hl-desc">Inspect live Anchor state over RPC with zero wallet signatures or fees</span>
+            </div>
+          </div>
+          <div className="highlight-card">
+            <Shield size={16} className="text-emerald" />
+            <div className="hl-text">
+              <span className="hl-title">03 · Air-Gapped Wallet Safety Seam</span>
+              <span className="hl-desc">LLM proposes instructions; host simulates deltas; only your wallet signs</span>
             </div>
           </div>
         </div>
@@ -425,7 +425,7 @@ export default function QuickstartPage() {
         <section className="qs-next-steps">
           <h2 className="next-steps-title">Next Steps</h2>
           <p className="next-steps-desc">
-            Explore the protocol wire format, publish tools for your own Solana program, or test the live Devnet explorer:
+            Explore the protocol wire format, publish tools for your own Solana program, or build with the TypeScript SDK:
           </p>
 
           <div className="next-grid">
@@ -447,13 +447,13 @@ export default function QuickstartPage() {
               <span className="next-arrow">View Spec <ArrowRight size={13} /></span>
             </Link>
 
-            <Link href="/docs/latest#playground" className="next-card">
-              <span className="next-tag">INTERACTIVE REFERENCE</span>
-              <h3 className="next-card-title">Live Devnet Tool Explorer</h3>
+            <Link href="/docs/latest#typescript-sdk" className="next-card">
+              <span className="next-tag">TYPESCRIPT SDK</span>
+              <h3 className="next-card-title">TypeScript SDK (@web3mcp)</h3>
               <p className="next-card-desc">
-                Browse the 4 reference vault tools directly in your browser with parameter schemas, accounts, and simulation CUs.
+                Programmatically discover tools, resolve PDAs, simulate instructions, and bind on-chain Solana programs to Anthropic Claude or OpenAI agents.
               </p>
-              <span className="next-arrow">Open Explorer <ArrowRight size={13} /></span>
+              <span className="next-arrow">SDK Reference <ArrowRight size={13} /></span>
             </Link>
           </div>
         </section>
@@ -1086,6 +1086,7 @@ export default function QuickstartPage() {
           color: #38bdf8;
           margin-top: 6px;
         }
+
 
         @media (max-width: 768px) {
           .qs-step-card {
