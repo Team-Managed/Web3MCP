@@ -11,6 +11,7 @@ coverage/
 .next/
 test-ledger/
 .anchor/
+.impeccable/
 *.keypair.json
 CLAUDE.local.md
 .DS_Store
