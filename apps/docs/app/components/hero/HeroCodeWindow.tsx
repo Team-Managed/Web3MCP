@@ -28,31 +28,23 @@ export const vaultToolConfig: Web3McpConfig = {
   ]
 };`;
 
-  const terminalText = `Current Balance: 35,001,000 lamports (~0.035 SOL)
+  const terminalText = `$ npm run host:agent -- --model gemini-3.8-flash
+[15:23:40] Verified executable program: GgVnzvsMhHHKeeGnqQhU9KAjBeCVhYiYmR17174Lyrgv
+[15:23:41] Discovered Config PDA: HfA1ExZS1cgYR5k5GEJmsQfyAcDK2J9NPi7p97dU3WLD
+[15:23:41] SHA-256 digest matched on-chain checksum (status: 2 Published)
+[15:23:41] Dynamic Borsh coders compiled for 4 tools (0 imported IDLs)
 
-Insufficient Vault Balance
-You cannot withdraw 5 SOL right now.
- • Requested: 5 SOL (5,000,000,000 lamports)
- • Available in Vault: ~0.035001 SOL (35,001,000 lamports)
- • Shortfall: ~4.964999 SOL (4,964,999,000 lamports)
+TRANSACTION REVIEW [PRE-SIMULATED]
+Program:        GgVnzvsMhHHKeeGnqQhU9KAjBeCVhYiYmR17174Lyrgv
+Tool:           deposit
+Amount:         100,000,000 lamports (0.1 SOL)
+Signer:         7xKXtG2CW87d97TXJSDpbd5jBkheTqA83TZRuJosgAsU
+Derived PDA:    HfA1ExZS1cgYR5k5GEJmsQfyAcDK2J9NPi7p97dU3WLD
+Compute Units:  4,563 CUs
+Network Fee:    5,000 lamports
+Effects:        Transfers native SOL to on-chain vault
 
-────────────────────────────────────────────────
-gemini-3.8-flash | devnet | GgVnzvsM...4Lyrgv
-> deposit 10% of my remaining wallet balance
-⠋ Thinking...
-
-• Wallet Balance Required
-The available on-chain tools allow reading vault PDA state (get_vault), but do not include a direct query for external wallet balances.
-
-How to Proceed:
-1. State your current wallet SOL balance, or
-2. Specify exact amount directly (e.g. "deposit 0.1 SOL")
-
-Once provided, I will simulate and prepare the transaction for your wallet approval.
-
-────────────────────────────────────────────────
-gemini-3.8-flash | devnet | GgVnzvsM...4Lyrgv
-> deposit 0.1 SOL`;
+? Approve and broadcast transaction to Devnet? [y/N] > _`;
 
   const handleCopy = (pane: string, code: string) => {
     navigator.clipboard.writeText(code);
@@ -177,66 +169,61 @@ gemini-3.8-flash | devnet | GgVnzvsM...4Lyrgv
           </div>
 
           <div className="terminal-body">
-            <div className="term-line term-dim">
-              Current Balance: <span className="text-white">35,001,000 lamports</span> (~0.035 SOL)
+            <div className="terminal-header-line">
+              <span className="prompt">$</span> npm run host:agent -- --model gemini-3.8-flash
             </div>
-            <div className="term-line term-alert">
-              Insufficient Vault Balance
+            <div className="terminal-log-dim">
+              [15:23:40] Verified executable program: GgVnzvsMhHHKeeGnqQhU9KAjBeCVhYiYmR17174Lyrgv
+              <br />
+              [15:23:41] Discovered Config PDA: HfA1ExZS1cgYR5k5GEJmsQfyAcDK2J9NPi7p97dU3WLD
+              <br />
+              [15:23:41] SHA-256 digest matched on-chain checksum (status: 2 Published)
+              <br />
+              [15:23:41] Dynamic Borsh coders compiled for 4 tools (0 imported IDLs)
             </div>
-            <div className="term-line term-muted">
-              You cannot withdraw 5 SOL right now.
-            </div>
-            <div className="term-indent-block">
-              <div className="term-bullet">
-                <span className="bullet-dot">•</span> Requested: 5 SOL (5,000,000,000 lamports)
+
+            {/* High Contrast Review Card */}
+            <div className="terminal-review-card">
+              <div className="card-top-bar">
+                <span className="card-label">TRANSACTION REVIEW</span>
+                <span className="card-badge">PRE-SIMULATED</span>
               </div>
-              <div className="term-bullet">
-                <span className="bullet-dot">•</span> Available in Vault: ~0.035001 SOL (35,001,000 lamports)
+              <div className="review-row">
+                <span className="rk">Program:</span>
+                <span className="rv">GgVnzvsMhHHKeeGnqQhU9KAjBeCVhYiYmR17174Lyrgv</span>
               </div>
-              <div className="term-bullet">
-                <span className="bullet-dot">•</span> Shortfall: ~4.964999 SOL
+              <div className="review-row">
+                <span className="rk">Tool:</span>
+                <span className="rv highlight">deposit</span>
               </div>
-            </div>
-
-            <div className="term-separator" />
-
-            <div className="term-prompt-header">
-              <span className="model-tag">gemini-3.8-flash</span>
-              <span className="prompt-sep">|</span>
-              <span className="cluster-tag">devnet</span>
-              <span className="prompt-sep">|</span>
-              <span className="pda-tag">GgVnzvsM...4Lyrgv</span>
-            </div>
-            <div className="term-user-input">
-              <span className="prompt-char">&gt;</span> deposit 10% of my remaining wallet balance into the vault
-            </div>
-            <div className="term-thinking">
-              <span className="thinking-spinner">⠋</span> Thinking...
-            </div>
-
-            <div className="term-reasoning-title">• Wallet Balance Required</div>
-            <div className="term-reasoning-body">
-              The available on-chain tools allow reading vault PDA state (<span className="text-purple">get_vault</span>), but do not include a direct query for external wallet balances.
-            </div>
-
-            <div className="term-how-to">
-              <div className="how-title">How to Proceed</div>
-              <div>1. State your current wallet SOL balance, or</div>
-              <div>2. Specify the exact amount directly (e.g. &quot;deposit 0.1 SOL&quot;)</div>
-            </div>
-
-            <div className="term-separator" />
-
-            <div className="term-prompt-header">
-              <span className="model-tag">gemini-3.8-flash</span>
-              <span className="prompt-sep">|</span>
-              <span className="cluster-tag">devnet</span>
-              <span className="prompt-sep">|</span>
-              <span className="pda-tag">GgVnzvsM...4Lyrgv</span>
-            </div>
-            <div className="term-user-input active-input">
-              <span className="prompt-char">&gt;</span> deposit 0.1 SOL
-              <span className="cursor-block" />
+              <div className="review-row">
+                <span className="rk">Amount:</span>
+                <span className="rv">100,000,000 lamports (0.1 SOL)</span>
+              </div>
+              <div className="review-row">
+                <span className="rk">Signer:</span>
+                <span className="rv">7xKXtG2CW87d97TXJSDpbd5jBkheTqA83TZRuJosgAsU</span>
+              </div>
+              <div className="review-row">
+                <span className="rk">Derived PDA:</span>
+                <span className="rv">HfA1ExZS1cgYR5k5GEJmsQfyAcDK2J9NPi7p97dU3WLD</span>
+              </div>
+              <div className="review-row">
+                <span className="rk">Compute Units:</span>
+                <span className="rv">4,563 CUs</span>
+              </div>
+              <div className="review-row">
+                <span className="rk">Network Fee:</span>
+                <span className="rv">5,000 lamports</span>
+              </div>
+              <div className="review-row">
+                <span className="rk">Effects:</span>
+                <span className="rv">Transfers native SOL to on-chain vault</span>
+              </div>
+              <div className="prompt-action">
+                <span className="prompt-q">? Approve and broadcast transaction to Devnet? [y/N] &rsaquo; </span>
+                <span className="cursor-blink">_</span>
+              </div>
             </div>
           </div>
         </div>
@@ -512,167 +499,100 @@ gemini-3.8-flash | devnet | GgVnzvsM...4Lyrgv
           max-height: 400px;
         }
 
-        .term-line {
-          margin-bottom: 2px;
-        }
-
-        .term-dim {
-          color: #94a3b8;
-        }
-
-        .text-white {
+        /* Terminal View */
+        .terminal-header-line {
           color: #f1f5f9;
-          font-weight: 600;
-        }
-
-        .term-alert {
-          color: #f87171;
-          font-weight: 600;
-          margin-top: 6px;
-        }
-
-        .term-muted {
-          color: #cbd5e1;
-          margin-bottom: 4px;
-        }
-
-        .term-indent-block {
-          padding-left: 8px;
-          display: flex;
-          flex-direction: column;
-          gap: 2px;
           margin-bottom: 8px;
+          font-size: 11px;
         }
 
-        .term-bullet {
-          color: #94a3b8;
-          font-size: 10.5px;
-        }
-
-        .bullet-dot {
-          color: #64748b;
-        }
-
-        .term-separator {
-          height: 1px;
-          background: rgba(255, 255, 255, 0.08);
-          margin: 10px 0;
-        }
-
-        .term-prompt-header {
-          display: flex;
-          align-items: center;
-          gap: 6px;
-          font-size: 10px;
-          font-weight: 600;
-          margin-bottom: 4px;
-        }
-
-        .model-tag {
-          color: #a78bfa;
-        }
-
-        .prompt-sep {
-          color: #475569;
-        }
-
-        .cluster-tag {
-          color: #34d399;
-        }
-
-        .pda-tag {
-          color: #38bdf8;
-        }
-
-        .term-user-input {
-          color: #ffffff;
-          font-weight: 500;
-          margin-bottom: 6px;
-        }
-
-        .prompt-char {
-          color: #38bdf8;
+        .terminal-header-line .prompt {
+          color: #00C2FF;
           font-weight: 700;
           margin-right: 6px;
         }
 
-        .term-thinking {
-          color: #eab308;
-          display: flex;
-          align-items: center;
-          gap: 6px;
-          font-size: 10.5px;
-          margin-bottom: 6px;
-        }
-
-        .thinking-spinner {
-          animation: spin 1s steps(8) infinite;
-          display: inline-block;
-        }
-
-        @keyframes spin {
-          0% {
-            transform: rotate(0deg);
-          }
-          100% {
-            transform: rotate(360deg);
-          }
-        }
-
-        .term-reasoning-title {
-          color: #f1f5f9;
-          font-weight: 600;
-          margin-top: 6px;
-          font-size: 10.5px;
-        }
-
-        .term-reasoning-body {
-          color: #94a3b8;
-          font-size: 10.5px;
-          margin-bottom: 6px;
-        }
-
-        .text-purple {
-          color: #c084fc;
-        }
-
-        .term-how-to {
-          padding-left: 8px;
-          color: #cbd5e1;
+        .terminal-log-dim {
+          color: #64748b;
           font-size: 10px;
+          line-height: 1.45;
+          margin-bottom: 12px;
+        }
+
+        .terminal-review-card {
+          background: #000000;
+          border: 1px solid rgba(255, 255, 255, 0.14);
+          border-radius: 4px;
+          padding: 10px 12px;
           display: flex;
           flex-direction: column;
-          gap: 2px;
+          gap: 5px;
+        }
+
+        .card-top-bar {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
           margin-bottom: 6px;
         }
 
-        .how-title {
-          font-weight: 600;
+        .card-label {
+          font-weight: 700;
+          font-size: 10.5px;
           color: #ffffff;
+          letter-spacing: 0.05em;
         }
 
-        .active-input {
+        .card-badge {
+          font-size: 8.5px;
+          font-weight: 700;
+          padding: 2px 6px;
+          border-radius: 4px;
+          background: rgba(0, 194, 255, 0.08);
+          border: 1px solid #005a78;
+          color: #00C2FF;
+        }
+
+        .review-row {
           display: flex;
-          align-items: center;
+          justify-content: space-between;
+          line-height: 1.35;
+          gap: 12px;
+          font-size: 10px;
         }
 
-        .cursor-block {
-          width: 7px;
-          height: 13px;
-          background: #ffffff;
-          margin-left: 4px;
-          animation: blinkCursor 1s step-end infinite;
-          display: inline-block;
+        .review-row .rk {
+          color: #64748b;
+          flex-shrink: 0;
         }
 
-        @keyframes blinkCursor {
-          0%,
-          100% {
-            opacity: 1;
-          }
-          50% {
-            opacity: 0;
-          }
+        .review-row .rv {
+          color: #ffffff;
+          text-align: right;
+          word-break: break-all;
+        }
+
+        .review-row .highlight {
+          color: #00C2FF;
+          font-weight: 700;
+        }
+
+        .prompt-action {
+          margin-top: 6px;
+          padding-top: 6px;
+          border-top: 1px dashed rgba(255, 255, 255, 0.14);
+          color: #00C2FF;
+          font-weight: 600;
+          font-size: 10px;
+        }
+
+        .cursor-blink {
+          animation: blink 1s infinite;
+        }
+
+        @keyframes blink {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0; }
         }
 
         @media (max-width: 900px) {

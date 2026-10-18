@@ -1,187 +1,10 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React from "react";
 import Link from "next/link";
 import { Terminal, Database, Code } from "lucide-react";
 
-interface ByteOffset {
-  name: string;
-  offset: string;
-  size: string;
-  type: string;
-  color: string;
-  detail: string;
-}
-
-interface DevnetToolSpec {
-  type: string;
-  badge: string;
-  color: string;
-  program: string;
-  ixName: string;
-  inputSchema: string;
-  accounts: { name: string; source: string; priv: string }[];
-  discriminator?: string;
-  effects: string;
-}
-
 export default function HomeStoryGrid() {
-  const [activeStageTab, setActiveStageTab] = useState<"terminal" | "bytes" | "tools">("terminal");
-  const [selectedByte, setSelectedByte] = useState<number>(0);
-  const [selectedTool, setSelectedTool] = useState<string>("deposit");
-
-  const BYTE_OFFSETS: ByteOffset[] = [
-    {
-      name: "discriminator",
-      offset: "0 .. 8",
-      size: "8 B",
-      type: "[u8; 8]",
-      color: "#9945FF",
-      detail: 'sha256("account:Web3McpConfig")[0..8] = 0x991dc793e1358b35. Enforces Anchor account type safety.',
-    },
-    {
-      name: "authority",
-      offset: "8 .. 40",
-      size: "32 B",
-      type: "Pubkey",
-      color: "#00C2FF",
-      detail: "Authorized publisher wallet. Only this key can write chunks or finalize updates.",
-    },
-    {
-      name: "status",
-      offset: "40 .. 41",
-      size: "1 B",
-      type: "u8",
-      color: "#14F195",
-      detail: "0 = Uninitialized (rejected), 1 = Uploading (fail-closed), 2 = Published (consumable by agents).",
-    },
-    {
-      name: "expected_len",
-      offset: "41 .. 45",
-      size: "4 B",
-      type: "u32 (LE)",
-      color: "#fbbf24",
-      detail: "Total JSON payload byte size (max 64 KiB = 65,536 bytes).",
-    },
-    {
-      name: "digest",
-      offset: "45 .. 77",
-      size: "32 B",
-      type: "[u8; 32]",
-      color: "#f472b6",
-      detail: "SHA-256 hash of entire config JSON. Verified on-chain via native sol_sha256 syscall.",
-    },
-    {
-      name: "config",
-      offset: "77 .. 77+N",
-      size: "4 + N B",
-      type: "Vec<u8>",
-      color: "#38bdf8",
-      detail: "4-byte LE length prefix + UTF-8 JSON envelope with embedded Anchor IDL.",
-    },
-  ];
-
-  const DEVNET_TOOLS: Record<string, DevnetToolSpec> = {
-    deposit: {
-      type: "instruction",
-      badge: "Wallet Approved",
-      color: "#00C2FF",
-      program: "GgVnzvsMhHHKeeGnqQhU9KAjBeCVhYiYmR17174Lyrgv",
-      ixName: "deposit",
-      inputSchema: '{"amount": "u64 (lamports, decimal string)"}',
-      accounts: [
-        { name: "owner", source: "signer", priv: "signer, writable" },
-        { name: "vault", source: "idl", priv: "writable (seeds: [\"vault\", owner])" },
-        { name: "system_program", source: "program", priv: "11111111111111111111111111111111" },
-      ],
-      effects: "Transfers native SOL from user wallet to on-chain vault PDA",
-    },
-    get_vault: {
-      type: "accountRead",
-      badge: "Signature-Free RPC",
-      color: "#14F195",
-      program: "GgVnzvsMhHHKeeGnqQhU9KAjBeCVhYiYmR17174Lyrgv",
-      ixName: "Vault",
-      inputSchema: '{"owner": "publicKey (optional, defaults to signer)"}',
-      accounts: [
-        { name: "vault", source: "idl", priv: "read-only (seeds: [\"vault\", owner])" },
-      ],
-      discriminator: "0xd0e83b384dcdd105 (Anchor 8-byte discriminator verified)",
-      effects: "Decodes binary account data into structured JSON state: { owner, balance, bump }",
-    },
-    withdraw: {
-      type: "instruction",
-      badge: "Wallet Approved",
-      color: "#00C2FF",
-      program: "GgVnzvsMhHHKeeGnqQhU9KAjBeCVhYiYmR17174Lyrgv",
-      ixName: "withdraw",
-      inputSchema: '{"amount": "u64 (lamports, decimal string)"}',
-      accounts: [
-        { name: "owner", source: "signer", priv: "signer, writable" },
-        { name: "vault", source: "idl", priv: "writable (seeds: [\"vault\", owner])" },
-        { name: "system_program", source: "program", priv: "11111111111111111111111111111111" },
-      ],
-      effects: "Transfers native SOL from on-chain vault PDA back to user wallet",
-    },
-    initialize: {
-      type: "instruction",
-      badge: "Wallet Approved",
-      color: "#00C2FF",
-      program: "GgVnzvsMhHHKeeGnqQhU9KAjBeCVhYiYmR17174Lyrgv",
-      ixName: "initialize",
-      inputSchema: "{} (no parameters required)",
-      accounts: [
-        { name: "owner", source: "signer", priv: "signer, writable" },
-        { name: "vault", source: "idl", priv: "writable (seeds: [\"vault\", owner])" },
-        { name: "system_program", source: "program", priv: "11111111111111111111111111111111" },
-      ],
-      effects: "Allocates and initializes the user's on-chain vault PDA account",
-    },
-  };
-
-  const currentToolSpec = DEVNET_TOOLS[selectedTool] || DEVNET_TOOLS.deposit;
-
-  // Scrollytelling: sync stagnant left terminal view with narrative section in viewport
-  useEffect(() => {
-    const sectionToTabMap: Record<string, "terminal" | "bytes" | "tools"> = {
-      why: "terminal",
-      discovery: "bytes",
-      models: "tools",
-      resolution: "tools",
-      security: "terminal",
-    };
-
-    const sectionIds = ["why", "discovery", "models", "resolution", "security"];
-    const sectionElements = sectionIds
-      .map((id) => document.getElementById(id))
-      .filter((el): el is HTMLElement => el !== null);
-
-    if (sectionElements.length === 0) return;
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            const tab = sectionToTabMap[entry.target.id];
-            if (tab) {
-              setActiveStageTab(tab);
-            }
-          }
-        });
-      },
-      {
-        rootMargin: "-20% 0px -45% 0px",
-        threshold: 0.15,
-      }
-    );
-
-    sectionElements.forEach((el) => observer.observe(el));
-
-    return () => {
-      sectionElements.forEach((el) => observer.unobserve(el));
-      observer.disconnect();
-    };
-  }, []);
 
   return (
     <div className="home-story-grid" id="story-grid">
@@ -200,189 +23,87 @@ export default function HomeStoryGrid() {
               <span className="ctrl yellow"></span>
               <span className="ctrl green"></span>
             </div>
-            <span className="stage-title">
-              web3mcp-host &middot; {activeStageTab === "terminal" ? "Terminal Review Card" : activeStageTab === "bytes" ? "81-Byte Account Layout" : "Devnet Reference Tools"}
-            </span>
+            <span className="stage-title">web3mcp-host &middot; Terminal Review Card</span>
             <div className="stage-live-badge">
               <span className="live-dot"></span>
               <span>LIVE RPC</span>
             </div>
           </div>
 
-          {/* Mode Switcher Tabs */}
-          <div className="stage-tabs">
-            <button
-              onClick={() => setActiveStageTab("terminal")}
-              className={`stage-tab ${activeStageTab === "terminal" ? "is-active" : ""}`}
-            >
+          {/* Static Chrome Sub-bar (Pure Display, Non-Interactive) */}
+          <div className="stage-sub-bar" aria-hidden="true">
+            <div className="tab-pill-active">
               <Terminal size={12} />
               <span>Review Card</span>
-            </button>
-            <button
-              onClick={() => setActiveStageTab("bytes")}
-              className={`stage-tab ${activeStageTab === "bytes" ? "is-active" : ""}`}
-            >
+            </div>
+            <div className="tab-pill-dim">
               <Database size={12} />
               <span>81-Byte Layout</span>
-            </button>
-            <button
-              onClick={() => setActiveStageTab("tools")}
-              className={`stage-tab ${activeStageTab === "tools" ? "is-active" : ""}`}
-            >
+            </div>
+            <div className="tab-pill-dim">
               <Code size={12} />
               <span>Devnet Tools</span>
-            </button>
+            </div>
           </div>
 
-          {/* Interactive Stage Body */}
+          {/* Terminal CLI Screen */}
           <div className="stage-screen">
-            {activeStageTab === "terminal" && (
-              <div className="terminal-view">
-                <div className="terminal-header-line">
-                  <span className="prompt">$</span> npm run host:agent -- --model gemini-3.8-flash
-                </div>
-                <div className="terminal-log-dim">
-                  [15:23:40] Verified executable program: GgVnzvsMhHHKeeGnqQhU9KAjBeCVhYiYmR17174Lyrgv
-                  <br />
-                  [15:23:41] Discovered Config PDA: HfA1ExZS1cgYR5k5GEJmsQfyAcDK2J9NPi7p97dU3WLD
-                  <br />
-                  [15:23:41] SHA-256 digest matched on-chain checksum (status: 2 Published)
-                  <br />
-                  [15:23:41] Dynamic Borsh coders compiled for 4 tools (0 imported IDLs)
-                </div>
+            <div className="terminal-header-line">
+              <span className="prompt">$</span> npm run host:agent -- --model gemini-3.8-flash
+            </div>
+            <div className="terminal-log-dim">
+              [15:23:40] Verified executable program: GgVnzvsMhHHKeeGnqQhU9KAjBeCVhYiYmR17174Lyrgv
+              <br />
+              [15:23:41] Discovered Config PDA: HfA1ExZS1cgYR5k5GEJmsQfyAcDK2J9NPi7p97dU3WLD
+              <br />
+              [15:23:41] SHA-256 digest matched on-chain checksum (status: 2 Published)
+              <br />
+              [15:23:41] Dynamic Borsh coders compiled for 4 tools (0 imported IDLs)
+            </div>
 
-                {/* High Contrast Review Card */}
-                <div className="terminal-review-card">
-                  <div className="card-top-bar">
-                    <span className="card-label">TRANSACTION REVIEW</span>
-                    <span className="card-badge">PRE-SIMULATED</span>
-                  </div>
-                  <div className="review-row">
-                    <span className="rk">Program:</span>
-                    <span className="rv">GgVnzvsMhHHKeeGnqQhU9KAjBeCVhYiYmR17174Lyrgv</span>
-                  </div>
-                  <div className="review-row">
-                    <span className="rk">Tool:</span>
-                    <span className="rv highlight">deposit</span>
-                  </div>
-                  <div className="review-row">
-                    <span className="rk">Amount:</span>
-                    <span className="rv">100,000,000 lamports (0.1 SOL)</span>
-                  </div>
-                  <div className="review-row">
-                    <span className="rk">Signer:</span>
-                    <span className="rv">7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU</span>
-                  </div>
-                  <div className="review-row">
-                    <span className="rk">Derived PDA:</span>
-                    <span className="rv">HfA1ExZS1cgYR5k5GEJmsQfyAcDK2J9NPi7p97dU3WLD</span>
-                  </div>
-                  <div className="review-row">
-                    <span className="rk">Compute Units:</span>
-                    <span className="rv">4,563 CUs</span>
-                  </div>
-                  <div className="review-row">
-                    <span className="rk">Network Fee:</span>
-                    <span className="rv">5,000 lamports</span>
-                  </div>
-                  <div className="review-row">
-                    <span className="rk">Effects:</span>
-                    <span className="rv">Transfers native SOL to on-chain vault</span>
-                  </div>
-                  <div className="prompt-action">
-                    <span className="prompt-q">? Approve and broadcast transaction to Devnet? [y/N] &rsaquo; </span>
-                    <span className="cursor-blink">_</span>
-                  </div>
-                </div>
+            {/* High Contrast Review Card */}
+            <div className="terminal-review-card">
+              <div className="card-top-bar">
+                <span className="card-label">TRANSACTION REVIEW</span>
+                <span className="card-badge">PRE-SIMULATED</span>
               </div>
-            )}
-
-            {activeStageTab === "bytes" && (
-              <div className="bytes-view">
-                <div className="bytes-header-title">Canonical Config PDA Binary Header (81 Bytes)</div>
-                <div className="byte-strip">
-                  {BYTE_OFFSETS.map((b, i) => (
-                    <button
-                      key={b.name}
-                      onClick={() => setSelectedByte(i)}
-                      className={`byte-cell ${selectedByte === i ? "is-selected" : ""}`}
-                      style={{
-                        borderColor: selectedByte === i ? b.color : "rgba(255,255,255,0.12)",
-                        background: selectedByte === i ? `${b.color}22` : "rgba(255,255,255,0.02)",
-                      }}
-                    >
-                      <span className="b-offset" style={{ color: b.color }}>{b.offset}</span>
-                      <span className="b-name">{b.name}</span>
-                    </button>
-                  ))}
-                </div>
-
-                <div className="byte-info-box">
-                  <div className="info-top">
-                    <span className="info-field">{BYTE_OFFSETS[selectedByte].name}</span>
-                    <span className="info-type">Type: <code>{BYTE_OFFSETS[selectedByte].type}</code></span>
-                    <span className="info-size">{BYTE_OFFSETS[selectedByte].size}</span>
-                  </div>
-                  <p className="info-detail">{BYTE_OFFSETS[selectedByte].detail}</p>
-                </div>
+              <div className="review-row">
+                <span className="rk">Program:</span>
+                <span className="rv">GgVnzvsMhHHKeeGnqQhU9KAjBeCVhYiYmR17174Lyrgv</span>
               </div>
-            )}
-
-            {activeStageTab === "tools" && (
-              <div className="tools-view">
-                <div className="tool-selector">
-                  {Object.keys(DEVNET_TOOLS).map((t) => (
-                    <button
-                      key={t}
-                      onClick={() => setSelectedTool(t)}
-                      className={`t-btn ${selectedTool === t ? "is-active" : ""}`}
-                    >
-                      {t}
-                    </button>
-                  ))}
-                </div>
-                <div className="tool-specs-box">
-                  <div className="spec-row">
-                    <span className="sk">Type:</span>
-                    <span className="sv" style={{ color: currentToolSpec.color, fontWeight: 600 }}>
-                      {currentToolSpec.type} ({currentToolSpec.badge})
-                    </span>
-                  </div>
-                  <div className="spec-row">
-                    <span className="sk">Program:</span>
-                    <span className="sv">{currentToolSpec.program}</span>
-                  </div>
-                  <div className="spec-row">
-                    <span className="sk">Target:</span>
-                    <span className="sv">{currentToolSpec.ixName}</span>
-                  </div>
-                  <div className="spec-row">
-                    <span className="sk">Input Schema:</span>
-                    <span className="sv code-text">{currentToolSpec.inputSchema}</span>
-                  </div>
-                  {currentToolSpec.discriminator && (
-                    <div className="spec-row">
-                      <span className="sk">Discriminator:</span>
-                      <span className="sv code-text">{currentToolSpec.discriminator}</span>
-                    </div>
-                  )}
-                  <div className="spec-row-col">
-                    <span className="sk">Account Resolution:</span>
-                    <div className="acc-list">
-                      {currentToolSpec.accounts.map((acc) => (
-                        <div key={acc.name} className="acc-item">
-                          <code>{acc.name}</code> &rarr; <span className="acc-priv">{acc.priv}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                  <div className="spec-row">
-                    <span className="sk">Effects:</span>
-                    <span className="sv">{currentToolSpec.effects}</span>
-                  </div>
-                </div>
+              <div className="review-row">
+                <span className="rk">Tool:</span>
+                <span className="rv highlight">deposit</span>
               </div>
-            )}
+              <div className="review-row">
+                <span className="rk">Amount:</span>
+                <span className="rv">100,000,000 lamports (0.1 SOL)</span>
+              </div>
+              <div className="review-row">
+                <span className="rk">Signer:</span>
+                <span className="rv">7xKXtG2CW87d97TXJSDpbd5jBkheTqA83TZRuJosgAsU</span>
+              </div>
+              <div className="review-row">
+                <span className="rk">Derived PDA:</span>
+                <span className="rv">HfA1ExZS1cgYR5k5GEJmsQfyAcDK2J9NPi7p97dU3WLD</span>
+              </div>
+              <div className="review-row">
+                <span className="rk">Compute Units:</span>
+                <span className="rv">4,563 CUs</span>
+              </div>
+              <div className="review-row">
+                <span className="rk">Network Fee:</span>
+                <span className="rv">5,000 lamports</span>
+              </div>
+              <div className="review-row">
+                <span className="rk">Effects:</span>
+                <span className="rv">Transfers native SOL to on-chain vault</span>
+              </div>
+              <div className="prompt-action">
+                <span className="prompt-q">? Approve and broadcast transaction to Devnet? [y/N] &rsaquo; </span>
+                <span className="cursor-blink">_</span>
+              </div>
+            </div>
           </div>
 
           <figcaption className="figure-caption figure-caption--terminal">
@@ -503,29 +224,58 @@ export default function HomeStoryGrid() {
           position: sticky;
           top: 36px;
           border-radius: 4px;
-          overflow: hidden;
           background: #000000;
-          border: 1px solid rgba(255, 255, 255, 0.16);
-          box-shadow: 0 16px 48px rgba(0, 0, 0, 0.6);
+          border: 1px solid rgba(255, 255, 255, 0.12);
+          box-shadow: 0 16px 48px rgba(0, 0, 0, 0.7);
+          font-family: var(--font-mono);
+        }
+
+        .landing-demo-figure .figure-corner--tl {
+          top: -1px;
+          left: -1px;
+          border-top: 2px solid #00C2FF;
+          border-left: 2px solid #00C2FF;
+        }
+
+        .landing-demo-figure .figure-corner--tr {
+          top: -1px;
+          right: -1px;
+          border-top: 2px solid #00C2FF;
+          border-right: 2px solid #00C2FF;
+        }
+
+        .landing-demo-figure .figure-corner--bl {
+          bottom: -1px;
+          left: -1px;
+          border-bottom: 2px solid #00C2FF;
+          border-left: 2px solid #00C2FF;
+        }
+
+        .landing-demo-figure .figure-corner--br {
+          bottom: -1px;
+          right: -1px;
+          border-bottom: 2px solid #00C2FF;
+          border-right: 2px solid #00C2FF;
         }
 
         .stage-header {
           display: flex;
           align-items: center;
           justify-content: space-between;
-          padding: 10px 14px;
+          padding: 11px 16px;
           background: #000000;
-          border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+          border-bottom: 1px solid rgba(255, 255, 255, 0.08);
         }
 
         .stage-controls {
           display: flex;
-          gap: 6px;
+          gap: 7px;
+          align-items: center;
         }
 
         .ctrl {
-          width: 9px;
-          height: 9px;
+          width: 9.5px;
+          height: 9.5px;
           border-radius: 50%;
         }
 
@@ -535,21 +285,23 @@ export default function HomeStoryGrid() {
 
         .stage-title {
           font-family: var(--font-mono);
-          font-size: 11px;
+          font-size: 11.5px;
           color: #94a3b8;
+          letter-spacing: 0.02em;
         }
 
         .stage-live-badge {
           display: flex;
           align-items: center;
-          gap: 5px;
+          gap: 6px;
           font-family: var(--font-mono);
-          font-size: 9.5px;
-          font-weight: 600;
-          color: #14F195;
-          background: rgba(20, 241, 149, 0.1);
-          border: 1px solid rgba(20, 241, 149, 0.3);
-          padding: 2px 6px;
+          font-size: 10px;
+          font-weight: 700;
+          letter-spacing: 0.04em;
+          color: #10b981;
+          background: rgba(16, 185, 129, 0.08);
+          border: 1px solid rgba(16, 185, 129, 0.35);
+          padding: 3px 8px;
           border-radius: 4px;
         }
 
@@ -558,110 +310,113 @@ export default function HomeStoryGrid() {
           height: 5px;
           border-radius: 50%;
           background: #14F195;
-          box-shadow: 0 0 5px #14F195;
+          box-shadow: 0 0 6px #14F195;
         }
 
-        .stage-tabs {
+        .stage-sub-bar {
           display: flex;
+          align-items: center;
+          gap: 18px;
+          padding: 9px 16px;
           background: #000000;
-          border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-          padding: 6px;
-          gap: 6px;
+          border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+          pointer-events: none;
+          user-select: none;
         }
 
-        .stage-tab {
+        .tab-pill-active {
           display: flex;
           align-items: center;
           gap: 6px;
-          padding: 6px 12px;
+          padding: 5px 12px;
           border-radius: 4px;
           font-family: var(--font-mono);
           font-size: 11px;
-          color: #64748b;
-          background: transparent;
-          border: 1px solid transparent;
-          cursor: pointer;
-          transition: all 0.15s ease;
-        }
-
-        .stage-tab:hover {
-          color: #e2e8f0;
-          background: rgba(255, 255, 255, 0.04);
-        }
-
-        .stage-tab.is-active {
-          color: #ffffff;
-          background: rgba(255, 255, 255, 0.08);
-          border-color: rgba(255, 255, 255, 0.16);
           font-weight: 600;
+          color: #ffffff;
+          background: rgba(255, 255, 255, 0.04);
+          border: 1px solid rgba(255, 255, 255, 0.18);
+        }
+
+        .tab-pill-dim {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          font-family: var(--font-mono);
+          font-size: 11px;
+          color: #64748b;
         }
 
         .stage-screen {
           background: #000000;
-          padding: 16px;
-          min-height: 420px;
+          padding: 20px 22px;
           font-family: var(--font-mono);
           font-size: 11.5px;
         }
 
-        /* Terminal View */
         .terminal-header-line {
-          color: #f1f5f9;
-          margin-bottom: 8px;
+          color: #ffffff;
+          font-size: 12px;
+          font-weight: 500;
+          margin-bottom: 12px;
+          line-height: 1.4;
         }
 
         .terminal-header-line .prompt {
           color: #00C2FF;
           font-weight: 700;
-          margin-right: 6px;
+          margin-right: 8px;
         }
 
         .terminal-log-dim {
           color: #64748b;
           font-size: 10.5px;
-          line-height: 1.5;
-          margin-bottom: 14px;
+          line-height: 1.6;
+          margin-bottom: 18px;
         }
 
         .terminal-review-card {
-          background: #050505;
-          border: 1px solid rgba(255, 255, 255, 0.16);
+          background: #000000;
+          border: 1px solid rgba(255, 255, 255, 0.14);
           border-radius: 4px;
-          padding: 12px;
+          padding: 18px 20px;
           display: flex;
           flex-direction: column;
-          gap: 6px;
+          gap: 8px;
         }
 
         .card-top-bar {
           display: flex;
           justify-content: space-between;
           align-items: center;
-          padding-bottom: 6px;
-          border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+          margin-bottom: 12px;
         }
 
         .card-label {
           font-weight: 700;
+          font-size: 11.5px;
           color: #ffffff;
-          letter-spacing: 0.05em;
+          letter-spacing: 0.06em;
         }
 
         .card-badge {
-          font-size: 9px;
+          font-size: 9.5px;
           font-weight: 700;
-          padding: 2px 6px;
+          letter-spacing: 0.04em;
+          padding: 2px 7px;
           border-radius: 4px;
-          background: rgba(0, 194, 255, 0.12);
-          border: 1px solid rgba(0, 194, 255, 0.3);
+          background: rgba(0, 194, 255, 0.08);
+          border: 1px solid #005a78;
           color: #00C2FF;
         }
 
         .review-row {
           display: flex;
           justify-content: space-between;
-          line-height: 1.4;
-          gap: 12px;
+          align-items: baseline;
+          font-size: 11.5px;
+          line-height: 1.45;
+          gap: 16px;
         }
 
         .review-row .rk {
@@ -670,25 +425,30 @@ export default function HomeStoryGrid() {
         }
 
         .review-row .rv {
-          color: #cbd5e1;
+          color: #ffffff;
           text-align: right;
           word-break: break-all;
         }
 
         .review-row .highlight {
           color: #00C2FF;
-          font-weight: 600;
+          font-weight: 700;
         }
 
         .prompt-action {
-          margin-top: 6px;
-          padding-top: 6px;
-          border-top: 1px dashed rgba(255, 255, 255, 0.12);
+          margin-top: 10px;
+          padding-top: 12px;
+          border-top: 1px dashed rgba(255, 255, 255, 0.14);
           color: #00C2FF;
           font-weight: 600;
+          font-size: 11.5px;
+          line-height: 1.4;
         }
 
         .cursor-blink {
+          display: inline-block;
+          color: #00C2FF;
+          margin-left: 2px;
           animation: blink 1s infinite;
         }
 
@@ -697,200 +457,15 @@ export default function HomeStoryGrid() {
           50% { opacity: 0; }
         }
 
-        /* Bytes View */
-        .bytes-header-title {
-          color: #94a3b8;
-          font-size: 11px;
-          margin-bottom: 12px;
-          text-transform: uppercase;
-          letter-spacing: 0.05em;
-        }
-
-        .byte-strip {
-          display: grid;
-          grid-template-columns: repeat(3, 1fr);
-          gap: 6px;
-          margin-bottom: 14px;
-        }
-
-        .byte-cell {
-          border-radius: 4px;
-          padding: 8px 6px;
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          gap: 3px;
-          border-width: 1px;
-          border-style: solid;
-          cursor: pointer;
-          transition: all 0.15s ease;
-        }
-
-        .byte-cell:hover {
-          border-color: rgba(255, 255, 255, 0.4);
-        }
-
-        .b-offset {
-          font-family: var(--font-mono);
-          font-size: 9.5px;
-          font-weight: 600;
-        }
-
-        .b-name {
-          font-family: var(--font-sans);
-          font-size: 10.5px;
-          color: #ffffff;
-        }
-
-        .byte-info-box {
-          background: #050505;
-          border: 1px solid rgba(255, 255, 255, 0.16);
-          border-radius: 4px;
-          padding: 12px;
-        }
-
-        .info-top {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          margin-bottom: 8px;
-          padding-bottom: 6px;
-          border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-          font-size: 11px;
-        }
-
-        .info-field {
-          font-weight: 600;
-          color: #ffffff;
-        }
-
-        .info-type code {
-          color: #00C2FF;
-        }
-
-        .info-size {
-          color: #64748b;
-        }
-
-        .info-detail {
-          font-family: var(--font-sans);
-          font-size: 12px;
-          color: #cbd5e1;
-          line-height: 1.45;
-          margin: 0;
-        }
-
-        /* Tools View */
-        .tool-selector {
-          display: flex;
-          gap: 6px;
-          margin-bottom: 12px;
-        }
-
-        .t-btn {
-          font-family: var(--font-mono);
-          font-size: 11px;
-          padding: 5px 10px;
-          border-radius: 4px;
-          background: #000000;
-          color: #94a3b8;
-          border: 1px solid rgba(255, 255, 255, 0.12);
-          cursor: pointer;
-          transition: all 0.15s ease;
-        }
-
-        .t-btn:hover {
-          color: #ffffff;
-          border-color: rgba(255, 255, 255, 0.3);
-        }
-
-        .t-btn.is-active {
-          background: rgba(0, 194, 255, 0.1);
-          border-color: rgba(0, 194, 255, 0.4);
-          color: #ffffff;
-          font-weight: 600;
-        }
-
-        .tool-specs-box {
-          background: #050505;
-          border: 1px solid rgba(255, 255, 255, 0.16);
-          border-radius: 4px;
-          padding: 12px;
-          display: flex;
-          flex-direction: column;
-          gap: 8px;
-        }
-
-        .spec-row {
-          display: flex;
-          justify-content: space-between;
-          font-size: 11.5px;
-          gap: 12px;
-        }
-
-        .spec-row .sk {
-          color: #64748b;
-          flex-shrink: 0;
-        }
-
-        .spec-row .sv {
-          color: #cbd5e1;
-          text-align: right;
-          word-break: break-all;
-        }
-
-        .code-text {
-          font-family: var(--font-mono);
-          font-size: 10.5px;
-          color: #94a3b8;
-        }
-
-        .spec-row-col {
-          display: flex;
-          flex-direction: column;
-          gap: 6px;
-          padding: 6px 0;
-          border-top: 1px solid rgba(255, 255, 255, 0.06);
-          border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-        }
-
-        .spec-row-col .sk {
-          color: #64748b;
-          font-size: 11px;
-        }
-
-        .acc-list {
-          display: flex;
-          flex-direction: column;
-          gap: 4px;
-          padding-left: 6px;
-        }
-
-        .acc-item {
-          font-size: 10.5px;
-          color: #cbd5e1;
-        }
-
-        .acc-item code {
-          color: #00C2FF;
-          background: rgba(0, 194, 255, 0.08);
-          padding: 1px 4px;
-          border-radius: 3px;
-        }
-
-        .acc-priv {
-          color: #94a3b8;
-        }
-
         .figure-caption--terminal {
-          padding: 8px 14px;
+          padding: 11px 18px;
           background: #000000;
           border-top: 1px solid rgba(255, 255, 255, 0.08);
           display: flex;
           justify-content: space-between;
           align-items: center;
           font-family: var(--font-mono);
-          font-size: 10.5px;
+          font-size: 11px;
           color: #64748b;
         }
 
@@ -899,6 +474,7 @@ export default function HomeStoryGrid() {
           height: 5px;
           border-radius: 50%;
           background: #14F195;
+          box-shadow: 0 0 5px #14F195;
         }
 
         /* Right Narrative Column */
