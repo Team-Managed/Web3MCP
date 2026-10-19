@@ -118,6 +118,13 @@ export default function DocsLatestPage() {
             gap: 16px;
           }
         }
+
+        @media (max-width: 640px) {
+          .docs-three-column-grid {
+            padding: 12px 10px 48px 10px;
+            gap: 12px;
+          }
+        }
       `}</style>
     </div>
   );

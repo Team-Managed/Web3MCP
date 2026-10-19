@@ -13,13 +13,13 @@ export default function DevnetPlayground() {
     {
       name: "get_vault",
       kind: "accountRead",
-      operation: "Read a Vault account by its exact PDA",
+      operation: "Read a Vault account by its exact PDA address",
       effects: "No transaction or signature",
     },
     {
       name: "get_vault_by_owner",
       kind: "accountRead",
-      operation: "Derive and read a vault from its owner's wallet address",
+      operation: "Derive and read a vault from its owner's wallet address (v0.2 PDA seed)",
       effects: "No transaction or signature",
     },
     {
@@ -155,7 +155,7 @@ export default function DevnetPlayground() {
         .devnet-ref-wrapper {
           display: flex;
           flex-direction: column;
-          gap: 16px;
+          gap: 14px;
           margin: 16px 0 24px 0;
         }
 
@@ -173,6 +173,7 @@ export default function DevnetPlayground() {
           display: flex;
           flex-direction: column;
           gap: 5px;
+          min-width: 0;
         }
 
         .ref-label {
@@ -187,6 +188,7 @@ export default function DevnetPlayground() {
           display: flex;
           align-items: center;
           gap: 8px;
+          min-width: 0;
         }
 
         .ref-link {
@@ -200,6 +202,7 @@ export default function DevnetPlayground() {
           overflow: hidden;
           text-overflow: ellipsis;
           white-space: nowrap;
+          min-width: 0;
         }
 
         .ref-link:hover {
@@ -213,6 +216,9 @@ export default function DevnetPlayground() {
           padding: 2px 6px;
           border-radius: 3px;
           color: #38bdf8;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
         }
 
         .copy-mini-btn {
@@ -223,6 +229,7 @@ export default function DevnetPlayground() {
           display: flex;
           align-items: center;
           padding: 2px;
+          flex-shrink: 0;
           transition: color 0.15s ease;
         }
 
@@ -230,7 +237,7 @@ export default function DevnetPlayground() {
           color: #ffffff;
         }
 
-        /* Table Boxed Wrapper matching screenshot */
+        /* Table Boxed Wrapper */
         .table-boxed-wrapper {
           border: 1px solid rgba(255, 255, 255, 0.12);
           border-radius: 4px;
@@ -376,6 +383,27 @@ export default function DevnetPlayground() {
           .cli-test-strip {
             flex-direction: column;
             align-items: flex-start;
+          }
+        }
+
+        @media (max-width: 640px) {
+          .ref-item {
+            padding: 10px 12px;
+          }
+          .ref-val-row {
+            flex-wrap: wrap;
+          }
+          .ref-link code {
+            font-size: 11px;
+            word-break: break-all;
+          }
+          .cli-cmd-text {
+            white-space: normal;
+            word-break: break-all;
+            font-size: 11px;
+          }
+          .table-boxed-wrapper {
+            -webkit-overflow-scrolling: touch;
           }
         }
       `}</style>
