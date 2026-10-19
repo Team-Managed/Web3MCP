@@ -37,12 +37,19 @@ export default function DocsNavBox({
   return (
     <aside className={`docs-nav-box ${isMobileExpanded ? "mobile-open" : ""}`}>
       {/* Box Header Banner (interactive toggle on mobile) */}
-      <div
+      <button
+        type="button"
         className="nav-box-header"
         onClick={() => setIsMobileExpanded((prev) => !prev)}
-        role="button"
-        tabIndex={0}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            setIsMobileExpanded((prev) => !prev);
+          }
+        }}
         aria-expanded={isMobileExpanded}
+        aria-controls="docs-nav-content"
+        aria-label="Toggle documentation navigation"
       >
         <div className="header-title-row">
           <span className="header-text">DOCUMENTATION</span>
@@ -51,10 +58,10 @@ export default function DocsNavBox({
             <span className="mobile-arrow">{isMobileExpanded ? "▲" : "▼"}</span>
           </div>
         </div>
-      </div>
+      </button>
 
       {/* Categories and Indented Items */}
-      <div className={`nav-box-content ${isMobileExpanded ? "is-mobile-expanded" : ""}`}>
+      <div id="docs-nav-content" className={`nav-box-content ${isMobileExpanded ? "is-mobile-expanded" : ""}`}>
         {categories.map((cat) => {
           const catSections = sections.filter((s) => s.category === cat && s.id !== "quickstart");
           if (catSections.length === 0) return null;
@@ -102,9 +109,20 @@ export default function DocsNavBox({
         }
 
         .nav-box-header {
-          padding: 14px 18px;
+          width: 100%;
+          border: none;
           border-bottom: 1px solid rgba(255, 255, 255, 0.08);
           background: rgba(255, 255, 255, 0.02);
+          padding: 14px 18px;
+          text-align: left;
+          color: inherit;
+          font: inherit;
+          cursor: default;
+        }
+
+        .nav-box-header:focus-visible {
+          outline: 2px solid #38bdf8;
+          outline-offset: -2px;
         }
 
         .header-title-row {

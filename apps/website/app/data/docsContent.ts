@@ -321,7 +321,8 @@ export const DOCS_SECTIONS: DocSection[] = [
       "input": "userAccount"
     },
     "systemProgram": {
-      "source": "program"
+      "source": "program",
+      "address": "11111111111111111111111111111111"
     }
   },
   "effects": {
@@ -439,15 +440,15 @@ pub struct Web3McpConfig {
             headers: ["Step", "Instruction", "Signer", "Behavior"],
             rows: [
               ["1. Init", "initialize_config(authority, expected_len, digest)", "Upgrade Authority", "Allocates PDA with header, sets status=1 (Uploading), zeroes payload buffer."],
-              ["2. Chunk", "write_config_chunk(offset, chunk)", "Authorized Updater", "Appends bounded byte chunk at specified offset into the config vector."],
-              ["3. Finalize", "finalize_config()", "Authorized Updater", "Verifies vector length == expected_len and SHA256(payload) == digest. Sets status=2."],
+              ["2. Chunk", "write_config_chunk(offset, chunk)", "Upgrade Authority", "Appends bounded byte chunk at specified offset into the config vector."],
+              ["3. Finalize", "finalize_config()", "Upgrade Authority", "Verifies vector length == expected_len and SHA256(payload) == digest. Sets status=2."],
             ],
           },
         },
         {
           id: "publication-handlers",
           title: "Reference Publication Instruction Handlers",
-          description: "Implement authorization using Anchor's ProgramData upgrade authority check to ensure only the program owner can modify tool definitions.",
+          description: "Implement authorization using Anchor's ProgramData upgrade authority check across all publication instructions to ensure only the program owner can modify tool definitions.",
           code: {
             language: "rust",
             code: `#[derive(Accounts)]
@@ -458,6 +459,7 @@ pub struct InitializeConfig<'info> {
     pub program: Program<'info, crate::program::ReferenceVault>,
     #[account(constraint = program_data.upgrade_authority_address == Some(authority.key()))]
     pub program_data: Account<'info, ProgramData>,
+    /// CHECK: Seeds and bump are verified by Anchor; layout and allocation handled in instruction
     #[account(
         mut,
         seeds = [b"web3mcp".as_ref(), b"config".as_ref()],
@@ -469,24 +471,37 @@ pub struct InitializeConfig<'info> {
 
 #[derive(Accounts)]
 pub struct WriteConfigChunk<'info> {
+    #[account(mut)]
     pub authority: Signer<'info>,
+    #[account(constraint = program.programdata_address()? == Some(program_data.key()))]
+    pub program: Program<'info, crate::program::ReferenceVault>,
+    #[account(constraint = program_data.upgrade_authority_address == Some(authority.key()))]
+    pub program_data: Account<'info, ProgramData>,
+    /// CHECK: Seeds, owner, authority, and layout are checked before modification
     #[account(
         mut,
         seeds = [b"web3mcp".as_ref(), b"config".as_ref()],
         bump
     )]
-    pub config: Account<'info, Web3McpConfig>,
+    pub config: AccountInfo<'info>,
+    pub system_program: Program<'info, System>,
 }
 
 #[derive(Accounts)]
 pub struct FinalizeConfig<'info> {
+    #[account(mut)]
     pub authority: Signer<'info>,
+    #[account(constraint = program.programdata_address()? == Some(program_data.key()))]
+    pub program: Program<'info, crate::program::ReferenceVault>,
+    #[account(constraint = program_data.upgrade_authority_address == Some(authority.key()))]
+    pub program_data: Account<'info, ProgramData>,
+    /// CHECK: Seeds, owner, authority, and layout are checked before modification
     #[account(
         mut,
         seeds = [b"web3mcp".as_ref(), b"config".as_ref()],
         bump
     )]
-    pub config: Account<'info, Web3McpConfig>,
+    pub config: AccountInfo<'info>,
 }`,
           },
         },
@@ -604,7 +619,10 @@ export function generateConfig({ idlPath, targetTools }) {
     tools: targetTools,
   };
 
-  validateConfig(manifest);
+  const validation = validateConfig(manifest);
+  if (!validation.valid) {
+    throw new Error("Generated Web3MCP config is invalid: " + validation.errors.join("; "));
+  }
   return manifest;
 }`,
           },
@@ -701,8 +719,13 @@ export async function publishConfig(options = {}) {
   const payload = Buffer.from(JSON.stringify(config), "utf8");
   const digest = crypto.createHash("sha256").update(payload).digest();
 
-  // 2. Derive PDAs
-  const programId = new PublicKey(config.programId);
+  // 2. Load IDL & instantiate Anchor Program
+  const idlPath = options.idlPath || path.resolve("./target/idl/your_program.json");
+  const idl = JSON.parse(fs.readFileSync(idlPath, "utf8"));
+  const program = new anchor.Program(idl, provider);
+  const programId = program.programId;
+
+  // 3. Derive PDAs
   const [configPda] = PublicKey.findProgramAddressSync(
     [Buffer.from("web3mcp"), Buffer.from("config")],
     programId
@@ -712,7 +735,7 @@ export async function publishConfig(options = {}) {
     BPF_LOADER_UPGRADEABLE_PROGRAM_ID
   );
 
-  // 3. Step 1: Initialize Config PDA in Uploading state
+  // 4. Step 1: Initialize Config PDA in Uploading state
   console.log("Initializing Config PDA (status = 1)...");
   await program.methods
     .initializeConfig(wallet.publicKey, payload.length, Array.from(digest))
@@ -725,7 +748,7 @@ export async function publishConfig(options = {}) {
     })
     .rpc();
 
-  // 4. Step 2: Stream sequential chunks
+  // 5. Step 2: Stream sequential chunks
   const totalChunks = Math.ceil(payload.length / CHUNK_SIZE);
   for (let i = 0; i < totalChunks; i++) {
     const offset = i * CHUNK_SIZE;
@@ -734,21 +757,32 @@ export async function publishConfig(options = {}) {
 
     await program.methods
       .writeConfigChunk(offset, chunk)
-      .accounts({ authority: wallet.publicKey, config: configPda })
+      .accounts({
+        authority: wallet.publicKey,
+        program: programId,
+        programData,
+        config: configPda,
+        systemProgram: SystemProgram.programId,
+      })
       .rpc();
 
     if (CHUNK_DELAY_MS > 0) await new Promise(r => setTimeout(r, CHUNK_DELAY_MS));
   }
 
-  // 5. Step 3: Finalize and verify digest on-chain
+  // 6. Step 3: Finalize and verify digest on-chain
   console.log("Finalizing config (status = 2 Published)...");
   await program.methods
     .finalizeConfig()
-    .accounts({ authority: wallet.publicKey, config: configPda })
+    .accounts({
+      authority: wallet.publicKey,
+      program: programId,
+      programData,
+      config: configPda,
+    })
     .preInstructions([ComputeBudgetProgram.setComputeUnitLimit({ units: 400_000 })])
     .rpc();
 
-  // 6. Post-publish verification via protocol validator
+  // 7. Post-publish verification via protocol validator
   const accountInfo = await connection.getAccountInfo(configPda, "confirmed");
   const programAccount = await connection.getAccountInfo(programId, "confirmed");
   const check = validateDiscoveredConfig({
@@ -773,13 +807,12 @@ export async function publishConfig(options = {}) {
 npm run host -- --program <YOUR_PROGRAM_ID>
 
 # Discover program tools programmatically using the SDK
-node -e "
-  const { Connection } = require('@solana/web3.js');
-  const { Web3McpSdk } = require('@web3mcp/sdk');
+node --input-type=module -e "
+  import { Connection } from '@solana/web3.js';
+  import { Web3McpSdk } from '@web3mcp/sdk';
   const sdk = new Web3McpSdk({ connection: new Connection('https://api.devnet.solana.com') });
-  sdk.discover('<YOUR_PROGRAM_ID>').then(() => {
-    console.log(sdk.getTools('<YOUR_PROGRAM_ID>').map(t => t.name));
-  });
+  await sdk.discover('<YOUR_PROGRAM_ID>');
+  console.log(sdk.getTools('<YOUR_PROGRAM_ID>').map(t => t.name));
 "`,
           },
         },
@@ -848,7 +881,7 @@ node -e "
           description: "Executing write instructions enforces strict user review and cryptographic signing boundaries:",
           items: [
             "**Construct Instruction**: Validate inputs against `inputSchema` and resolve required account public keys.",
-            "**Simulate Transaction**: Simulate execution via Solana RPC to inspect balance diffs and account state changes.",
+            "**Simulate Transaction**: Simulate execution via Solana RPC to inspect simulation errors, execution logs, compute units consumed, and return data.",
             "**Present Human Summary**: Display the human-readable summary, simulation results, and message hash to the user.",
             "**Explicit Wallet Signature**: Prompt the connected wallet for explicit user approval; the LLM never signs.",
             "**Verify & Submit**: Verify that the signed message hash matches the simulated transaction before broadcast.",
@@ -893,7 +926,7 @@ node -e "
           description: "Preparing and executing wallet-approved transactions follows a 5-step lifecycle:",
           items: [
             "**1. Prepare Instruction**: Call `prepareInstruction` with the tool name, arguments, program ID, and connected wallet signer.",
-            "**2. Simulate & Review**: Inspect simulated transaction effects, balance diffs, and the transaction message hash.",
+            "**2. Simulate & Review**: Inspect simulation results (error status, logs, compute units, return data), declared tool effects, and the transaction message hash.",
             "**3. Human Approval**: Display the human-readable summary and prompt the user for explicit confirmation in the wallet UI.",
             "**4. Sign Transaction**: The user's wallet signs the prepared transaction (`prepared.transaction`); the model never touches private keys.",
             "**5. Submit & Confirm**: Call `submitSignedTransaction` to broadcast to Solana RPC and wait for cluster confirmation. Prepare again if the blockhash expires.",
