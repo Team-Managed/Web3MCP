@@ -16,6 +16,7 @@ export default function DocsNavBox({
 }: DocsNavBoxProps) {
   const CATEGORY_ORDER = [
     "Protocol",
+    "Smart Contract",
     "Implementation",
     "Reference",
   ];
