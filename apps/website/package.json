@@ -2,6 +2,7 @@
   "name": "website",
   "version": "0.1.0",
   "private": true,
+  "homepage": "https://www.web3mcp.org",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
