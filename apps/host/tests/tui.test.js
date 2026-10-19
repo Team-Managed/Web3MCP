@@ -9,7 +9,7 @@ import path from 'node:path';
 import { ChatScreen, TransactionReview, safeReviewText } from '../dist/tui/index.js';
 import { discoverWalletPaths } from '../dist/tui/wallet-paths.js';
 
-const tick = (ms = 60) => new Promise(resolve => setTimeout(resolve, ms));
+const tick = () => new Promise(resolve => setTimeout(resolve, 25));
 const chatStream = delta => new Response(`data: ${JSON.stringify({ id: 'test', object: 'chat.completion.chunk', choices: [{ index: 0, delta, finish_reason: null }] })}\n\ndata: [DONE]\n\n`,
   { headers: { 'content-type': 'text/event-stream' } });
 

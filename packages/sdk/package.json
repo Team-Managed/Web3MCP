@@ -1,6 +1,6 @@
 {
   "name": "@web3mcp/sdk",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Node.js SDK for discovering and using Web3MCP tools from Solana programs",
   "type": "module",
   "license": "Apache-2.0",
@@ -9,28 +9,15 @@
     "url": "git+https://github.com/Team-Managed/Web3MCP.git",
     "directory": "packages/sdk"
   },
-  "publishConfig": {
-    "access": "public"
-  },
-  "engines": {
-    "node": ">=20"
-  },
-  "files": [
-    "dist",
-    "schema",
-    "README.md"
-  ],
+  "homepage": "https://www.web3mcp.org/docs/latest",
+  "publishConfig": { "access": "public" },
+  "engines": { "node": ">=20" },
+  "files": ["dist", "schema", "README.md"],
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
-    ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.js"
-    },
-    "./errors": {
-      "types": "./dist/errors.d.ts",
-      "import": "./dist/errors.js"
-    }
+    ".": { "types": "./dist/index.d.ts", "import": "./dist/index.js" },
+    "./errors": { "types": "./dist/errors.d.ts", "import": "./dist/errors.js" }
   },
   "scripts": {
     "build": "tsup",

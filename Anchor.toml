@@ -10,11 +10,9 @@ members = ["reference-programs/*"]
 
 [programs.localnet]
 reference_vault = "9zJzM4rHDPR4pd3vXHQjQ7whTVmx4zxB3ZH4Gb9iXRwD"
-reference_protocol_guard = "BDwiU9GGqf7zxNNxD3QxyZ4PzKBWr8QMfUeYknbsXzFA"
 
 [programs.devnet]
 reference_vault = "9zJzM4rHDPR4pd3vXHQjQ7whTVmx4zxB3ZH4Gb9iXRwD"
-reference_protocol_guard = "BDwiU9GGqf7zxNNxD3QxyZ4PzKBWr8QMfUeYknbsXzFA"
 
 [registry]
 url = "https://api.apr.dev"
