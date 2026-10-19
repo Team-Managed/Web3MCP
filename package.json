@@ -30,6 +30,7 @@
     "type": "git",
     "url": "git+https://github.com/Team-Managed/Web3MCP.git"
   },
+  "homepage": "https://www.web3mcp.org",
   "license": "Apache-2.0",
   "devDependencies": {
     "@coral-xyz/anchor": "^0.32.1",

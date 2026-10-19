@@ -2,6 +2,8 @@
 
 Web3MCP is a candidate Solana protocol for publishing agent-facing tools in a **program-owned config PDA**. A compatible host discovers those tools through Solana RPC, reads accounts, and prepares program instructions for a user to approve with a wallet. The target program needs no website, custom API, or MCP server.
 
+Explore the [website and documentation](https://www.web3mcp.org).
+
 ## How it works
 
 1. A Solana program publishes a versioned config and embedded Anchor IDL in its canonical PDA, derived from `["web3mcp", "config"]` and the program ID.
@@ -29,7 +31,7 @@ The PDA stores **tool declarations, not executable tools**. Solana program instr
 | [Node.js SDK](packages/sdk/README.md) | `@web3mcp/sdk`: generic discovery, account reads, instruction preparation, simulation, and signed submission. |
 | [Web3MCP Compatible Host CLI](apps/host/README.md) | Terminal chat with model tools, on-demand discovery, RPC settings, wallet selection, and explicit signing approval. |
 | [Reference vault](reference-programs/reference-vault/README.md) | Anchor SOL vault and authorized publisher for its program-owned config PDA. |
-| [Website](apps/website/README.md) | Landing page, quickstart, protocol documentation, and pitch materials; independent of tool execution. |
+| [Website](apps/website/README.md) | Landing page, quickstart, protocol documentation, and pitch materials at [web3mcp.org](https://www.web3mcp.org); independent of tool execution. |
 
 Only `@web3mcp/sdk` is published to npm. The protocol source remains here as the specification and conformance reference; the Host CLI is an example application. The SDK and host do not import the reference vault's source or generated IDL.
 
@@ -117,9 +119,9 @@ For the reference program's local-validator integration suite, install Rust, Sol
 
 ## Status and documentation
 
-[@web3mcp/sdk@0.1.0](https://www.npmjs.com/package/@web3mcp/sdk) is public. The reference vault and v0.2 config are deployed on Devnet; SDK discovery found all five tools, and a fresh public SDK install repeated that discovery. The local-validator integration suite passed, and a basic provider-backed OpenAI chat worked. The protocol remains a candidate while adversarial conformance coverage is reviewed.
+[@web3mcp/sdk](https://www.npmjs.com/package/@web3mcp/sdk) is public, and the [website](https://www.web3mcp.org) is live. The reference vault and v0.2 config are deployed on Devnet; SDK discovery found all five tools, and a fresh public SDK install repeated that discovery. The local-validator integration suite passed, and a basic provider-backed OpenAI chat worked. The protocol remains a candidate while adversarial conformance coverage is reviewed.
 
-Pending: a full provider-backed Devnet CLI read/write rehearsal, a second compatible-program demo, and a verified production website launch. See the [roadmap](docs/roadmap.md) for acceptance criteria.
+Pending: a full provider-backed Devnet CLI read/write rehearsal and a second compatible-program demo. See the [roadmap](docs/roadmap.md) for acceptance criteria.
 
 - [Whitepaper](docs/whitepaper.md)
 - [Protocol specification](protocol/SPEC.md) and [conformance guide](protocol/README.md)

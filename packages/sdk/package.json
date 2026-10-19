@@ -1,6 +1,6 @@
 {
   "name": "@web3mcp/sdk",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Node.js SDK for discovering and using Web3MCP tools from Solana programs",
   "type": "module",
   "license": "Apache-2.0",
@@ -9,6 +9,7 @@
     "url": "git+https://github.com/Team-Managed/Web3MCP.git",
     "directory": "packages/sdk"
   },
+  "homepage": "https://www.web3mcp.org/docs/latest",
   "publishConfig": { "access": "public" },
   "engines": { "node": ">=20" },
   "files": ["dist", "schema", "README.md"],

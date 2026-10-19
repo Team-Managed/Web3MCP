@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import { SITE_URL } from "./site-url";
 
 export const metadata: Metadata = {
+  metadataBase: new URL(SITE_URL),
   title: "Web3MCP — The Open Tool Protocol for Solana AI Agents",
   description:
     "A proposed on-chain tool discovery protocol for Solana programs. Compatible hosts validate program-owned config PDAs, prepare transactions, and request human approval before signing.",
@@ -15,11 +17,14 @@ export const metadata: Metadata = {
     "WebMCP",
   ],
   authors: [{ name: "Web3MCP Team" }],
+  alternates: { canonical: "/" },
   openGraph: {
     title: "Web3MCP — On-Chain Tool Discovery for Solana AI Agents",
     description:
       "Publish tool definitions in a program-owned Solana PDA. Compatible hosts discover them through RPC and require human approval for signed transactions.",
     type: "website",
+    siteName: "Web3MCP",
+    url: "/",
   },
 };
 

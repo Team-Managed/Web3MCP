@@ -2,6 +2,7 @@
   "name": "@web3mcp/host",
   "version": "0.1.0",
   "description": "Web3MCP Compatible Host CLI: terminal agent chat built on @web3mcp/sdk",
+  "homepage": "https://www.web3mcp.org",
   "type": "module",
   "engines": {
     "node": ">=22"
