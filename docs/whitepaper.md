@@ -1,5 +1,7 @@
 # Web3MCP
 
+Read the [Web3MCP documentation](https://www.web3mcp.org/docs/latest).
+
 ## Thesis
 
 AI agents need a reliable way to discover what a Solana program can do. Today, each agent usually needs a program-specific integration, an MCP adapter, or the project's website. Web3MCP proposes a common interface published by the program itself.

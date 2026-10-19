@@ -2,6 +2,8 @@
 
 One Node.js agent chat application, using the public `@web3mcp/sdk` package for program discovery, reads, transaction preparation, and signed submission. It talks directly to Solana RPC; no MCP server or client is involved.
 
+See the [Web3MCP protocol documentation](https://www.web3mcp.org/docs/latest).
+
 From the repository root, build the SDK and host, then launch a terminal:
 
 ```sh

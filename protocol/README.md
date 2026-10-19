@@ -2,6 +2,8 @@
 
 Candidate specification, JSON Schema, validation logic, and conformance vectors for Web3MCP v0.1 and the v0.2 account-read PDA extension. The supported Anchor IDL 0.1.0 profile and initial semantic binding checks are implemented; adversarial vectors remain under review.
 
+Read the [protocol documentation](https://www.web3mcp.org/docs/latest). The [v0.2 JSON Schema](https://www.web3mcp.org/schema/v0.2/config.schema.json) is served from this repository's canonical schema source.
+
 ## Structure
 
 - `schema/`: Machine-readable JSON Schema files.

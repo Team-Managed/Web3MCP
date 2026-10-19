@@ -3,6 +3,7 @@
   "private": true,
   "version": "0.1.0",
   "description": "Normative schema, account layout, validation logic, and conformance vectors for Web3MCP v0.1",
+  "homepage": "https://www.web3mcp.org/docs/latest",
   "type": "module",
   "license": "Apache-2.0",
   "repository": {

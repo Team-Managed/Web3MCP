@@ -2,6 +2,8 @@
 
 Node.js SDK for discovering Web3MCP tools directly from a Solana program's owned config PDA. It needs an RPC connection and a program ID. It does not contain a model, terminal UI, wallet file reader, or MCP transport.
 
+See the [protocol documentation](https://www.web3mcp.org/docs/latest) and [quickstart](https://www.web3mcp.org/quickstart).
+
 ## Install
 
 Install the SDK in a Node.js project:

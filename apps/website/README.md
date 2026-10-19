@@ -1,6 +1,6 @@
 # Website
 
-This directory contains the Web3MCP landing page, quickstart, documentation reference, and pitch materials. Its Devnet tool table is a static reference; use the Host CLI or SDK for a fresh on-chain discovery. The site does not execute target-program tools and has not been deployed.
+This directory contains the Web3MCP landing page, quickstart, documentation reference, and pitch materials. The live site is [www.web3mcp.org](https://www.web3mcp.org); `web3mcp.org` redirects there. Its Devnet tool table is a static reference; use the Host CLI or SDK for a fresh on-chain discovery. The site does not execute target-program tools.
 
 ## Development
 
