@@ -35,9 +35,6 @@ export default function DocsArticleBox({
     const addresses: { [key: string]: string } = {
       "9zJzM4rHDPR4pd3vXHQjQ7whTVmx4zxB3ZH4Gb9iXRwD": "Reference Vault Program ID",
       "J8Ph37LoQsv4yED6USdupCooCZzsVMqJkgBTm9uSkvCw": "Reference Vault Config PDA",
-      "BDwiU9GGqf7zxNNxD3QxyZ4PzKBWr8QMfUeYknbsXzFA": "Protocol Guard Program ID",
-      "FnN43zVgGkqKWbs5D83AEs4cTrKfjrmodafTB7J69vB4": "Protocol Guard Config PDA",
-      "EWXdUTZGa1uQ1g1aLPeJv3J6oKFTSNgvJpueZ1fnN2dB": "Protocol Guard State PDA",
     };
 
     const keys = Object.keys(addresses);
@@ -696,15 +693,101 @@ export default function DocsArticleBox({
           color: #38bdf8;
         }
 
+        @media (max-width: 900px) {
+          .docs-center-col {
+            width: 100%;
+            min-width: 0;
+          }
+        }
+
         @media (max-width: 768px) {
           .article-card-box {
             padding: 24px 18px;
           }
           .serif-article-title {
-            font-size: 32px;
+            font-size: 30px;
+            line-height: 1.2;
+            word-break: break-word;
           }
           .serif-subsection-title {
+            font-size: 22px;
+          }
+          .article-overview-p {
+            font-size: 15px;
+          }
+        }
+
+        @media (max-width: 640px) {
+          .article-card-box {
+            padding: 18px 14px;
+          }
+          .search-bar-box {
+            padding: 8px 12px;
+          }
+          .ctrl-k-badge {
+            display: none;
+          }
+          .serif-article-title {
             font-size: 24px;
+            line-height: 1.25;
+            word-break: break-word;
+          }
+          .serif-subsection-title {
+            font-size: 19px;
+          }
+          .article-overview-p {
+            font-size: 14px;
+            line-height: 1.6;
+            margin-bottom: 18px;
+          }
+          .article-header-actions {
+            gap: 6px;
+          }
+          .version-dropdown-btn {
+            font-size: 9.5px;
+            padding: 2px 6px;
+          }
+          .action-icon-link {
+            width: 24px;
+            height: 24px;
+          }
+          .subsection-items-list {
+            gap: 8px;
+            margin: 10px 0 14px 0;
+          }
+          .subsection-item {
+            font-size: 13px;
+            line-height: 1.55;
+            padding-left: 16px;
+          }
+          .pi-table th,
+          .pi-table td {
+            padding: 8px 10px;
+            font-size: 12px;
+          }
+          .table-boxed-wrapper {
+            margin: 16px 0;
+            -webkit-overflow-scrolling: touch;
+          }
+          .boxed-code-frame {
+            margin: 14px 0;
+          }
+          .code-pre-block {
+            padding: 12px 14px;
+            font-size: 11.5px;
+            -webkit-overflow-scrolling: touch;
+          }
+          .article-subsection {
+            margin-top: 24px;
+          }
+          .title-divider-line {
+            margin: 14px 0 20px 0;
+          }
+          .article-callout {
+            padding: 10px 12px;
+          }
+          .callout-text {
+            font-size: 13.5px;
           }
         }
       `}</style>

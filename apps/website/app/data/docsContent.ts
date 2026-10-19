@@ -24,10 +24,6 @@ export interface DocSection {
 const VAULT_PROGRAM_ID = "9zJzM4rHDPR4pd3vXHQjQ7whTVmx4zxB3ZH4Gb9iXRwD";
 const VAULT_CONFIG_PDA = "J8Ph37LoQsv4yED6USdupCooCZzsVMqJkgBTm9uSkvCw";
 
-const GUARD_PROGRAM_ID = "BDwiU9GGqf7zxNNxD3QxyZ4PzKBWr8QMfUeYknbsXzFA";
-const GUARD_CONFIG_PDA = "FnN43zVgGkqKWbs5D83AEs4cTrKfjrmodafTB7J69vB4";
-const GUARD_STATE_PDA = "EWXdUTZGa1uQ1g1aLPeJv3J6oKFTSNgvJpueZ1fnN2dB";
-
 export const DOCS_SECTIONS: DocSection[] = [
   {
     id: "overview",
@@ -205,11 +201,11 @@ export const DOCS_SECTIONS: DocSection[] = [
             code: `{
   "standard": "web3mcp",
   "version": "0.2.0",
-  "programId": "BDwiU9GGqf7zxNNxD3QxyZ4PzKBWr8QMfUeYknbsXzFA",
+  "programId": "9zJzM4rHDPR4pd3vXHQjQ7whTVmx4zxB3ZH4Gb9iXRwD",
   "idl": {
-    "address": "BDwiU9GGqf7zxNNxD3QxyZ4PzKBWr8QMfUeYknbsXzFA",
+    "address": "9zJzM4rHDPR4pd3vXHQjQ7whTVmx4zxB3ZH4Gb9iXRwD",
     "metadata": {
-      "name": "reference_protocol_guard",
+      "name": "reference_vault",
       "version": "0.1.0",
       "spec": "0.1.0"
     },
@@ -312,19 +308,26 @@ export const DOCS_SECTIONS: DocSection[] = [
             language: "json",
             code: `"solana": {
   "kind": "instruction",
-  "instruction": "update_risk_parameters",
+  "instruction": "deposit",
   "accounts": {
-    "authority": {
+    "signer": {
       "source": "signer"
     },
-    "guard": {
+    "vault": {
       "source": "idl"
+    },
+    "userAccount": {
+      "source": "input",
+      "input": "userAccount"
+    },
+    "systemProgram": {
+      "source": "program"
     }
   },
   "effects": {
     "stateChanging": true,
-    "financial": false,
-    "summary": "Updates protocol fee basis points, utilization cap, and volume limits"
+    "financial": true,
+    "summary": "Transfers SOL into the segregated reference vault account"
   }
 }`,
           },
@@ -349,14 +352,18 @@ export const DOCS_SECTIONS: DocSection[] = [
             language: "json",
             code: `"solana": {
   "kind": "accountRead",
-  "account": "ProtocolGuard",
+  "account": "UserAccount",
   "accounts": {
-    "guard": {
+    "userAccount": {
       "source": "pda",
       "seeds": [
         {
           "kind": "const",
-          "value": [112, 114, 111, 116, 111, 99, 111, 108, 95, 103, 117, 97, 114, 100]
+          "value": [118, 97, 117, 108, 116]
+        },
+        {
+          "kind": "input",
+          "input": "owner"
         }
       ]
     }
@@ -448,7 +455,7 @@ pub struct InitializeConfig<'info> {
     #[account(mut)]
     pub authority: Signer<'info>,
     #[account(constraint = program.programdata_address()? == Some(program_data.key()))]
-    pub program: Program<'info, crate::program::ReferenceProtocolGuard>,
+    pub program: Program<'info, crate::program::ReferenceVault>,
     #[account(constraint = program_data.upgrade_authority_address == Some(authority.key()))]
     pub program_data: Account<'info, ProgramData>,
     #[account(
@@ -911,144 +918,31 @@ node -e "
     category: "Reference",
     title: "Devnet reference program",
     badge: "Protocol example",
-    summary: "Interactive tool explorer for deployed Devnet reference programs.",
+    summary: "Interactive tool explorer for the deployed Devnet reference vault.",
     content: {
-      overview: "Web3MCP maintains live reference programs on Solana Devnet to prove protocol discovery, account decoding, and simulated execution. Explore their published tools, live accounts, and CLI discovery commands below.",
+      overview: "Web3MCP maintains a live reference program on Solana Devnet at " + VAULT_PROGRAM_ID + " with canonical config PDA " + VAULT_CONFIG_PDA + ". It demonstrates segregated account creation, deposits, withdrawals, and deterministic v0.2 PDA seed derivation.",
       subsections: [{
         id: "reference-tools-breakdown",
-        title: "Published tools summary",
-        description: "The Devnet reference vault program " + VAULT_PROGRAM_ID + " demonstrates segregated PDA vault deposits and withdrawals. The protocol guard program " + GUARD_PROGRAM_ID + " demonstrates non-custodial risk parameter updates and emergency circuit breaking.",
+        title: "Published tools catalog",
+        description: "The reference vault program publishes two read queries and three wallet-approved write instructions:",
         items: [
-          "**Reference Vault (" + VAULT_PROGRAM_ID + ")**: Custodial SOL vault with segregated accounts per owner wallet.",
-          "**Protocol Guard (" + GUARD_PROGRAM_ID + ")**: Non-custodial risk management and emergency circuit breaker.",
+          "**get_vault (accountRead)**: Reads and decodes a Vault account by its exact PDA address.",
+          "**get_vault_by_owner (accountRead)**: Derives and reads a vault from the owner wallet public key using v0.2 PDA seeds.",
+          "**initialize (instruction)**: Allocates a rent-exempt segregated vault account for the signer.",
+          "**deposit (instruction)**: Transfers SOL lamports from the signer into the vault PDA.",
+          "**withdraw (instruction)**: Transfers SOL lamports from the vault back to the authorized owner signer.",
         ],
         table: {
-          headers: ["Program", "Program ID", "Config PDA", "Tools Published"],
+          headers: ["Tool Name", "Kind", "Operation", "Effects Claim"],
           rows: [
-            ["Reference Vault", VAULT_PROGRAM_ID, VAULT_CONFIG_PDA, "5 tools (2 reads, 3 writes)"],
-            ["Protocol Guard", GUARD_PROGRAM_ID, GUARD_CONFIG_PDA, "5 tools (1 read, 4 writes)"],
+            ["get_vault", "accountRead", "Read a Vault account by its exact PDA address", "No transaction or signature"],
+            ["get_vault_by_owner", "accountRead", "Derive and read a vault from owner wallet (v0.2 PDA seed)", "No transaction or signature"],
+            ["initialize", "instruction", "Allocates rent-exempt segregated vault PDA", "Creates a rent-funded vault account"],
+            ["deposit", "instruction", "Transfers SOL lamports from signer to vault PDA", "Transfers SOL from wallet to vault"],
+            ["withdraw", "instruction", "Transfers SOL lamports from vault back to signer", "Transfers SOL from vault to wallet"],
           ],
         },
       }],
-    },
-  },
-  {
-    id: "protocol-guard-reference",
-    category: "Reference",
-    title: "Protocol Guard Reference",
-    badge: "Live Devnet",
-    summary: "Non-custodial risk guard and emergency circuit-breaker program on Solana Devnet with 5 published tools.",
-    content: {
-      overview: "reference-protocol-guard proves that Web3MCP generalizes to non-custodial administrative, operational, and risk-management programs. Deployed to Solana Devnet at " + GUARD_PROGRAM_ID + ", it publishes 1 read query and 4 wallet-approved instructions without any token custody or vault escrow.",
-      tables: [
-        {
-          headers: ["Contract Account", "Base58 Address", "Seeds / Role"],
-          rows: [
-            ["Program ID", GUARD_PROGRAM_ID, "Deployed executable BPF program"],
-            ["Config PDA", GUARD_CONFIG_PDA, "Seeds: ['web3mcp', 'config'] (Status: Published)"],
-            ["State PDA", GUARD_STATE_PDA, "Seeds: ['protocol_guard'] (Global operational state)"],
-          ],
-        },
-      ],
-      subsections: [
-        {
-          id: "guard-tools-breakdown",
-          title: "Published Tool Catalog",
-          description: "All 5 tools are discovered dynamically from on-chain config through Solana RPC without importing the program source or IDL:",
-          items: [
-            "**get_protocol_status (accountRead)**: Reads global operational mode, circuit breaker flag, fee bps, and volume thresholds.",
-            "**trip_circuit_breaker (instruction)**: Instant emergency freeze. Flips `is_paused = true` and `operational_mode = 2`.",
-            "**resume_protocol (instruction)**: Resumes normal operations after an emergency. Requires admin authority.",
-            "**update_risk_parameters (instruction)**: Updates fee basis points, maximum utilization cap, and volume limits.",
-            "**set_operator (instruction)**: Delegates a hot operator key for automated circuit-breaking bots.",
-          ],
-          table: {
-            headers: ["Tool Name", "Kind", "Signer / Source", "Operation & Effects"],
-            rows: [
-              ["get_protocol_status", "accountRead", "PDA ['protocol_guard']", "Reads operational mode (0=Normal, 1=Caution, 2=Emergency), circuit breaker flag, fee bps, and volume."],
-              ["trip_circuit_breaker", "instruction", "operator or authority", "Emergency halt: flips is_paused=true and operational_mode=2. stateChanging: true, financial: false."],
-              ["resume_protocol", "instruction", "admin authority", "Resumes operations: flips is_paused=false and operational_mode=0. stateChanging: true, financial: false."],
-              ["update_risk_parameters", "instruction", "admin authority", "Sets fee_basis_points (u64), max_utilization_bps (u64), and epoch_volume_limit (u64)."],
-              ["set_operator", "instruction", "admin authority", "Delegates hot operator key for automated circuit-breaking bots without sharing admin master key."],
-            ],
-          },
-        },
-        {
-          id: "guard-manifest-sample",
-          title: "Verified On-Chain Manifest Excerpt",
-          description: "Examine how reference-protocol-guard publishes its state read using v0.2 constant PDA seeds and binds its emergency circuit breaker to the wallet signer.",
-          code: {
-            language: "json",
-            code: `{
-  "standard": "web3mcp",
-  "version": "0.2.0",
-  "programId": "BDwiU9GGqf7zxNNxD3QxyZ4PzKBWr8QMfUeYknbsXzFA",
-  "tools": [
-    {
-      "name": "get_protocol_status",
-      "title": "Get Protocol Status & Risk Parameters",
-      "description": "Reads global protocol guard state: operational mode, circuit breaker, fee basis points, and volume usage.",
-      "annotations": { "readOnlyHint": true, "untrustedContentHint": false },
-      "inputSchema": {
-        "type": "object",
-        "properties": {},
-        "required": [],
-        "additionalProperties": false
-      },
-      "solana": {
-        "kind": "accountRead",
-        "account": "ProtocolGuard",
-        "accounts": {
-          "guard": {
-            "source": "pda",
-            "seeds": [{ "kind": "const", "value": [112, 114, 111, 116, 111, 99, 111, 108, 95, 103, 117, 97, 114, 100] }]
-          }
-        }
-      }
-    },
-    {
-      "name": "trip_circuit_breaker",
-      "title": "Trip Emergency Circuit Breaker",
-      "description": "Instantly freezes protocol operations and sets mode to Emergency Paused. Executed by operator or admin.",
-      "annotations": { "readOnlyHint": false, "untrustedContentHint": false },
-      "inputSchema": { "type": "object", "properties": {}, "required": [], "additionalProperties": false },
-      "solana": {
-        "kind": "instruction",
-        "instruction": "trip_circuit_breaker",
-        "accounts": {
-          "signer": { "source": "signer" },
-          "guard": { "source": "idl" }
-        },
-        "effects": {
-          "stateChanging": true,
-          "financial": false,
-          "summary": "Trips emergency circuit breaker to halt protocol operations"
-        }
-      }
-    }
-  ]
-}`,
-          },
-        },
-        {
-          id: "guard-cli-commands",
-          title: "Discovery & Interaction Commands",
-          description: "Test discovery and inspect published tools against live Solana Devnet using the Web3MCP Host CLI or SDK.",
-          items: [
-            "**Host CLI Discovery**: Run `npm run host -- --program BDwiU9GGqf7zxNNxD3QxyZ4PzKBWr8QMfUeYknbsXzFA` to launch the interactive prompt.",
-            "**Natural Language Invocations**: Issue prompts like `Check protocol status` or `Trip the circuit breaker` to test automated tool proposals.",
-          ],
-          code: {
-            language: "bash",
-            code: `# Discover tools and inspect protocol state using the Host CLI
-npm run host -- --program BDwiU9GGqf7zxNNxD3QxyZ4PzKBWr8QMfUeYknbsXzFA
-
-# In Host CLI prompt:
-> Check protocol status
-> Update risk parameters with fee 250 bps and utilization 8500 bps`,
-          },
-        },
-      ],
     },
   },
 ];
