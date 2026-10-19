@@ -1,6 +1,9 @@
 [workspace]
-members = ["reference-programs/reference-vault"]
+members = ["reference-programs/*"]
 resolver = "2"
 
 [profile.release]
 overflow-checks = true
+lto = "fat"
+codegen-units = 1
+opt-level = "z"
