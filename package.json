@@ -10,7 +10,7 @@
     "apps/host"
   ],
   "scripts": {
-    "test": "npm --prefix protocol test && npm --prefix packages/sdk run build && npm --prefix packages/sdk test && npm --prefix apps/host run build && npm --prefix apps/host test && node --test tests/generate-config.test.js tests/git-guardrails.test.js tests/publish-transaction.test.js",
+    "test": "npm --prefix protocol test && npm --prefix packages/sdk run build && npm --prefix packages/sdk test && npm --prefix apps/host run build && npm --prefix apps/host test && node --test tests/generate-config.test.js tests/protocol-guard-config.test.js tests/git-guardrails.test.js tests/publish-transaction.test.js",
     "test:sdk": "npm --prefix packages/sdk run build && npm --prefix packages/sdk test",
     "test:protocol": "npm --prefix protocol test",
     "test:host": "npm --prefix packages/sdk run build && npm --prefix apps/host run build && npm --prefix apps/host test",

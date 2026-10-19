@@ -9,14 +9,28 @@
     "url": "git+https://github.com/Team-Managed/Web3MCP.git",
     "directory": "packages/sdk"
   },
-  "publishConfig": { "access": "public" },
-  "engines": { "node": ">=20" },
-  "files": ["dist", "schema", "README.md"],
+  "publishConfig": {
+    "access": "public"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "files": [
+    "dist",
+    "schema",
+    "README.md"
+  ],
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
-    ".": { "types": "./dist/index.d.ts", "import": "./dist/index.js" },
-    "./errors": { "types": "./dist/errors.d.ts", "import": "./dist/errors.js" }
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./errors": {
+      "types": "./dist/errors.d.ts",
+      "import": "./dist/errors.js"
+    }
   },
   "scripts": {
     "build": "tsup",
