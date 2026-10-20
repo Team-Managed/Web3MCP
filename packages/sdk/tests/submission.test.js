@@ -1,23 +1,35 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { Keypair, SystemProgram, Transaction } from '@solana/web3.js';
+import { Keypair, PublicKey, SystemProgram, Transaction, TransactionInstruction } from '@solana/web3.js';
 import crypto from 'node:crypto';
 import { utils } from '@coral-xyz/anchor';
+import { serializeConfigAccount, PublicationStatus } from '@web3mcp/protocol/account';
+import { deriveConfigPda } from '@web3mcp/protocol/pda';
 import { Web3McpSdk, TransactionConfirmationUnknownError } from '../dist/index.js';
 
 function fixture() {
   const signer = Keypair.generate();
+  const programId = Keypair.generate().publicKey.toBase58();
   const transaction = new Transaction({
     feePayer: signer.publicKey,
     recentBlockhash: Keypair.generate().publicKey.toBase58(),
-  }).add(SystemProgram.transfer({ fromPubkey: signer.publicKey, toPubkey: Keypair.generate().publicKey, lamports: 1 }));
+  }).add(new TransactionInstruction({ programId: new PublicKey(programId), keys: [], data: Buffer.from([1]) }));
   const prepared = {
+    programId,
     transaction,
     messageHash: crypto.createHash('sha256').update(transaction.serializeMessage()).digest('hex'),
     simulation: { err: null },
     lastValidBlockHeight: 100,
   };
-  return { signer, prepared };
+  const configPda = deriveConfigPda(programId).pda;
+  const config = { standard: 'web3mcp', version: '0.1.0', programId,
+    idl: { address: programId, metadata: { name: 'fixture', version: '0.1.0', spec: '0.1.0' }, instructions: [] }, tools: [] };
+  const configData = serializeConfigAccount({ authority: programId, status: PublicationStatus.Published, configUtf8: JSON.stringify(config) });
+  const accounts = new Map([
+    [programId, { executable: true, owner: SystemProgram.programId, data: Buffer.from([1]) }],
+    [configPda, { owner: new PublicKey(programId), data: configData }],
+  ]);
+  return { signer, prepared, accounts, programId, configPda };
 }
 
 test('signed submission rejects changed messages and expired blockhashes before RPC broadcast', async () => {
@@ -26,7 +38,9 @@ test('signed submission rejects changed messages and expired blockhashes before 
   let confirmationError = null;
   let confirmationThrows = false;
   let broadcastThrows = false;
+  const { signer, prepared, accounts, programId } = fixture();
   const connection = {
+    getAccountInfo: async address => accounts.get(address.toBase58()) || null,
     getBlockHeight: async () => height,
     sendRawTransaction: async () => { sends++; if (broadcastThrows) throw new Error('fetch failed'); return 'sig'; },
     confirmTransaction: async () => {
@@ -35,7 +49,7 @@ test('signed submission rejects changed messages and expired blockhashes before 
     },
   };
   const sdk = new Web3McpSdk({ connection });
-  const { signer, prepared } = fixture();
+  prepared.snapshot = (await sdk.discover(programId)).snapshot;
   const signed = new Transaction().add(...prepared.transaction.instructions);
   signed.feePayer = signer.publicKey;
   signed.recentBlockhash = prepared.transaction.recentBlockhash;
@@ -74,7 +88,7 @@ test('signed submission rejects changed messages and expired blockhashes before 
 });
 
 test('submission sends the verified signed bytes if a caller mutates the transaction during RPC wait', async () => {
-  const { signer, prepared } = fixture();
+  const { signer, prepared, accounts, programId } = fixture();
   const signed = new Transaction().add(...prepared.transaction.instructions);
   signed.feePayer = signer.publicKey;
   signed.recentBlockhash = prepared.transaction.recentBlockhash;
@@ -82,6 +96,7 @@ test('submission sends the verified signed bytes if a caller mutates the transac
   const reviewedBytes = Buffer.from(signed.serialize());
   let sentBytes;
   const sdk = new Web3McpSdk({ connection: {
+    getAccountInfo: async address => accounts.get(address.toBase58()) || null,
     getBlockHeight: async () => {
       signed.instructions[0] = SystemProgram.transfer({ fromPubkey: signer.publicKey,
         toPubkey: Keypair.generate().publicKey, lamports: 999 });
@@ -91,6 +106,29 @@ test('submission sends the verified signed bytes if a caller mutates the transac
     sendRawTransaction: async bytes => { sentBytes = bytes; return 'signature'; },
     confirmTransaction: async () => ({ value: { err: null } }),
   } });
+  prepared.snapshot = (await sdk.discover(programId)).snapshot;
   await sdk.submitSignedTransaction(prepared, signed);
   assert.deepEqual(sentBytes, reviewedBytes);
+});
+
+test('submission rejects a changed config or program before broadcast', async () => {
+  const { signer, prepared, accounts, programId, configPda } = fixture();
+  let broadcasts = 0;
+  const sdk = new Web3McpSdk({ connection: {
+    getAccountInfo: async address => accounts.get(address.toBase58()) || null,
+    getBlockHeight: async () => 50,
+    sendRawTransaction: async () => { broadcasts++; return 'sig'; },
+  } });
+  prepared.snapshot = (await sdk.discover(programId)).snapshot;
+  const signed = new Transaction().add(...prepared.transaction.instructions);
+  signed.feePayer = signer.publicKey;
+  signed.recentBlockhash = prepared.transaction.recentBlockhash;
+  signed.sign(signer);
+  accounts.set(configPda, { ...accounts.get(configPda), data: Buffer.concat([accounts.get(configPda).data, Buffer.from([0])]) });
+  await assert.rejects(sdk.submitSignedTransaction(prepared, signed), /config changed/i);
+  assert.equal(broadcasts, 0);
+  accounts.set(configPda, { ...accounts.get(configPda), data: accounts.get(configPda).data.subarray(0, -1) });
+  accounts.set(programId, { ...accounts.get(programId), data: Buffer.from([2]) });
+  await assert.rejects(sdk.submitSignedTransaction(prepared, signed), /config changed/i);
+  assert.equal(broadcasts, 0);
 });

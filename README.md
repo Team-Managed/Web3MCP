@@ -95,7 +95,7 @@ Program authors can use the [reference implementation](reference-programs/refere
 
 ## Trust and approval
 
-- On discovery, the SDK verifies the executable program, config PDA address and owner, publication status, payload digest, version, IDL, tool bindings, and arguments. Unsupported or ambiguous declarations fail closed. Discovered tools stay cached until `discover(programId)` is called again.
+- On discovery, the SDK verifies the executable program, config PDA address and owner, publication status, payload digest, version, IDL, tool bindings, and arguments. Unsupported or ambiguous declarations fail closed. For writes, it checks that the config and program deployment still match discovery before preparation and submission.
 - Published descriptions and claimed effects are untrusted input. On-chain ownership identifies the publisher; it does not prove that a tool is safe.
 - Read tools need no signature. For writes, the model proposes an action, the SDK prepares and simulates it, and the user approves the exact transaction. The model never receives signing authority.
 
@@ -127,5 +127,6 @@ Pending: a full provider-backed Devnet CLI read/write rehearsal and a second com
 - [Protocol specification](protocol/SPEC.md) and [conformance guide](protocol/README.md)
 - [Project design](docs/superpowers/specs/2026-10-13-web3mcp-project-design.md)
 - [SDK guide](packages/sdk/README.md), [Host CLI guide](apps/host/README.md), and [npm release guide](docs/npm-release.md)
+- [Contributing](CONTRIBUTING.md), [security policy](SECURITY.md), [protocol change process](docs/protocol-changes.md), and [dependency status](docs/dependency-security.md)
 
 Licensed under [Apache 2.0](LICENSE).

@@ -5,6 +5,7 @@ import { validateToolInput } from '@web3mcp/protocol/validator';
 import crypto from 'node:crypto';
 import { Web3McpHostError, ValidationError, TransactionConfirmationUnknownError } from './errors.js';
 import { discoverProgram } from './discovery/index.js';
+import { captureSnapshot } from './discovery/snapshot.js';
 import { queryTools, findTool, resolveToolContext } from './tools/registry.js';
 import { formatOpenAiTools } from './tools/schema.js';
 import { readAccount } from './accounts/reader.js';
@@ -141,7 +142,12 @@ export class Web3McpSdk {
    * @returns {Promise<PreparedInstruction>}
    */
   async prepareInstruction(toolName: string, args: Record<string, unknown> = {}, options: InstructionOptions = {}): Promise<PreparedInstruction> {
-    return prepareAndSimulateInstruction({
+    const { context, tool } = resolveToolContext(this.programs, toolName, options.programId);
+    if (tool.solana.kind !== 'instruction') throw new ValidationError(`Tool '${toolName}' is not an instruction tool.`);
+    const input = validateToolInput(tool, args);
+    if (!input.valid) throw new ValidationError(`Invalid arguments for tool '${toolName}': ${input.errors.join('; ')}`);
+    await this.assertFresh(context.programId, context.snapshot);
+    const prepared = await prepareAndSimulateInstruction({
       connection: this.connection,
       programs: this.programs,
       toolName,
@@ -149,10 +155,23 @@ export class Web3McpSdk {
       options,
       defaultCommitment: this.commitment,
     });
+    await this.assertFresh(context.programId, context.snapshot);
+    return { ...prepared, snapshot: context.snapshot };
+  }
+
+  private async assertFresh(programId: string, expectedSnapshot: string): Promise<void> {
+    const context = this.programs.get(programId);
+    if (!context || !expectedSnapshot || context.snapshot !== expectedSnapshot) {
+      throw new Web3McpHostError('Web3MCP discovery changed; discover and review again.');
+    }
+    const current = await captureSnapshot(this.connection, programId, context.configPda, this.commitment);
+    if (current !== expectedSnapshot) {
+      throw new Web3McpHostError('Program or Web3MCP config changed; discover and review again.');
+    }
   }
 
   /** Broadcast only a wallet-signed copy of the reviewed, successfully simulated message. */
-  async submitSignedTransaction(prepared: Pick<PreparedInstruction, 'transaction' | 'messageHash' | 'simulation' | 'lastValidBlockHeight'>,
+  async submitSignedTransaction(prepared: Pick<PreparedInstruction, 'programId' | 'snapshot' | 'transaction' | 'messageHash' | 'simulation' | 'lastValidBlockHeight'>,
     signedTransaction: Transaction): Promise<{ signature: string }> {
     if (!prepared?.simulation || prepared.simulation.err) {
       throw new Web3McpHostError('A successful simulation is required before submission.');
@@ -174,6 +193,10 @@ export class Web3McpSdk {
     if (await this.connection.getBlockHeight(this.commitment) > prepared.lastValidBlockHeight) {
       throw new Web3McpHostError('Prepared transaction blockhash expired; prepare and review again.');
     }
+    if (!prepared.transaction.instructions.some(ix => ix.programId.toBase58() === prepared.programId)) {
+      throw new Web3McpHostError('Prepared transaction does not invoke its discovered program.');
+    }
+    await this.assertFresh(prepared.programId, prepared.snapshot);
     let signature;
     try {
       signature = await this.connection.sendRawTransaction(signedBytes, {

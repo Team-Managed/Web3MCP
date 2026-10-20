@@ -20,7 +20,7 @@ Given a program ID, verify the executable program and config PDA, parse the conf
 
 **Distribution:** Publish only `@web3mcp/sdk` to npm. Its package includes the protocol validator and schema; `protocol/` stays in the repository for normative rules and conformance tests.
 
-**Open design work:** A discovered config stays cached until explicit rediscovery. Define and enforce a freshness check before writes so an in-flight config update or program upgrade cannot leave a long-running host using stale tool metadata.
+**Write freshness:** The SDK now fingerprints the config account and program deployment at discovery, then checks both before preparation and submission. A changed fingerprint requires rediscovery and a new user review. The two RPC checks are best-effort snapshots; an upgrade racing after the final check is still possible.
 
 ## 4. Add the LLM and wallet flow (In review)
 
@@ -32,7 +32,7 @@ Choose one tool-calling model for the demo. Add a generic chat interface that ex
 
 Build a static documentation site from the whitepaper, protocol reference, publisher guide, and host guide. Run the full read → deposit → read → withdraw flow on a local validator, followed by a devnet rehearsal when deployment is authorized. Load a second small compatible program without changing host code to test the program-agnostic claim. Show one rejected unsafe or malformed tool call.
 
-**Status:** The [website](https://www.web3mcp.org), quickstart, and documentation reference are live from `apps/website/`. The site uses static examples and links to the current Devnet reference vault. The full provider-backed Devnet rehearsal and second-program demo remain pending.
+**Status:** The [website](https://www.web3mcp.org), quickstart, and documentation reference are live from `apps/website/`. The site uses static examples and links to the current Devnet reference vault. A second, independent program catalog now runs in SDK mock-RPC tests. A real second-program local-validator demo and the full provider-backed Devnet rehearsal remain pending.
 
 ## Demo acceptance
 
