@@ -278,7 +278,7 @@ test('/model masks a new key and saves it only after model selection', async () 
     await tick();
     assert.match(app.lastFrame(), /API key for openai/);
     app.stdin.write('sk-test-secret');
-    await tick();
+    await waitFor(() => app.lastFrame()?.includes('*'.repeat('sk-test-secret'.length)));
     assert.doesNotMatch(app.lastFrame(), /sk-test-secret/);
     app.stdin.write('\r');
     await tick();
@@ -319,7 +319,9 @@ test('/model keeps a custom endpoint key separate from the OpenAI key', async ()
     await tick(); app.stdin.write('/model'); await tick(); app.stdin.write('\r'); await tick();
     app.stdin.write('\r'); await tick();
     assert.match(app.lastFrame(), /API key for openai/);
-    app.stdin.write('gateway-key'); await tick(); app.stdin.write('\r'); await tick();
+    app.stdin.write('gateway-key');
+    await waitFor(() => app.lastFrame()?.includes('*'.repeat('gateway-key'.length)));
+    app.stdin.write('\r'); await tick();
     assert.match(requestedUrl, /^https:\/\/gateway\.example\/v1\/models/);
     assert.equal(authorization, 'Bearer gateway-key');
     app.stdin.write('\r'); await waitFor(() => saved.length === 1);
