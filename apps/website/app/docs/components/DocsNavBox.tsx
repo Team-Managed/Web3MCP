@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import { DocSection } from "../../data/docsContent";
 
 interface DocsNavBoxProps {
@@ -14,8 +14,11 @@ export default function DocsNavBox({
   activeSectionId,
   onSelectSection,
 }: DocsNavBoxProps) {
+  const [isMobileExpanded, setIsMobileExpanded] = useState(false);
+
   const CATEGORY_ORDER = [
     "Protocol",
+    "Smart Contract",
     "Implementation",
     "Reference",
   ];
@@ -29,15 +32,36 @@ export default function DocsNavBox({
     return a.localeCompare(b);
   });
 
+  const activeSection = sections.find((s) => s.id === activeSectionId);
+
   return (
-    <aside className="docs-nav-box">
-      {/* Box Header Banner */}
-      <div className="nav-box-header">
-        <span className="header-text">DOCUMENTATION</span>
-      </div>
+    <aside className={`docs-nav-box ${isMobileExpanded ? "mobile-open" : ""}`}>
+      {/* Box Header Banner (interactive toggle on mobile) */}
+      <button
+        type="button"
+        className="nav-box-header"
+        onClick={() => setIsMobileExpanded((prev) => !prev)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            setIsMobileExpanded((prev) => !prev);
+          }
+        }}
+        aria-expanded={isMobileExpanded}
+        aria-controls="docs-nav-content"
+        aria-label="Toggle documentation navigation"
+      >
+        <div className="header-title-row">
+          <span className="header-text">DOCUMENTATION</span>
+          <div className="mobile-nav-toggle-badge">
+            <span className="mobile-active-name">{activeSection ? activeSection.title : "Navigation"}</span>
+            <span className="mobile-arrow">{isMobileExpanded ? "▲" : "▼"}</span>
+          </div>
+        </div>
+      </button>
 
       {/* Categories and Indented Items */}
-      <div className="nav-box-content">
+      <div id="docs-nav-content" className={`nav-box-content ${isMobileExpanded ? "is-mobile-expanded" : ""}`}>
         {categories.map((cat) => {
           const catSections = sections.filter((s) => s.category === cat && s.id !== "quickstart");
           if (catSections.length === 0) return null;
@@ -52,7 +76,10 @@ export default function DocsNavBox({
                   return (
                     <button
                       key={sec.id}
-                      onClick={() => onSelectSection(sec.id)}
+                      onClick={() => {
+                        onSelectSection(sec.id);
+                        setIsMobileExpanded(false);
+                      }}
                       className={`nav-item-btn ${isActive ? "is-active" : ""}`}
                     >
                       <span className="item-title">{sec.title}</span>
@@ -63,7 +90,6 @@ export default function DocsNavBox({
             </div>
           );
         })}
-
       </div>
 
       <style jsx>{`
@@ -79,12 +105,31 @@ export default function DocsNavBox({
           max-height: calc(100vh - 96px);
           display: flex;
           flex-direction: column;
+          transition: border-color 0.15s ease;
         }
 
         .nav-box-header {
-          padding: 14px 18px;
+          width: 100%;
+          border: none;
           border-bottom: 1px solid rgba(255, 255, 255, 0.08);
           background: rgba(255, 255, 255, 0.02);
+          padding: 14px 18px;
+          text-align: left;
+          color: inherit;
+          font: inherit;
+          cursor: default;
+        }
+
+        .nav-box-header:focus-visible {
+          outline: 2px solid #38bdf8;
+          outline-offset: -2px;
+        }
+
+        .header-title-row {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          width: 100%;
         }
 
         .header-text {
@@ -93,6 +138,10 @@ export default function DocsNavBox({
           font-weight: 700;
           letter-spacing: 0.14em;
           color: #f1f5f9;
+        }
+
+        .mobile-nav-toggle-badge {
+          display: none;
         }
 
         .nav-box-content {
@@ -131,7 +180,7 @@ export default function DocsNavBox({
           border-left: 2px solid transparent;
           color: #94a3b8;
           font-family: var(--font-sans);
-          font-size: 14px;
+          font-size: 13.5px;
           text-align: left;
           cursor: pointer;
           transition: all 0.12s ease;
@@ -151,22 +200,60 @@ export default function DocsNavBox({
           font-weight: 600;
         }
 
-        .bottom-group {
-          margin-top: 8px;
-          padding-top: 8px;
-          border-top: 1px solid rgba(255, 255, 255, 0.06);
-        }
-
-        .changelog-btn {
-          padding-left: 18px;
-        }
-
         @media (max-width: 900px) {
           .docs-nav-box {
             width: 100%;
             position: relative;
             top: 0;
             max-height: none;
+          }
+
+          .nav-box-header {
+            cursor: pointer;
+            user-select: none;
+            padding: 12px 14px;
+          }
+
+          .nav-box-header:hover {
+            background: rgba(255, 255, 255, 0.05);
+          }
+
+          .mobile-nav-toggle-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-family: var(--font-mono);
+            font-size: 11px;
+            color: #38bdf8;
+            background: rgba(56, 189, 248, 0.08);
+            border: 1px solid rgba(56, 189, 248, 0.25);
+            padding: 2px 8px;
+            border-radius: 3px;
+            max-width: 60%;
+          }
+
+          .mobile-active-name {
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            font-size: 10.5px;
+          }
+
+          .mobile-arrow {
+            font-size: 9px;
+            color: #7dd3fc;
+            flex-shrink: 0;
+          }
+
+          .nav-box-content {
+            display: none;
+            max-height: 60vh;
+            padding: 12px 0 16px 0;
+            border-top: 1px solid rgba(255, 255, 255, 0.06);
+          }
+
+          .nav-box-content.is-mobile-expanded {
+            display: flex;
           }
         }
       `}</style>

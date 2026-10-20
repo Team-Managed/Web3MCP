@@ -12,11 +12,11 @@ AI agents need a reliable way to discover what a Solana program can do. Today, e
 
 | Approach | Architecture | Limitations |
 | --- | --- | --- |
-| **Solana Agent Kit / Action Kits** | Off-chain npm plugins hand-coded per protocol (e.g. Jupiter, Orca) | Centralized off-chain code maintenance; new programs require new library releases; often uses risky autonomous private key custody. |
-| **Bespoke MCP Servers (Anthropic MCP)** | Separate Node.js/Python server running locally (stdio) or remotely (SSE/HTTP) per application | Requires hosting, server maintenance, network hops, and out-of-band trust instead of on-chain provenance. |
-| **On-Chain Anchor IDLs (`anchor idl init`)** | Gzipped IDL stored in a program-owned buffer account | Developer/explorer-focused only; lacks AI tool descriptors, parameter validation schemas (`inputSchema`), semantic execution bindings, and human-readable safety hints. |
-| **Browser WebMCP (Google Chrome)** | Declarative tool registration in the browser DOM | Limited to web applications and DOM interfaces; cannot discover or execute on-chain smart contract instructions directly. |
-| **Web3MCP (This Protocol)** | Program-owned canonical Config PDA storing versioned tool descriptors, parameter schemas, and embedded IDL | Fully on-chain, self-sovereign discovery via standard Solana RPC; generic host with zero target-program dependencies; simulation-first wallet approval boundary. |
+| **Program-specific agent libraries** | Off-chain integration code for each supported program | Integrations must be maintained as programs change. |
+| **Bespoke MCP servers** | A local or remote server exposes application tools | Project-specific server code adds a trust and maintenance surface. |
+| **On-chain Anchor IDLs** | A published IDL describes instructions and accounts | An IDL alone does not define Web3MCP tool schemas or execution bindings. |
+| **Browser WebMCP** | A website registers browser-accessible tools | Discovery depends on the website being available to the browser. |
+| **Web3MCP (this proposal)** | Program-owned config PDA stores tool descriptors, schemas, bindings, and an IDL | A compatible host can discover through RPC; writes still require wallet approval. |
 
 ## How it works
 
@@ -36,5 +36,5 @@ On-chain publication makes tool definitions publicly readable and ties a config 
 
 - **Phase 1: Protocol v0.1 (In review)**: The binary layout, schema, version rules, and conformance tests are implemented in `protocol/SPEC.md`.
 - **Phase 2: Reference Program (Deployed)**: The current vault and Web3MCP config are published on Devnet at program `9zJzM4rHDPR4pd3vXHQjQ7whTVmx4zxB3ZH4Gb9iXRwD`.
-- **Phase 3: Generic Host Core (Implemented)**: The host discovers on-chain tools, reads accounts, prepares instructions, and simulates transactions. Discovery passed against the current Devnet config; wallet-approved Devnet transactions remain to be rehearsed.
-- **Phase 4: LLM and Wallet Flow (In review)**: Model adapters, a terminal agent, and wallet approval are implemented; a provider-backed rehearsal remains pending.
+- **Phase 3: Generic SDK and Host CLI (Implemented locally)**: The SDK discovers on-chain tools, reads accounts, prepares instructions, and simulates transactions. Discovery and account reads passed against the current Devnet config.
+- **Phase 4: LLM and Wallet Flow (In review)**: Model adapters, a terminal agent, and wallet approval are implemented. A basic provider-backed chat worked; a full Devnet read/write rehearsal remains pending.

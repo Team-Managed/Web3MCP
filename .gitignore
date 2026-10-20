@@ -14,4 +14,3 @@ test-ledger/
 .impeccable/
 *.keypair.json
 CLAUDE.local.md
-.DS_Store

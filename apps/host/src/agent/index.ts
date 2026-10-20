@@ -16,8 +16,6 @@ export interface Web3McpAgentOptions {
   programId?: string;
   onApprovalRequest?: ApprovalHandler;
   onDiscoverProgram?: (reference: string) => Promise<{ programId: string; toolNames: string[] }>;
-  includeKnowledge?: boolean;
-  knowledgeDir?: string;
 }
 
 /**
@@ -32,8 +30,6 @@ export class Web3McpAgent {
   programId?: string;
   onApprovalRequest?: ApprovalHandler;
   onDiscoverProgram?: (reference: string) => Promise<{ programId: string; toolNames: string[] }>;
-  includeKnowledge?: boolean;
-  knowledgeDir?: string;
   messages: Array<any>;
 
   constructor({
@@ -47,19 +43,15 @@ export class Web3McpAgent {
     programId,
     onApprovalRequest,
     onDiscoverProgram,
-    includeKnowledge = true,
-    knowledgeDir,
   }: Web3McpAgentOptions) {
     if (!host) {
-      throw new Error('Web3McpAgent requires an active Web3McpHost instance.');
+      throw new Error('Web3McpAgent requires an active Web3McpSdk instance.');
     }
     this.host = host;
     this.signer = signer;
     this.programId = programId;
     this.onApprovalRequest = onApprovalRequest;
     this.onDiscoverProgram = onDiscoverProgram;
-    this.includeKnowledge = includeKnowledge;
-    this.knowledgeDir = knowledgeDir;
 
     const resolvedLlmOptions: CreateLlmClientOptions = {
       ...(llmOptions || {}),
@@ -84,8 +76,6 @@ export class Web3McpAgent {
       signerAddress: this.signer ? this.signer.publicKey.toBase58() : undefined,
       tools,
       canDiscoverPrograms: Boolean(this.onDiscoverProgram),
-      includeKnowledge: this.includeKnowledge,
-      knowledgeDir: this.knowledgeDir,
     });
     if (preserveHistory && this.messages.length) this.messages[0] = { role: 'system', content: systemContent };
     else this.messages = [{ role: 'system', content: systemContent }];
@@ -179,4 +169,3 @@ export class Web3McpAgent {
 export * from './prompt.js';
 export * from './commands.js';
 export * from './loop.js';
-export * from './knowledge.js';

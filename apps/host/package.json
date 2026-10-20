@@ -1,5 +1,6 @@
 {
   "name": "@web3mcp/host",
+  "private": true,
   "version": "0.1.0",
   "description": "Web3MCP Compatible Host CLI: terminal agent chat built on @web3mcp/sdk",
   "homepage": "https://www.web3mcp.org",
@@ -10,7 +11,6 @@
   "files": [
     "bin/web3mcp.js",
     "dist",
-    "knowledge",
     "README.md"
   ],
   "main": "./dist/index.js",
@@ -46,9 +46,7 @@
   },
   "scripts": {
     "build": "tsup",
-    "test": "node --import tsx --test tests/agent-knowledge.test.js tests/llm.test.js tests/wallet.test.js tests/local-boundaries.test.js tests/cli.test.js tests/tui.test.js tests/sdk-agent.test.js tests/commands.test.js tests/program-ref.test.js",
-    "prepack": "npm --prefix ../../packages/sdk run build && npm run build",
-    "test:legacy-devnet": "node --import tsx --test tests/agent-devnet-e2e.test.js tests/discovery.test.js tests/account-read.test.js tests/instruction-prepare.test.js tests/tools.test.js"
+    "test": "node --import tsx --test tests/prompt.test.js tests/llm.test.js tests/wallet.test.js tests/local-boundaries.test.js tests/cli.test.js tests/tui.test.js tests/sdk-agent.test.js tests/commands.test.js tests/program-ref.test.js"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.135.0",

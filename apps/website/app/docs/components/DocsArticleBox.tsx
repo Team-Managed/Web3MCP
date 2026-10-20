@@ -32,15 +32,18 @@ export default function DocsArticleBox({
   };
 
   const renderTextWithLinks = (text: string) => {
-    const programId = "9zJzM4rHDPR4pd3vXHQjQ7whTVmx4zxB3ZH4Gb9iXRwD";
-    const pdaId = "J8Ph37LoQsv4yED6USdupCooCZzsVMqJkgBTm9uSkvCw";
+    const addresses: { [key: string]: string } = {
+      "9zJzM4rHDPR4pd3vXHQjQ7whTVmx4zxB3ZH4Gb9iXRwD": "Reference Vault Program ID",
+      "J8Ph37LoQsv4yED6USdupCooCZzsVMqJkgBTm9uSkvCw": "Reference Vault Config PDA",
+    };
 
-    const regex = new RegExp(`(${programId}|${pdaId})`, "g");
+    const keys = Object.keys(addresses);
+    const regex = new RegExp(`(${keys.join("|")})`, "g");
     const parts = text.split(regex);
 
     return parts.map((part, i) => {
-      if (part === programId || part === pdaId) {
-        const isProg = part === programId;
+      if (addresses[part]) {
+        const title = addresses[part];
         const url = `https://explorer.solana.com/address/${part}?cluster=devnet`;
         return (
           <a
@@ -49,7 +52,7 @@ export default function DocsArticleBox({
             target="_blank"
             rel="noopener noreferrer"
             className="explorer-inline-link"
-            title={`View ${isProg ? "Program ID" : "Config PDA"} on Solana Explorer (Devnet)`}
+            title={`View ${title} on Solana Explorer (Devnet)`}
           >
             <code>{part}</code>
             <ExternalLink size={10} className="explorer-inline-icon" />
@@ -57,6 +60,27 @@ export default function DocsArticleBox({
         );
       }
       return <React.Fragment key={i}>{part}</React.Fragment>;
+    });
+  };
+
+  const renderFormattedText = (text: string) => {
+    const parts = text.split(/(\*\*[^*]+\*\*|`[^`]+`)/g);
+    return parts.map((part, i) => {
+      if (part.startsWith("**") && part.endsWith("**")) {
+        return (
+          <strong key={i} className="item-strong">
+            {part.slice(2, -2)}
+          </strong>
+        );
+      }
+      if (part.startsWith("`") && part.endsWith("`")) {
+        return (
+          <code key={i} className="item-code">
+            {part.slice(1, -1)}
+          </code>
+        );
+      }
+      return <React.Fragment key={i}>{renderTextWithLinks(part)}</React.Fragment>;
     });
   };
 
@@ -108,9 +132,9 @@ export default function DocsArticleBox({
 
         <div className="title-divider-line" />
 
-        {/* Overview text with interactive links */}
+        {/* Overview text with interactive links and formatted text */}
         {content.overview && (
-          <p className="article-overview-p">{renderTextWithLinks(content.overview)}</p>
+          <p className="article-overview-p">{renderFormattedText(content.overview)}</p>
         )}
 
         {/* Callouts if any */}
@@ -174,7 +198,7 @@ export default function DocsArticleBox({
                           {cIdx === 0 ? (
                             <span className="code-token-badge">{cell}</span>
                           ) : (
-                            cell
+                            renderFormattedText(cell)
                           )}
                         </td>
                       ))}
@@ -200,7 +224,19 @@ export default function DocsArticleBox({
               <section key={sIdx} id={subId} className="article-subsection">
                 <div className="subsection-divider" />
                 <h2 className="serif-subsection-title">{sub.title}</h2>
-                <p className="article-body-p">{sub.description}</p>
+                {sub.description && (
+                  <p className="article-body-p">{renderFormattedText(sub.description)}</p>
+                )}
+
+                {sub.items && sub.items.length > 0 && (
+                  <ul className="subsection-items-list">
+                    {sub.items.map((item, iIdx) => (
+                      <li key={iIdx} className="subsection-item">
+                        {renderFormattedText(item)}
+                      </li>
+                    ))}
+                  </ul>
+                )}
 
                 {sub.code && (
                   <div className="boxed-code-frame">
@@ -249,7 +285,7 @@ export default function DocsArticleBox({
                                 {cIdx === 0 ? (
                                   <span className="code-token-badge">{cell}</span>
                                 ) : (
-                                  cell
+                                  renderFormattedText(cell)
                                 )}
                               </td>
                             ))}
@@ -615,15 +651,143 @@ export default function DocsArticleBox({
           flex-shrink: 0;
         }
 
+        .subsection-items-list {
+          display: flex;
+          flex-direction: column;
+          gap: 10px;
+          margin: 12px 0 18px 0;
+          padding-left: 0;
+          list-style: none;
+        }
+
+        .subsection-item {
+          position: relative;
+          padding-left: 20px;
+          font-family: var(--font-sans);
+          font-size: 13.5px;
+          line-height: 1.6;
+          color: #cbd5e1;
+        }
+
+        .subsection-item::before {
+          content: "•";
+          position: absolute;
+          left: 4px;
+          top: -1px;
+          color: #38bdf8;
+          font-size: 16px;
+        }
+
+        .item-strong {
+          color: #f8fafc;
+          font-weight: 600;
+        }
+
+        .item-code {
+          font-family: var(--font-mono);
+          font-size: 11.5px;
+          background: rgba(255, 255, 255, 0.06);
+          border: 1px solid rgba(255, 255, 255, 0.12);
+          padding: 1px 5px;
+          border-radius: 3px;
+          color: #38bdf8;
+        }
+
+        @media (max-width: 900px) {
+          .docs-center-col {
+            width: 100%;
+            min-width: 0;
+          }
+        }
+
         @media (max-width: 768px) {
           .article-card-box {
             padding: 24px 18px;
           }
           .serif-article-title {
-            font-size: 32px;
+            font-size: 30px;
+            line-height: 1.2;
+            word-break: break-word;
           }
           .serif-subsection-title {
+            font-size: 22px;
+          }
+          .article-overview-p {
+            font-size: 15px;
+          }
+        }
+
+        @media (max-width: 640px) {
+          .article-card-box {
+            padding: 18px 14px;
+          }
+          .search-bar-box {
+            padding: 8px 12px;
+          }
+          .ctrl-k-badge {
+            display: none;
+          }
+          .serif-article-title {
             font-size: 24px;
+            line-height: 1.25;
+            word-break: break-word;
+          }
+          .serif-subsection-title {
+            font-size: 19px;
+          }
+          .article-overview-p {
+            font-size: 14px;
+            line-height: 1.6;
+            margin-bottom: 18px;
+          }
+          .article-header-actions {
+            gap: 6px;
+          }
+          .version-dropdown-btn {
+            font-size: 9.5px;
+            padding: 2px 6px;
+          }
+          .action-icon-link {
+            width: 24px;
+            height: 24px;
+          }
+          .subsection-items-list {
+            gap: 8px;
+            margin: 10px 0 14px 0;
+          }
+          .subsection-item {
+            font-size: 13px;
+            line-height: 1.55;
+            padding-left: 16px;
+          }
+          .pi-table th,
+          .pi-table td {
+            padding: 8px 10px;
+            font-size: 12px;
+          }
+          .table-boxed-wrapper {
+            margin: 16px 0;
+            -webkit-overflow-scrolling: touch;
+          }
+          .boxed-code-frame {
+            margin: 14px 0;
+          }
+          .code-pre-block {
+            padding: 12px 14px;
+            font-size: 11.5px;
+            -webkit-overflow-scrolling: touch;
+          }
+          .article-subsection {
+            margin-top: 24px;
+          }
+          .title-divider-line {
+            margin: 14px 0 20px 0;
+          }
+          .article-callout {
+            padding: 10px 12px;
+          }
+          .callout-text {
+            font-size: 13.5px;
           }
         }
       `}</style>
