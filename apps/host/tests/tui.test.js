@@ -11,7 +11,7 @@ import { discoverWalletPaths } from '../dist/tui/wallet-paths.js';
 
 const tick = () => new Promise(resolve => setTimeout(resolve, 25));
 const waitFor = async predicate => {
-  for (let attempt = 0; attempt < 60; attempt++) {
+  for (let attempt = 0; attempt < 160; attempt++) {
     if (predicate()) return;
     await tick();
   }
@@ -245,12 +245,12 @@ test('/model guides provider, existing key, and model selection', async () => {
     await tick();
     assert.match(app.lastFrame(), /API key for openai/);
     app.stdin.write('\r');
-    await tick();
+    await waitFor(() => app.lastFrame()?.includes('Models visible to openai'));
     assert.match(app.lastFrame(), /Models visible to openai/);
     assert.match(app.lastFrame(), /gpt-6-luna/);
     await tick();
     app.stdin.write('\r');
-    await tick();
+    await waitFor(() => app.lastFrame()?.includes('Model gpt-6-luna (openai)'));
     assert.match(app.lastFrame(), /Model gpt-6-luna \(openai\)/);
   } finally {
     app.unmount();
@@ -281,7 +281,7 @@ test('/model masks a new key and saves it only after model selection', async () 
     await waitFor(() => app.lastFrame()?.includes('*'.repeat('sk-test-secret'.length)));
     assert.doesNotMatch(app.lastFrame(), /sk-test-secret/);
     app.stdin.write('\r');
-    await tick();
+    await waitFor(() => app.lastFrame()?.includes('Models visible to openai'));
     assert.match(app.lastFrame(), /Models visible to openai/);
     assert.doesNotMatch(app.lastFrame(), /sk-test-secret/);
     assert.deepEqual(saved, []);

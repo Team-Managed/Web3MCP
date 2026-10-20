@@ -2,12 +2,12 @@
 
 ## Decision
 
-`Web3McpSdk.discover(programId)` fetches and validates the executable program and canonical Config PDA, builds coders from the embedded IDL, and stores the resulting context in an in-memory map. Calling `discover` again replaces that snapshot. The SDK has no automatic TTL, polling, or slot-based invalidation in the current release.
+`Web3McpSdk.discover(programId)` fetches and validates the executable program and canonical Config PDA, builds coders from the embedded IDL, and stores the resulting context in an in-memory map. Calling `discover` again replaces that snapshot. The SDK has no automatic TTL, polling, or slot-based invalidation for cached tool lists and account-read metadata.
 
 ## Consequences
 
-- Cached tools can become stale after config publication or a program upgrade. A previously discovered tool can remain callable while the on-chain config is `Uploading` because execution methods use the stored context.
-- The host can explicitly rediscover before a sensitive operation. Generic SDK consumers need their own refresh policy until the SDK enforces one.
-- Simulation and exact-message approval remain required for writes, but they do not establish that cached metadata is current or that the program is safe.
+- Cached tool lists and account-read metadata can become stale after config publication or a program upgrade; account data itself is fetched live. Hosts and SDK consumers should rediscover when they need a current catalog.
+- Writes compare the stored discovery snapshot with the live Config PDA and program deployment before and after simulation, then again before broadcast. A change requires rediscovery and a new review.
+- Simulation and exact-message approval remain required for writes. Freshness checks do not prove that a program is safe or prevent an upgrade after the final check.
 
-Automatic freshness checks and the behavior when a refreshed config removes an advertised tool need a protocol and SDK decision before claiming that all active hosts fail closed during updates.
+Automatic refresh of cached tool lists and account-read metadata remains deferred.

@@ -5,6 +5,21 @@ import { AccountResolutionError, ValidationError } from '../errors.js';
 import { formatArgForCoder } from '../accounts/coder.js';
 import { resolveInstructionAccounts } from './resolver.js';
 import { resolveToolContext } from '../tools/registry.js';
+import type { InstructionOptions } from '../types.js';
+
+export function resolveFeePayer(options: InstructionOptions): PublicKey {
+  const rawSigner = options.signer || options.wallet;
+  if (!rawSigner) throw new AccountResolutionError('A wallet public key is required as transaction fee payer.');
+  if (rawSigner instanceof PublicKey) return rawSigner;
+  if (typeof rawSigner === 'string') {
+    try { return new PublicKey(rawSigner); }
+    catch (error) { throw new ValidationError(`Invalid signer public key '${rawSigner}': ${error instanceof Error ? error.message : String(error)}`); }
+  }
+  if (typeof rawSigner === 'object' && 'publicKey' in rawSigner && rawSigner.publicKey instanceof PublicKey) {
+    return rawSigner.publicKey;
+  }
+  throw new ValidationError('Invalid signer public key.');
+}
 
 /**
  * Prepares a state-changing instruction tool for wallet handoff.
@@ -49,22 +64,7 @@ export async function prepareAndSimulateInstruction({
   }
 
   // 3. Resolve signer public key
-  let signerPubkey = null;
-  const rawSigner = options.signer || options.wallet;
-  if (rawSigner) {
-    if (rawSigner.publicKey && rawSigner.publicKey instanceof PublicKey) {
-      signerPubkey = rawSigner.publicKey;
-    } else if (rawSigner instanceof PublicKey) {
-      signerPubkey = rawSigner;
-    } else if (typeof rawSigner === 'string') {
-      try {
-        signerPubkey = new PublicKey(rawSigner);
-      } catch (err) {
-        throw new ValidationError(`Invalid signer public key '${rawSigner}': ${err.message}`);
-      }
-    }
-  }
-  if (!signerPubkey) throw new AccountResolutionError('A wallet public key is required as transaction fee payer.');
+  const signerPubkey = resolveFeePayer(options);
 
   // 4. Resolve Accounts
   const { keys, accountsSummary } = resolveInstructionAccounts({

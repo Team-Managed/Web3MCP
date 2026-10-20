@@ -16,6 +16,7 @@ function fixture() {
   }).add(new TransactionInstruction({ programId: new PublicKey(programId), keys: [], data: Buffer.from([1]) }));
   const prepared = {
     programId,
+    commitment: 'confirmed',
     transaction,
     messageHash: crypto.createHash('sha256').update(transaction.serializeMessage()).digest('hex'),
     simulation: { err: null },
@@ -131,4 +132,25 @@ test('submission rejects a changed config or program before broadcast', async ()
   accounts.set(programId, { ...accounts.get(programId), data: Buffer.from([2]) });
   await assert.rejects(sdk.submitSignedTransaction(prepared, signed), /config changed/i);
   assert.equal(broadcasts, 0);
+});
+
+test('submission checks and broadcasts at the prepared commitment', async () => {
+  const { signer, prepared, accounts, programId } = fixture();
+  prepared.commitment = 'processed';
+  const seen = [];
+  const sdk = new Web3McpSdk({ connection: {
+    getAccountInfo: async (address, commitment) => { seen.push(commitment); return accounts.get(address.toBase58()) || null; },
+    getBlockHeight: async commitment => { seen.push(commitment); return 50; },
+    sendRawTransaction: async (_bytes, options) => { seen.push(options.preflightCommitment); return 'signature'; },
+    confirmTransaction: async (_strategy, commitment) => { seen.push(commitment); return { value: { err: null } }; },
+  }, commitment: 'confirmed' });
+  prepared.snapshot = (await sdk.discover(programId)).snapshot;
+  seen.length = 0;
+  const signed = new Transaction().add(...prepared.transaction.instructions);
+  signed.feePayer = signer.publicKey;
+  signed.recentBlockhash = prepared.transaction.recentBlockhash;
+  signed.sign(signer);
+  await sdk.submitSignedTransaction(prepared, signed);
+  assert.ok(seen.length > 0);
+  assert.deepEqual([...new Set(seen)], ['processed']);
 });

@@ -86,6 +86,36 @@ test('discovery snapshot changes when upgradeable ProgramData slot changes', asy
   assert.notEqual(before, after);
 });
 
+test('discovery snapshot changes when ProgramData code changes in the same slot', async () => {
+  const programId = Keypair.generate().publicKey.toBase58();
+  const programDataAddress = Keypair.generate().publicKey;
+  const loader = new PublicKey('BPFLoaderUpgradeab1e11111111111111111111111');
+  const programData = Buffer.alloc(36);
+  programData.writeUInt32LE(2, 0);
+  programDataAddress.toBuffer().copy(programData, 4);
+  const deployment = Buffer.alloc(13);
+  deployment.writeUInt32LE(3, 0);
+  deployment.writeBigUInt64LE(1n, 4);
+  deployment[12] = 1;
+  const config = { standard: 'web3mcp', version: '0.1.0', programId,
+    idl: { address: programId, metadata: { name: 'fixture', version: '0.1.0', spec: '0.1.0' }, instructions: [] }, tools: [] };
+  const configData = serializeConfigAccount({ authority: programId, status: PublicationStatus.Published, configUtf8: JSON.stringify(config) });
+  const pda = deriveConfigPda(programId).pda;
+  const sdk = new Web3McpSdk({ connection: { getAccountInfo: async (address, options) => {
+    if (address.toBase58() === programId) return { executable: true, owner: loader, data: programData };
+    if (address.toBase58() === pda) return { owner: new PublicKey(programId), data: configData };
+    if (address.equals(programDataAddress)) {
+      const { offset = 0, length = deployment.length } = options?.dataSlice || {};
+      return { owner: loader, data: Buffer.from(deployment.subarray(offset, offset + length)) };
+    }
+    return null;
+  } } });
+  const before = (await sdk.discover(programId)).snapshot;
+  deployment[12] = 2;
+  const after = (await sdk.discover(programId)).snapshot;
+  assert.notEqual(before, after);
+});
+
 test('stale config blocks write preparation before simulation', async () => {
   const programId = Keypair.generate().publicKey.toBase58();
   const pda = deriveConfigPda(programId).pda;
@@ -105,4 +135,28 @@ test('stale config blocks write preparation before simulation', async () => {
   accounts.set(pda, { ...accounts.get(pda), data: Buffer.concat([configData, Buffer.from([0])]) });
   await assert.rejects(sdk.prepareInstruction('deposit', { amount: '1', flag: true,
     recipient: Keypair.generate().publicKey.toBase58() }, { programId, signer: Keypair.generate().publicKey }), /config changed/i);
+});
+
+test('write preparation checks freshness at the requested commitment', async () => {
+  const programId = Keypair.generate().publicKey.toBase58();
+  const pda = deriveConfigPda(programId).pda;
+  const config = JSON.parse(readFileSync(new URL('../../../protocol/fixtures/valid/reference-instruction.json', import.meta.url), 'utf8'));
+  config.programId = programId;
+  config.idl.address = programId;
+  const configData = serializeConfigAccount({ authority: programId, status: PublicationStatus.Published, configUtf8: JSON.stringify(config) });
+  let blockhashRequested = false;
+  const sdk = new Web3McpSdk({ connection: {
+    getAccountInfo: async (address, commitment) => {
+      if (address.toBase58() === programId) return { executable: true, owner: SystemProgram.programId, data: Buffer.from([1]) };
+      if (address.toBase58() === pda) return { owner: new PublicKey(programId), data: commitment === 'processed'
+        ? Buffer.concat([configData, Buffer.from([0])]) : configData };
+      return null;
+    },
+    getLatestBlockhash: async () => { blockhashRequested = true; throw new Error('simulation must not start'); },
+  }, commitment: 'confirmed' });
+  await sdk.discover(programId);
+  await assert.rejects(sdk.prepareInstruction('deposit', { amount: '1', flag: true,
+    recipient: Keypair.generate().publicKey.toBase58() }, { programId, signer: Keypair.generate().publicKey,
+    commitment: 'processed' }), /config changed/i);
+  assert.equal(blockhashRequested, false);
 });

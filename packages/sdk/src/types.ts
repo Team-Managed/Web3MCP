@@ -38,6 +38,8 @@ export interface PreparedInstruction {
   programId: string;
   /** Discovery snapshot used to prepare the reviewed transaction. */
   snapshot: string;
+  /** Commitment used for freshness checks, simulation, and submission. */
+  commitment: Commitment;
   instruction: TransactionInstruction;
   transaction: Transaction;
   lastValidBlockHeight: number;

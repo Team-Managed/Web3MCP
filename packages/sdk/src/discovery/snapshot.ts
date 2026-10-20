@@ -23,12 +23,12 @@ export async function captureSnapshot(connection: Connection, programId: string,
       throw new ConfigValidationError('Upgradeable program account is malformed.');
     }
     const address = new PublicKey(programData.subarray(4, 36));
-    const account = await connection.getAccountInfo(address, { commitment, dataSlice: { offset: 0, length: 12 } });
-    const header = Buffer.from(account?.data || []);
-    if (!account || !account.owner.equals(UPGRADEABLE_LOADER) || header.length < 12 || header.readUInt32LE(0) !== 3) {
+    const account = await connection.getAccountInfo(address, commitment);
+    const deploymentData = Buffer.from(account?.data || []);
+    if (!account || !account.owner.equals(UPGRADEABLE_LOADER) || deploymentData.length < 12 || deploymentData.readUInt32LE(0) !== 3) {
       throw new ConfigValidationError('ProgramData account is missing or malformed.');
     }
-    deployment = `${address.toBase58()}:${digest(header)}`;
+    deployment = `${address.toBase58()}:${digest(deploymentData)}`;
   }
   return digest(Buffer.from(JSON.stringify({
     programId,
