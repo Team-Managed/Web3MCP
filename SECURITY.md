@@ -4,9 +4,9 @@ Web3MCP is a candidate protocol. The reference vault is a demonstration, not an 
 
 ## Report a vulnerability
 
-Use [GitHub's private vulnerability reporting](https://github.com/Team-Managed/Web3MCP/security/advisories/new) for a flaw in the protocol, SDK, Host CLI, website, or reference program. Include affected versions or commits, reproduction steps, impact, and a safe contact method. Please avoid opening a public issue with exploit details before maintainers can assess it.
+When enabled for this repository, use [GitHub's private vulnerability reporting](https://github.com/Team-Managed/Web3MCP/security/advisories/new) for a flaw in the protocol, SDK, Host CLI, website, or reference program. The repository setting was disabled at the last check. Until it is enabled, open a public issue requesting a private contact **without including exploit details**. Include affected versions or commits, reproduction steps, and impact only in the subsequent private report.
 
-We will acknowledge a report, investigate it, and coordinate a fix and disclosure with the reporter. If the private report form is unavailable, contact a repository maintainer through their GitHub profile without posting exploit details publicly.
+We will acknowledge a report, investigate it, and coordinate a fix and disclosure with the reporter.
 
 ## Supported releases
 
