@@ -21,7 +21,6 @@
     "start": "npm --prefix apps/website run start",
     "dev:docs": "npm --prefix apps/website run dev",
     "build:docs": "npm --prefix apps/website run build",
-    "deck:generate": "node scripts/generate-deck.js",
     "generate:config": "node reference-programs/reference-vault/scripts/generate-config.js",
     "publish:vault": "node reference-programs/reference-vault/scripts/publish.js",
     "host": "node apps/host/bin/web3mcp.js"
@@ -33,8 +32,6 @@
   "homepage": "https://www.web3mcp.org",
   "license": "Apache-2.0",
   "devDependencies": {
-    "@coral-xyz/anchor": "^0.32.1",
-    "@napi-rs/canvas": "^1.0.11",
-    "pptxgenjs": "^4.0.1"
+    "@coral-xyz/anchor": "^0.32.1"
   }
 }
