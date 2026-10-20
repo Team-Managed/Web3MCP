@@ -39,7 +39,7 @@ export const DOCS_SECTIONS: DocSection[] = [
           ["Solana Program", "Owns the canonical config PDA and executes advertised instructions on-chain."],
           ["Config PDA", "Publishes the tool manifest, embedded Anchor IDL, and execution bindings on-chain."],
           ["Agent Host", "Discovers tools via RPC, validates schemas fail-closed, decodes reads, and prepares writes."],
-          ["User Wallet", "Simulates and signs transactions after explicit human approval; the LLM never signs."],
+          ["User Wallet", "Signs the reviewed transaction after explicit human approval; the LLM never signs."],
         ],
       }],
       subsections: [
@@ -84,14 +84,14 @@ export const DOCS_SECTIONS: DocSection[] = [
           ["Input Validation", "Only supported decimal-string u64, boolean, and Base58 public-key parameters are permitted."],
           ["Instruction Bindings", "Every advertised IDL account must resolve through signer, input, program, or idl PDA sources."],
           ["Account Reads", "Verify account owner and discriminator; v0.2 may derive read PDAs from declared seeds."],
-          ["Transaction Writes", "Validate inputs, simulate effects, request explicit approval, and assert message integrity before submission."],
+          ["Transaction Writes", "Validate inputs, simulate execution, request explicit approval, and assert message integrity before submission."],
         ],
       }],
       subsections: [
         {
           id: "protocol-scope",
           title: "Current profile & roadmap boundaries",
-          description: "Web3MCP deliberately bounds initial profile complexity to guarantee fail-closed security and auditability:",
+          description: "Web3MCP bounds the initial profile so unsupported declarations can be rejected:",
           items: [
             "**Supported Capabilities**: Program ID discovery, scalar inputs (`u64`, `boolean`, `publicKey`), Anchor IDL instruction bindings, read account queries, and v0.2 deterministic PDA seed derivation.",
             "**Deferred Capabilities**: Floating-point numbers, arbitrary strings, arrays, nested objects, multi-instruction recipes, dynamic address lookup tables (ALTs), and autonomous agent signing.",
@@ -140,7 +140,7 @@ export const DOCS_SECTIONS: DocSection[] = [
           description: "The account header status byte controls discovery availability:",
           items: [
             "**Status 0 (`Uninitialized`)**: Account allocated but no upload started; hosts reject fail-closed.",
-            "**Status 1 (`Uploading`)**: Chunked upload in progress; hosts reject to prevent partial or corrupted reads.",
+            "**Status 1 (`Uploading`)**: Chunked upload in progress; fresh discovery rejects this config. Hosts using cached metadata must rediscover to observe the change.",
             "**Status 2 (`Published`)**: Upload complete and SHA-256 verified; hosts discover and load tools.",
           ],
         },
@@ -547,7 +547,7 @@ config_info.realloc(new_account_len, false)?;`,
     badge: "Optimization",
     summary: "Techniques for pruning Anchor IDLs to keep manifests under the 64 KiB on-chain storage limit.",
     content: {
-      overview: "While Solana accounts can hold up to 10 MB, Web3MCP enforces a strict 64 KiB (65,536 bytes) maximum payload limit. This guarantees rapid RPC discovery, low memory overhead for agent hosts, and minimal rent cost. Complex Anchor IDLs frequently exceed 100 KiB, so smart contract engineers should prune unadvertised instructions before publishing.",
+      overview: "Web3MCP limits the config payload to 64 KiB (65,536 bytes). Prune IDL entries that published tools do not use before validating and publishing the manifest.",
       tables: [
         {
           headers: ["Boundary", "Limit", "Consequence if Exceeded"],
@@ -567,7 +567,7 @@ config_info.realloc(new_account_len, false)?;`,
             "**Instructions**: Retain only instructions advertised as agent tools. Omit admin migrations and internal handlers.",
             "**Accounts**: Retain only account types queried by `accountRead` tools.",
             "**Types**: Retain only struct definitions for retained accounts. Omit unreferenced enums and event structs.",
-            "**Docstrings**: Strip source code comments and docstrings to reduce payload size by 20% to 40%.",
+            "**Docstrings**: Remove unneeded IDL documentation to reduce payload size.",
           ],
           table: {
             headers: ["IDL Section", "Action", "Rule"],
@@ -575,56 +575,17 @@ config_info.realloc(new_account_len, false)?;`,
               ["instructions", "Filter", "Retain only instructions named in tool bindings."],
               ["accounts", "Filter", "Retain only account types named in accountRead bindings."],
               ["types", "Prune", "Retain only struct definitions for retained accounts. Omit unreferenced enums."],
-              ["docs / comments", "Strip", "Remove docstring arrays to save 20-40% of payload size."],
+              ["docs / comments", "Strip", "Remove unneeded IDL documentation."],
             ],
           },
         },
         {
           id: "pruning-script",
-          title: "Automated Pruning in Manifest Generator",
-          description: "Use a manifest generation script to extract only the needed instructions and types from the compiled IDL before publishing.",
+          title: "Validate the generated manifest",
+          description: "The repository's reference generator prunes its compiled IDL and validates the manifest with the protocol source. From a Web3MCP checkout, run the offline validator on the generated file:",
           code: {
-            language: "javascript",
-            code: `import fs from "node:fs";
-import { validateConfig } from "@web3mcp/protocol/validator";
-
-export function generateConfig({ idlPath, targetTools }) {
-  const rawIdl = JSON.parse(fs.readFileSync(idlPath, "utf8"));
-
-  // Prune instructions not exposed as tools
-  const toolInstructionNames = new Set(
-    targetTools.filter(t => t.solana.kind === "instruction").map(t => t.solana.instruction)
-  );
-  const prunedInstructions = rawIdl.instructions.filter(ix => toolInstructionNames.has(ix.name));
-
-  // Prune accounts not exposed as reads
-  const readAccountNames = new Set(
-    targetTools.filter(t => t.solana.kind === "accountRead").map(t => t.solana.account)
-  );
-  const prunedAccounts = (rawIdl.accounts || []).filter(acc => readAccountNames.has(acc.name));
-
-  const prunedIdl = {
-    address: rawIdl.address,
-    metadata: rawIdl.metadata,
-    instructions: prunedInstructions,
-    accounts: prunedAccounts,
-    types: (rawIdl.types || []).filter(t => readAccountNames.has(t.name)),
-  };
-
-  const manifest = {
-    standard: "web3mcp",
-    version: "0.2.0",
-    programId: rawIdl.address,
-    idl: prunedIdl,
-    tools: targetTools,
-  };
-
-  const validation = validateConfig(manifest);
-  if (!validation.valid) {
-    throw new Error("Generated Web3MCP config is invalid: " + validation.errors.join("; "));
-  }
-  return manifest;
-}`,
+            language: "bash",
+            code: "node protocol/bin/validate.js target/web3mcp.json",
           },
         },
       ],
@@ -642,7 +603,7 @@ export function generateConfig({ idlPath, targetTools }) {
         {
           type: "security",
           title: "Upgrade Authority Verification",
-          text: "The initialize_config instruction cryptographically asserts that ctx.accounts.program_data.upgrade_authority_address == ctx.accounts.authority.key(). Only the wallet holding the deployed program's BPF upgrade authority can publish or update tool definitions.",
+          text: "The reference vault checks the deployed program's upgrade authority before publishing. Other programs must define and enforce their own authorized publication policy.",
         },
         {
           type: "tip",
@@ -691,111 +652,8 @@ export function generateConfig({ idlPath, targetTools }) {
         },
         {
           id: "pub-script-reference",
-          title: "3. Complete Publishing Script Reference",
-          description: "Use this battle-tested publishing script from the reference implementations. It includes 429 exponential backoff, transaction confirmation, and post-publish verification.",
-          code: {
-            language: "javascript",
-            code: `import fs from "node:fs";
-import path from "node:path";
-import crypto from "node:crypto";
-import * as anchor from "@coral-xyz/anchor";
-import { Connection, PublicKey, SystemProgram, ComputeBudgetProgram } from "@solana/web3.js";
-import { generateConfig } from "./generate-config.js";
-import { validateDiscoveredConfig } from "@web3mcp/protocol/validator";
-
-const BPF_LOADER_UPGRADEABLE_PROGRAM_ID = new PublicKey("BPFLoaderUpgradeab1e11111111111111111111111");
-const CHUNK_SIZE = 800;
-const CHUNK_DELAY_MS = 500;
-
-export async function publishConfig(options = {}) {
-  const url = options.url || "https://api.devnet.solana.com";
-  const connection = new Connection(url, "confirmed");
-  const wallet = anchor.Wallet.local();
-  const provider = new anchor.AnchorProvider(connection, wallet, { commitment: "confirmed" });
-  anchor.setProvider(provider);
-
-  // 1. Generate & digest manifest
-  const config = generateConfig();
-  const payload = Buffer.from(JSON.stringify(config), "utf8");
-  const digest = crypto.createHash("sha256").update(payload).digest();
-
-  // 2. Load IDL & instantiate Anchor Program
-  const idlPath = options.idlPath || path.resolve("./target/idl/your_program.json");
-  const idl = JSON.parse(fs.readFileSync(idlPath, "utf8"));
-  const program = new anchor.Program(idl, provider);
-  const programId = program.programId;
-
-  // 3. Derive PDAs
-  const [configPda] = PublicKey.findProgramAddressSync(
-    [Buffer.from("web3mcp"), Buffer.from("config")],
-    programId
-  );
-  const [programData] = PublicKey.findProgramAddressSync(
-    [programId.toBuffer()],
-    BPF_LOADER_UPGRADEABLE_PROGRAM_ID
-  );
-
-  // 4. Step 1: Initialize Config PDA in Uploading state
-  console.log("Initializing Config PDA (status = 1)...");
-  await program.methods
-    .initializeConfig(wallet.publicKey, payload.length, Array.from(digest))
-    .accounts({
-      authority: wallet.publicKey,
-      program: programId,
-      programData,
-      config: configPda,
-      systemProgram: SystemProgram.programId,
-    })
-    .rpc();
-
-  // 5. Step 2: Stream sequential chunks
-  const totalChunks = Math.ceil(payload.length / CHUNK_SIZE);
-  for (let i = 0; i < totalChunks; i++) {
-    const offset = i * CHUNK_SIZE;
-    const chunk = payload.subarray(offset, Math.min(offset + CHUNK_SIZE, payload.length));
-    console.log(\`Uploading chunk \${i + 1}/\${totalChunks}...\`);
-
-    await program.methods
-      .writeConfigChunk(offset, chunk)
-      .accounts({
-        authority: wallet.publicKey,
-        program: programId,
-        programData,
-        config: configPda,
-        systemProgram: SystemProgram.programId,
-      })
-      .rpc();
-
-    if (CHUNK_DELAY_MS > 0) await new Promise(r => setTimeout(r, CHUNK_DELAY_MS));
-  }
-
-  // 6. Step 3: Finalize and verify digest on-chain
-  console.log("Finalizing config (status = 2 Published)...");
-  await program.methods
-    .finalizeConfig()
-    .accounts({
-      authority: wallet.publicKey,
-      program: programId,
-      programData,
-      config: configPda,
-    })
-    .preInstructions([ComputeBudgetProgram.setComputeUnitLimit({ units: 400_000 })])
-    .rpc();
-
-  // 7. Post-publish verification via protocol validator
-  const accountInfo = await connection.getAccountInfo(configPda, "confirmed");
-  const programAccount = await connection.getAccountInfo(programId, "confirmed");
-  const check = validateDiscoveredConfig({
-    programId: programId.toBase58(),
-    programAccount,
-    configAddress: configPda.toBase58(),
-    configAccount: accountInfo,
-  });
-
-  if (!check.valid) throw new Error(\`Validation failed: \${check.errors.join("; ")}\`);
-  console.log("Config published and verified successfully!");
-}`,
-          },
+          title: "3. Reference publisher source",
+          description: "Use reference-programs/reference-vault/scripts/publish.js as an example to adapt for your own program. It uses bounded 429 retries, confirms each signed transaction, and validates the published account. The protocol does not require that specific script or Anchor framework.",
         },
         {
           id: "pub-verification",
@@ -821,19 +679,19 @@ node --input-type=module -e "
           title: "5. Troubleshooting Common Publisher Errors",
           description: "Common issues encountered when publishing to Solana Devnet and how to resolve them:",
           items: [
-            "**429 Too Many Requests**: Public RPC rate limit exceeded during chunk loop. Add 500ms delay between chunks and implement exponential backoff retry.",
+            "**429 Too Many Requests**: Public RPC rate limit exceeded during chunk upload. Pace requests and retry the same signed transaction when needed.",
             "**Program failed to complete (Compute Limit)**: Finalize SHA-256 hashing exceeded default 200,000 CUs. Prepend `ComputeBudgetProgram.setComputeUnitLimit({ units: 400_000 })` to `finalizeConfig`.",
-            "**Custom 6001 (Unauthorized)**: Signer wallet is not the program's upgrade authority. Ensure signing key matches the BPF program deployment authority.",
-            "**Custom 6002 (InvalidDigest)**: SHA-256 digest mismatch on finalization. Ensure JSON string serialization is identical in generator and publisher without reformatting.",
+            "**Reference vault 6008 (Unauthorized)**: Signer wallet is not the program's upgrade authority. Check the deployment authority.",
+            "**Reference vault 6007 (DigestMismatch)**: SHA-256 digest mismatch on finalization. Keep JSON bytes unchanged during upload.",
             "**Transaction too large**: Chunk size exceeds Solana IPv6 MTU limit. Keep `CHUNK_SIZE` at 800 bytes or lower.",
           ],
           table: {
             headers: ["Error / Symptom", "Root Cause", "Resolution"],
             rows: [
-              ["429 Too Many Requests", "Devnet RPC rate limit exceeded during chunk loop", "Add 500ms delay between chunks and implement exponential backoff retry."],
+              ["429 Too Many Requests", "Devnet RPC rate limit exceeded during chunk loop", "Pace requests and retry the same signed transaction."],
               ["Program failed to complete (Compute Limit)", "Finalize SHA-256 hashing exceeded default 200,000 CUs", "Add ComputeBudgetProgram.setComputeUnitLimit({ units: 400_000 }) to finalizeConfig."],
-              ["Custom 6001 (Unauthorized)", "Signer wallet is not the program's upgrade authority", "Ensure signing key matches the BPF program deployment authority."],
-              ["Custom 6002 (InvalidDigest)", "SHA-256 digest mismatch on finalization", "Ensure JSON string serialization is identical in generator and publisher (no reformatting)."],
+              ["Reference vault 6008 (Unauthorized)", "Signer wallet is not the program's upgrade authority", "Check the deployment authority."],
+              ["Reference vault 6007 (DigestMismatch)", "SHA-256 digest mismatch on finalization", "Upload the exact bytes used to compute the digest."],
               ["Transaction too large", "Chunk size exceeds Solana IPv6 MTU limit", "Keep CHUNK_SIZE at 800 bytes or lower."],
             ],
           },
@@ -940,7 +798,7 @@ node --input-type=module -e "
             "**Language Agnostic**: The Web3MCP wire format is defined by the on-chain binary header and JSON schema, not TypeScript.",
             "**Custom Host Implementations**: Developers building hosts in Rust, Go, or Python can implement discovery and simulation directly.",
             "**CLI Independence**: The terminal Host CLI is an example consumer; other agent hosts and backends can import `@web3mcp/sdk` directly.",
-            "**Embedded Conformance**: The package exports `validateDiscoveredConfig` for offline and integration testing without network calls.",
+            "**Conformance source**: The SDK bundles protocol validation internally. Offline validator and conformance fixtures are in this repository's `protocol/` directory.",
           ],
         },
       ],

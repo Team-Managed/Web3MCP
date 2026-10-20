@@ -95,7 +95,7 @@ Program authors can use the [reference implementation](reference-programs/refere
 
 ## Trust and approval
 
-- The host verifies the executable program, config PDA address and owner, publication status, payload digest, version, IDL, tool bindings, and arguments. Unsupported or ambiguous declarations fail closed.
+- On discovery, the SDK verifies the executable program, config PDA address and owner, publication status, payload digest, version, IDL, tool bindings, and arguments. Unsupported or ambiguous declarations fail closed. Discovered tools stay cached until `discover(programId)` is called again.
 - Published descriptions and claimed effects are untrusted input. On-chain ownership identifies the publisher; it does not prove that a tool is safe.
 - Read tools need no signature. For writes, the model proposes an action, the SDK prepares and simulates it, and the user approves the exact transaction. The model never receives signing authority.
 

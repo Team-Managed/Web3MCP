@@ -852,7 +852,7 @@ async function createDeck() {
     });
   });
 
-  const outputPath = path.join(__dirname, "../Web3MCP_Pitch_Deck.pptx");
+  const outputPath = path.join(__dirname, "../apps/website/public/Web3MCP_Pitch_Deck.pptx");
   await pptx.writeFile({ fileName: outputPath });
   console.log(`Successfully generated pitch deck at: ${outputPath}`);
 }

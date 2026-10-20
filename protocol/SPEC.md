@@ -15,7 +15,7 @@ Web3MCP defines an on-chain standard for Solana programs to advertise agent-faci
 ### 1.1 Core Boundaries
 1. **Target Program Ownership**: The tool configuration account (Config PDA) is derived deterministically from the target program ID and owned exclusively by that program.
 2. **Host Independence**: The Web3MCP host discovers and executes tools strictly from the target program ID, on-chain configuration data, and Solana RPC. The host never imports the target program's source code, generated Anchor IDL, or a hardcoded tool catalog.
-3. **Wallet Approval**: The LLM suggests tool calls and parameters. The host performs strict, untrusted input validation, simulates transaction effects, and requests explicit user wallet signing. The LLM never signs transactions.
+3. **Wallet Approval**: The LLM suggests tool calls and parameters. The host validates untrusted inputs, simulates transaction execution, and requests explicit user wallet signing. Simulation does not prove a transaction is safe. The LLM never signs transactions.
 4. **Fail-Closed Security**: Any configuration with unknown envelope fields, unsupported versions, ambiguous account bindings, or invalid cryptographic hashes is immediately rejected.
 5. **RPC Commitment**: The protocol recommends `finalized` commitment for config PDA fetching and account reads, but permits `confirmed` to support local-validator testing.
 

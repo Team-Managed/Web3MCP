@@ -21,7 +21,7 @@
     "start": "npm --prefix apps/website run start",
     "dev:docs": "npm --prefix apps/website run dev",
     "build:docs": "npm --prefix apps/website run build",
-    "deck:generate": "node scripts/generate-deck.js && cp Web3MCP_Pitch_Deck.pptx apps/website/public/Web3MCP_Pitch_Deck.pptx",
+    "deck:generate": "node scripts/generate-deck.js",
     "generate:config": "node reference-programs/reference-vault/scripts/generate-config.js",
     "publish:vault": "node reference-programs/reference-vault/scripts/publish.js",
     "host": "node apps/host/bin/web3mcp.js"

@@ -1,6 +1,6 @@
 # Deterministic Instruction Preparation and Simulation Pipeline
 
-We formalized a six-stage deterministic execution pipeline inside the Web3MCP host (`prepareInstruction`) that converts untrusted LLM tool calls into verified, simulated Solana instructions prior to wallet handoff. Rather than delegating transaction construction to the model or third-party adapters, the host enforces a strict, fail-closed pipeline: input validation, account resolution, IDL seed parsing, PDA derivation, Anchor Borsh encoding, and RPC transaction simulation.
+We formalized an instruction-preparation pipeline in `@web3mcp/sdk` (`prepareInstruction`) that converts proposed tool calls into resolved, encoded, simulated Solana transactions before wallet handoff. The SDK validates inputs, resolves accounts using supported bindings, encodes from the published IDL, and simulates through RPC.
 
 ## Pipeline Architecture
 
@@ -18,15 +18,15 @@ We formalized a six-stage deterministic execution pipeline inside the Web3MCP ho
    For accounts sourced from the IDL, the host extracts the `pda.seeds` specification from the embedded IDL instruction declaration and evaluates each seed sequentially:
    - `kind: "const"`: Converted directly from the IDL's byte array into a byte buffer.
    - `kind: "account"`: Resolves to the 32-byte public key buffer of an earlier resolved account (e.g. resolving `owner` before `vault`).
-   - `kind: "arg"`: Resolves to the serialized byte representation of the corresponding input argument.
+   Argument seeds, nested account paths, chained PDAs, and alternate PDA programs are outside the current instruction profile.
 
 4. **Deterministic PDA Derivation:**
    The assembled byte buffers are passed to standard Solana PDA derivation (`PublicKey.findProgramAddressSync(seeds, programId)`). The derived public key is assigned to the account with `isSigner: false` and the mutability flag (`isWritable`) declared in the IDL.
 
 5. **Anchor Borsh Instruction Encoding:**
-   The host computes the 8-byte Anchor instruction discriminator (`sha256("global:<instruction_name>")[0..8]`) and serializes the validated argument values into binary Borsh format according to the exact field types and ordering defined in the IDL `args` schema. The discriminator and Borsh payload are concatenated to form the instruction `data` buffer.
+   The SDK uses the validated eight-byte discriminator in the published IDL and serializes the supported arguments in IDL order with the runtime Anchor coder.
 
 6. **Live RPC Transaction Simulation:**
    The host constructs a complete `@solana/web3.js` `TransactionInstruction` (program ID, ordered `AccountMeta` array, and binary data buffer), compiles a transaction message with a recent blockhash, and submits it to Solana RPC via `simulateTransaction`. The simulation report (compute units consumed, return data, logs, and potential error codes) is combined with the declared publisher `effects` and returned to the caller.
 
-This pipeline ensures that every instruction presented to the human wallet is mathematically deterministic, fully resolved without LLM hallucination, and pre-verified against the live Solana runtime.
+The host must show the exact prepared message and simulation result for human review. Successful simulation is a prerequisite to submission, not a safety guarantee or a promise that later execution will succeed.

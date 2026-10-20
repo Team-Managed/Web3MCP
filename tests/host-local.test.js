@@ -6,7 +6,7 @@ import { publishConfig } from '../reference-programs/reference-vault/scripts/pub
 
 describe('generic host against the current local reference program', () => {
   const url = process.env.ANCHOR_PROVIDER_URL || 'http://127.0.0.1:8899';
-  if (!/^https?:\/\/(127\.0\.0\.1|localhost)(:\d+)?\/?$/.test(url)) {
+  if (!/^https?:\/\/(127\.0\.0\.1|localhost|0\.0\.0\.0)(:\d+)?\/?$/.test(url)) {
     throw new Error('Integration tests require a local validator RPC URL');
   }
 
