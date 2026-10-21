@@ -53,7 +53,7 @@
     "@bonfida/spl-name-service": "^4.0.1",
     "@inkjs/ui": "^2.0.0",
     "@napi-rs/keyring": "^2.1.1",
-    "@solana/web3.js": "^1.99.0",
+    "@solana/web3.js": "^3.1.0",
     "@web3mcp/sdk": "^0.1.0",
     "ink": "^8.0.0",
     "openai": "^7.35.0",
