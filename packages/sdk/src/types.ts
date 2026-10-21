@@ -13,6 +13,8 @@ export interface DiscoveredProgram {
   config: { standard: string; version: string; programId: string; idl: unknown; tools: Web3McpTool[] };
   idl: unknown;
   tools: Web3McpTool[];
+  /** Digest of the program deployment and serialized config at discovery. */
+  snapshot: string;
 }
 
 export type WalletPublicKey = PublicKey | string | { publicKey: PublicKey };
@@ -34,6 +36,10 @@ export interface AccountReadResult {
 export interface PreparedInstruction {
   tool: string;
   programId: string;
+  /** Discovery snapshot used to prepare the reviewed transaction. */
+  snapshot: string;
+  /** Commitment used for freshness checks, simulation, and submission. */
+  commitment: Commitment;
   instruction: TransactionInstruction;
   transaction: Transaction;
   lastValidBlockHeight: number;

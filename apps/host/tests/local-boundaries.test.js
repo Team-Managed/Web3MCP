@@ -1,14 +1,14 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { Keypair } from '@solana/web3.js';
-import { Web3McpHost } from '../dist/index.js';
+import { Web3McpSdk } from '../dist/index.js';
 import { executeAgentTurn } from '../dist/agent/index.js';
 
 test('account reads use the advertised input address without guessing a PDA', async () => {
   const address = Keypair.generate().publicKey.toBase58();
   const programId = Keypair.generate().publicKey.toBase58();
   const requested = [];
-  const host = new Web3McpHost({
+  const host = new Web3McpSdk({
     connection: {
       getAccountInfo: async (pubkey) => {
         requested.push(pubkey.toBase58());
@@ -63,7 +63,7 @@ test('failed simulation never reaches wallet approval', async () => {
 
 test('instruction preparation enforces protocol u64 bounds before RPC', async () => {
   const programId = Keypair.generate().publicKey.toBase58();
-  const host = new Web3McpHost({ connection: {} });
+  const host = new Web3McpSdk({ connection: {} });
   host.programs.set(programId, {
     programId,
     tools: [{

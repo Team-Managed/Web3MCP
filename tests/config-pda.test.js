@@ -15,7 +15,7 @@ if (!process.env.ANCHOR_WALLET) {
 
 describe("reference-vault: Web3MCP Config PDA chunked upload lifecycle", () => {
   const url = process.env.ANCHOR_PROVIDER_URL || "http://127.0.0.1:8899";
-  if (!/^https?:\/\/(127\.0\.0\.1|localhost)(:\d+)?\/?$/.test(url)) {
+  if (!/^https?:\/\/(127\.0\.0\.1|localhost|0\.0\.0\.0)(:\d+)?\/?$/.test(url)) {
     throw new Error("Integration tests require a local validator RPC URL");
   }
   const connection = new Connection(url, "confirmed");

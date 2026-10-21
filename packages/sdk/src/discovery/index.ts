@@ -3,6 +3,7 @@ import { deriveConfigPda } from '@web3mcp/protocol/pda';
 import { validateDiscoveredConfig } from '@web3mcp/protocol/validator';
 import { DiscoveryError, ConfigValidationError } from '../errors.js';
 import { createRuntimeCoders } from '../accounts/coder.js';
+import { captureSnapshot } from './snapshot.js';
 
 /**
  * Discovers a Solana program's published Web3MCP tools via RPC.
@@ -83,6 +84,8 @@ export async function discoverProgram(connection, programId, commitment = 'confi
 
   // 5. Instantiate dynamic Anchor Borsh coders from on-chain IDL (ADR 0007 / ADR 0008)
   const coders = createRuntimeCoders(config.idl);
+  const snapshot = await captureSnapshot(connection, programId, configPdaAddress, commitment,
+    { program: programAccount, config: configAccount });
 
   return {
     programId,
@@ -91,5 +94,6 @@ export async function discoverProgram(connection, programId, commitment = 'confi
     idl: config.idl,
     coders,
     tools: Array.isArray(config.tools) ? config.tools : [],
+    snapshot,
   };
 }

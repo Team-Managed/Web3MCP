@@ -22,11 +22,15 @@ test('resolves a published instruction PDA for a wallet without RPC or signing',
 
 test('instruction preparation requires an explicit fee payer before RPC', async () => {
   const programId = Keypair.generate().publicKey.toBase58();
-  const sdk = new Web3McpSdk({ connection: { getLatestBlockhash: async () => { throw new Error('RPC must not be called'); } } });
+  let rpcCalls = 0;
+  const sdk = new Web3McpSdk({ connection: { getAccountInfo: async () => { rpcCalls++; throw new Error('RPC must not be called'); },
+    getLatestBlockhash: async () => { rpcCalls++; throw new Error('RPC must not be called'); } } });
   sdk.programs.set(programId, { programId, idl: { instructions: [{ name: 'ping', args: [], accounts: [] }] },
     tools: [{ name: 'ping', inputSchema: { type: 'object', properties: {}, required: [], additionalProperties: false },
       solana: { kind: 'instruction', instruction: 'ping', accounts: {} } }] });
   await assert.rejects(sdk.prepareInstruction('ping', {}, { programId }), AccountResolutionError);
+  await assert.rejects(sdk.prepareInstruction('ping', {}, { programId, signer: 'invalid' }), /Invalid signer public key/);
+  assert.equal(rpcCalls, 0);
 });
 
 test('simulation uses the prepared message blockhash and requested commitment', async () => {
@@ -42,6 +46,7 @@ test('simulation uses the prepared message blockhash and requested commitment', 
     },
     getFeeForMessage: async () => ({ value: 5000 }),
   } });
+  sdk.assertFresh = async () => {};
   sdk.programs.set(programId, { programId, idl: { instructions: [{ name: 'ping', args: [], accounts: [] }] },
     coders: { instructions: { encode: () => Buffer.alloc(8) } },
     tools: [{ name: 'ping', inputSchema: { type: 'object', properties: {}, required: [], additionalProperties: false },

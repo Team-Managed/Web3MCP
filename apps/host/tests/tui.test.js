@@ -10,6 +10,13 @@ import { ChatScreen, TransactionReview, safeReviewText } from '../dist/tui/index
 import { discoverWalletPaths } from '../dist/tui/wallet-paths.js';
 
 const tick = () => new Promise(resolve => setTimeout(resolve, 25));
+const waitFor = async predicate => {
+  for (let attempt = 0; attempt < 160; attempt++) {
+    if (predicate()) return;
+    await tick();
+  }
+  assert.fail('Timed out waiting for the terminal action to complete.');
+};
 const chatStream = delta => new Response(`data: ${JSON.stringify({ id: 'test', object: 'chat.completion.chunk', choices: [{ index: 0, delta, finish_reason: null }] })}\n\ndata: [DONE]\n\n`,
   { headers: { 'content-type': 'text/event-stream' } });
 
@@ -238,12 +245,12 @@ test('/model guides provider, existing key, and model selection', async () => {
     await tick();
     assert.match(app.lastFrame(), /API key for openai/);
     app.stdin.write('\r');
-    await tick();
+    await waitFor(() => app.lastFrame()?.includes('Models visible to openai'));
     assert.match(app.lastFrame(), /Models visible to openai/);
     assert.match(app.lastFrame(), /gpt-6-luna/);
     await tick();
     app.stdin.write('\r');
-    await tick();
+    await waitFor(() => app.lastFrame()?.includes('Model gpt-6-luna (openai)'));
     assert.match(app.lastFrame(), /Model gpt-6-luna \(openai\)/);
   } finally {
     app.unmount();
@@ -271,16 +278,16 @@ test('/model masks a new key and saves it only after model selection', async () 
     await tick();
     assert.match(app.lastFrame(), /API key for openai/);
     app.stdin.write('sk-test-secret');
-    await tick();
+    await waitFor(() => app.lastFrame()?.includes('*'.repeat('sk-test-secret'.length)));
     assert.doesNotMatch(app.lastFrame(), /sk-test-secret/);
     app.stdin.write('\r');
-    await tick();
+    await waitFor(() => app.lastFrame()?.includes('Models visible to openai'));
     assert.match(app.lastFrame(), /Models visible to openai/);
     assert.doesNotMatch(app.lastFrame(), /sk-test-secret/);
     assert.deepEqual(saved, []);
     await tick();
     app.stdin.write('\r');
-    await tick();
+    await waitFor(() => saved.length === 1 && preferences.length > 0);
     assert.deepEqual(saved, [['openai', 'sk-test-secret']]);
     assert.equal(preferences.at(-1).model, 'gpt-6-luna');
     assert.equal(preferences.at(-1).provider, 'openai');
@@ -312,10 +319,12 @@ test('/model keeps a custom endpoint key separate from the OpenAI key', async ()
     await tick(); app.stdin.write('/model'); await tick(); app.stdin.write('\r'); await tick();
     app.stdin.write('\r'); await tick();
     assert.match(app.lastFrame(), /API key for openai/);
-    app.stdin.write('gateway-key'); await tick(); app.stdin.write('\r'); await tick();
+    app.stdin.write('gateway-key');
+    await waitFor(() => app.lastFrame()?.includes('*'.repeat('gateway-key'.length)));
+    app.stdin.write('\r'); await tick();
     assert.match(requestedUrl, /^https:\/\/gateway\.example\/v1\/models/);
     assert.equal(authorization, 'Bearer gateway-key');
-    app.stdin.write('\r'); await tick();
+    app.stdin.write('\r'); await waitFor(() => saved.length === 1);
     assert.deepEqual(saved, [['openai-compatible:https://gateway.example/v1', 'gateway-key']]);
   } finally {
     app.unmount(); globalThis.fetch = previousFetch;
