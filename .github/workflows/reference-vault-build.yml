@@ -20,7 +20,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v6.1.0
+      - uses: actions/checkout@v7.0.1
       - name: Install Solana CLI 2.3.0
         run: |
           sh -c "$(curl -sSfL https://release.anza.xyz/v2.3.0/install)"
